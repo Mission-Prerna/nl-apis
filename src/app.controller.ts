@@ -14,6 +14,7 @@ import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.d
 import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
+import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
@@ -71,5 +72,26 @@ export class AppController {
       assessmentSurveyResult,
     );
     return result;
+  }
+
+  @Get('/api/mentor/dashboard-overview')
+  @Roles('Admin', 'OpenRole')
+  @UseGuards(JwtAuthGuard)
+  getHomeScreenMetric(
+    @Query() queryParams: GetHomeScreenMetric,
+    @Headers('authorization') authToken: string,
+  ) {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    const mentorPhoneNumber =
+      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'];
+
+    return this.appService.getHomeScreenMetric(
+      mentorPhoneNumber,
+      queryParams.month,
+      queryParams.year,
+    );
   }
 }

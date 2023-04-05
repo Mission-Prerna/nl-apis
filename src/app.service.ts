@@ -253,4 +253,37 @@ export class AppService {
       throw new InternalServerErrorException();
     }
   }
+
+  // TODO:
+  async getHomeScreenMetric(
+    mentorPhoneNumber: string,
+    month: number,
+    year: number,
+  ) {
+    try {
+      const result = await this.prismaService.$queryRaw(Prisma.sql`select 
+          count(DISTINCT udise) as visited_schools
+        from assessment_visit_results_v2 as avr2
+        join mentor as m on avr2.mentor_id = m.id
+        where m.id = 25868
+        and EXTRACT(MONTH FROM avr2.submission_date) = 4
+        and EXTRACT(YEAR FROM avr2.submission_date) = 2023;
+        
+        select count(*) as total_assessments
+        from assessment_visit_results_students as avrs
+        where avrs.assessment_visit_results_v2_id in (21,22,23);
+        
+        select count(*) as grades1
+        from assessment_visit_results_students as avrs
+        where avrs.assessment_visit_results_v2_id in (
+          select avr2.id
+          from assessment_visit_results_v2 as avr2
+          where avr2.grade = 1
+        );`);
+      return result;
+    } catch (e) {
+      this.logger.error(`Prisma error: ${e}`);
+      throw new InternalServerErrorException();
+    }
+  }
 }

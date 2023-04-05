@@ -4,7 +4,6 @@ import {
   IsInt,
   IsString,
   IsUUID,
-  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { CreateAssessmentVisitResultStudentOdkResult } from './CreateAssessmentVisitResultsStudentOdkResult.dto';
@@ -15,40 +14,33 @@ export class CreateAssessmentVisitResultStudent {
   student_name!: string;
 
   @IsInt()
-  @MaxLength(9)
   competency_id!: number;
 
   @IsString()
   module: string;
 
   @IsInt()
-  @MaxLength(16)
   end_time!: bigint;
 
   @IsBoolean()
   is_passed!: boolean;
 
   @IsInt()
-  @MaxLength(16)
   start_time: bigint;
 
   @IsString()
   statement?: string;
 
   @IsInt()
-  @MaxLength(9)
   achievement: number;
 
   @IsInt()
-  @MaxLength(9)
   app_version_code: number;
 
   @IsInt()
-  @MaxLength(9)
   total_questions: number;
 
   @IsInt()
-  @MaxLength(9)
   success_criteria: number;
 
   @IsBoolean()
@@ -61,7 +53,6 @@ export class CreateAssessmentVisitResultStudent {
   workflow_ref_id: string;
 
   @IsInt()
-  @MaxLength(9)
   total_time_taken?: number;
 
   @IsUUID()

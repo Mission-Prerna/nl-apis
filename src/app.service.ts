@@ -1,18 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 
 @Injectable()
 export class AppService {
-  constructor(private readonly prismaService: PrismaService) {}
+  private readonly logger = new Logger(AppService.name);
 
-  getHello(): string {
-    return 'Hello World!';
-  }
+  constructor(private readonly prismaService: PrismaService) {}
 
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
-  ): Promise<any> {
+  ) {
     try {
       const submissionDate = new Date(
         createAssessmentVisitResultData.submission_date,
@@ -28,7 +30,7 @@ export class AppService {
         ),
       );
 
-      this.prismaService.$transaction(async (tx) => {
+      await this.prismaService.$transaction(async (tx) => {
         // Checking if Assessment visit result already exist; if not then creating it
         let assessmentVisitResult =
           await tx.assessment_visit_results_v2.findFirst({
@@ -37,6 +39,9 @@ export class AppService {
                 gte: startOfMonthDate,
                 lte: endOfMonthDate,
               },
+              mentor_id: createAssessmentVisitResultData.mentor_id,
+              grade: createAssessmentVisitResultData.grade,
+              subject_id: createAssessmentVisitResultData.subject_id,
             },
           });
 
@@ -59,65 +64,68 @@ export class AppService {
         }
 
         // filtering student whose module is 'odk'
-        createAssessmentVisitResultData.students
-          .filter((student) => student.module === 'odk')
-          .forEach(async (student) => {
-            // Checking if Assessment visit result student already exist; if not then creating it
-            let assessmentVisitResultStudent =
-              await tx.assessment_visit_results_students.findFirst({
-                where: {
+        const assessmentVisitResultStudents =
+          createAssessmentVisitResultData.students.filter(
+            (student) => student.module === 'odk',
+          );
+
+        for (const student of assessmentVisitResultStudents) {
+          // Checking if Assessment visit result student already exist; if not then creating it
+          let assessmentVisitResultStudent =
+            await tx.assessment_visit_results_students.findFirst({
+              where: {
+                competency_id: student.competency_id,
+                student_session: student.student_session,
+                assessment_visit_results_v2_id: assessmentVisitResult.id,
+              },
+            });
+
+          if (assessmentVisitResultStudent) {
+            // Assessment visit result student exist; delete its odk submissions
+            await tx.assessment_visit_results_student_odk_results.deleteMany({
+              where: {
+                assessment_visit_results_students_id:
+                  assessmentVisitResultStudent.id,
+              },
+            });
+          } else {
+            assessmentVisitResultStudent =
+              await tx.assessment_visit_results_students.create({
+                data: {
+                  student_name: student.student_name,
                   competency_id: student.competency_id,
+                  module: student.module,
+                  end_time: student.end_time,
+                  is_passed: student.is_passed,
+                  start_time: student.start_time,
+                  statement: student.statement,
+                  achievement: student.achievement,
+                  app_version_code: student.app_version_code,
+                  total_questions: student.total_questions,
+                  success_criteria: student.success_criteria,
+                  session_completed: student.session_completed,
+                  is_network_active: student.is_network_active,
+                  workflow_ref_id: student.workflow_ref_id,
+                  total_time_taken: student.total_time_taken,
                   student_session: student.student_session,
                   assessment_visit_results_v2_id: assessmentVisitResult.id,
                 },
               });
+          }
 
-            if (assessmentVisitResultStudent) {
-              // Assessment visit result student exist; delete its odk submissions
-              await tx.assessment_visit_results_student_odk_results.deleteMany({
-                where: {
-                  assessment_visit_results_students_id:
-                    assessmentVisitResultStudent.id,
-                },
-              });
-            } else {
-              assessmentVisitResultStudent =
-                await tx.assessment_visit_results_students.create({
-                  data: {
-                    student_name: student.student_name,
-                    competency_id: student.competency_id,
-                    module: student.module,
-                    end_time: student.end_time,
-                    is_passed: student.is_passed,
-                    start_time: student.start_time,
-                    statement: student.statement,
-                    achievement: student.achievement,
-                    app_version_code: student.app_version_code,
-                    total_questions: student.total_questions,
-                    success_criteria: student.success_criteria,
-                    session_completed: student.session_completed,
-                    is_network_active: student.is_network_active,
-                    workflow_ref_id: student.workflow_ref_id,
-                    total_time_taken: student.total_time_taken,
-                    student_session: student.student_session,
-                    assessment_visit_results_v2_id: assessmentVisitResult.id,
-                  },
-                });
-            }
-
-            // creating multiple Assessment visit results student odk results
-            await tx.assessment_visit_results_student_odk_results.createMany({
-              data: student.odk_results.map((odkResult) => {
-                return {
-                  question: odkResult.question,
-                  answer: odkResult.answer,
-                  assessment_visit_results_students_id:
-                    assessmentVisitResultStudent.id,
-                };
-              }),
-              skipDuplicates: true,
-            });
+          // creating multiple Assessment visit results student odk results
+          await tx.assessment_visit_results_student_odk_results.createMany({
+            data: student.odk_results.map((odkResult) => {
+              return {
+                question: odkResult.question,
+                answer: odkResult.answer,
+                assessment_visit_results_students_id:
+                  assessmentVisitResultStudent.id,
+              };
+            }),
+            skipDuplicates: true,
           });
+        }
 
         // filtering student whose module is not 'odk'
         const nonOdkModuleStudents = createAssessmentVisitResultData.students
@@ -141,7 +149,6 @@ export class AppService {
               total_time_taken: student.total_time_taken,
               student_session: student.student_session,
               assessment_visit_results_v2_id: assessmentVisitResult.id,
-              odk_results: [],
             };
           });
 
@@ -150,10 +157,9 @@ export class AppService {
           skipDuplicates: true,
         });
       });
-
-      console.log('asdsad');
     } catch (e) {
-      console.log('eroror has occured');
+      this.logger.error(`Prisma error: ${e}`);
+      throw new InternalServerErrorException();
     }
   }
 }

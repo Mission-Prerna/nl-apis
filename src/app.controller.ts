@@ -16,23 +16,19 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  @Roles('Admin', 'OpenRole')
-  @UseGuards(JwtAuthGuard)
   getHello(): string {
-    return this.appService.getHello();
+    return 'NL Assessments Visit Result App';
   }
 
+  @Roles('Admin', 'OpenRole')
+  @UseGuards(JwtAuthGuard)
   @Post('/assessment-visit-results')
-  createAssessmentVisitResults(
+  async createAssessmentVisitResults(
     @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
   ) {
-    try {
-      const result = this.appService.createAssessmentVisitResult(
-        createAssessmentVisitResultDto,
-      );
-    } catch (e) {
-      console.log('error');
-    }
+    await this.appService.createAssessmentVisitResult(
+      createAssessmentVisitResultDto,
+    );
     return 'Created';
   }
 }

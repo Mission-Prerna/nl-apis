@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsOptional,
   IsString,
   IsUUID,
   ValidateNested,
@@ -17,7 +18,7 @@ export class CreateAssessmentVisitResultStudent {
   competency_id!: number;
 
   @IsString()
-  module: string;
+  module!: string;
 
   @IsInt()
   end_time!: bigint;
@@ -26,37 +27,39 @@ export class CreateAssessmentVisitResultStudent {
   is_passed!: boolean;
 
   @IsInt()
-  start_time: bigint;
+  start_time!: bigint;
 
   @IsString()
+  @IsOptional()
   statement?: string;
 
   @IsInt()
-  achievement: number;
+  achievement!: number;
 
   @IsInt()
-  app_version_code: number;
+  app_version_code!: number;
 
   @IsInt()
-  total_questions: number;
+  total_questions!: number;
 
   @IsInt()
-  success_criteria: number;
+  success_criteria!: number;
 
   @IsBoolean()
-  session_completed: boolean;
+  session_completed!: boolean;
 
   @IsBoolean()
-  is_network_active: boolean;
+  is_network_active!: boolean;
 
   @IsString()
-  workflow_ref_id: string;
+  workflow_ref_id!: string;
 
   @IsInt()
+  @IsOptional()
   total_time_taken?: number;
 
   @IsUUID()
-  student_session: string;
+  student_session!: string;
 
   @IsArray()
   @ValidateNested({ each: true })

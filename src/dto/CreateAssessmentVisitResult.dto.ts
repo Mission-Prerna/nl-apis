@@ -1,4 +1,10 @@
-import { IsArray, IsDateString, IsInt, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
 import { CreateAssessmentVisitResultStudent } from './CreateAssessmentVisitResultStudent.dto';
 import { Type } from 'class-transformer';
 
@@ -13,22 +19,25 @@ export class CreateAssessmentVisitResult {
   subject_id!: number;
 
   @IsInt()
+  @IsOptional()
   mentor_id?: number;
 
   @IsInt()
-  no_of_student: number;
+  no_of_student!: number;
 
   @IsInt()
   actor_id!: number;
 
   @IsInt()
+  @IsOptional()
   block_id?: number;
 
   @IsInt()
+  @IsOptional()
   assessment_type_id?: number;
 
   @IsInt()
-  udise: number;
+  udise!: number;
 
   @IsArray()
   @ValidateNested({ each: true })

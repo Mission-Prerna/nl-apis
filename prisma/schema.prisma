@@ -66,7 +66,7 @@ model assessment_survey_result {
 model assessment_survey_result_questions {
   id                          BigInt                      @id @default(autoincrement())
   survey_id                   BigInt
-  qid                         String                      @db.Char
+  qid                         String                      @db.VarChar
   value                       String                      @db.VarChar
   created_at                  DateTime                    @default(now()) @db.Timestamptz(6)
   assessment_survey_result_v2 assessment_survey_result_v2 @relation(fields: [survey_id], references: [id], onDelete: Cascade)
@@ -79,18 +79,20 @@ model assessment_survey_result_questions {
 
 model assessment_survey_result_v2 {
   id                                 BigInt                               @id @default(autoincrement())
-  mentor_id                          BigInt?
+  mentor_id                          BigInt
   grade                              Int
-  subject_id                         Int
+  subject_id                         Int?
   actor_id                           Int
   created_at                         DateTime                             @default(now()) @db.Timestamptz(6)
-  udise                              BigInt?
+  udise                              BigInt
+  submission_date                    DateTime                             @db.Date
   assessment_survey_result_questions assessment_survey_result_questions[]
   actors                             actors                               @relation(fields: [actor_id], references: [id])
-  mentor                             mentor?                              @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                           subjects                             @relation(fields: [subject_id], references: [id])
-  school_list                        school_list?                         @relation(fields: [udise], references: [udise], onDelete: Restrict)
+  mentor                             mentor                               @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                           subjects?                            @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  school_list                        school_list                          @relation(fields: [udise], references: [udise])
 
+  @@unique([mentor_id, grade, subject_id, submission_date], map: "assessment_survey_result_v2_mentor_id_grade_subject_id_submissi")
   @@index([actor_id], map: "assessment_survey_result_actor_id_idx", type: Hash)
   @@index([grade], map: "assessment_survey_result_grade_idx")
   @@index([mentor_id], map: "assessment_survey_result_mentor_id_idx")

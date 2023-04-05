@@ -6,6 +6,7 @@ import {
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 import { Prisma } from '@prisma/client';
+import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 
 @Injectable()
 export class AppService {
@@ -158,6 +159,8 @@ export class AppService {
           skipDuplicates: true,
         });
       });
+
+      this.logger.debug('Assessment visit result created');
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();
@@ -189,6 +192,62 @@ export class AppService {
       join blocks b on b.id = s.block_id
       join mentor m on m.district_id = d.id and m.block_id = b.id
       where m.phone_no = ${mentorPhoneNumber}`);
+    } catch (e) {
+      this.logger.error(`Prisma error: ${e}`);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async createAssessmentSurveyResult(
+    assessmentSurveyResult: CreateAssessmentSurveyResult,
+  ) {
+    try {
+      // delete assessment survey if already created with this configuration
+      await this.prismaService.assessment_survey_result_v2.delete({
+        where: {
+          mentor_id_grade_subject_id_submission_date: {
+            mentor_id: assessmentSurveyResult.mentor_id,
+            subject_id: assessmentSurveyResult.subject_id || 0,
+            grade: assessmentSurveyResult.grade_id,
+            submission_date: new Date(assessmentSurveyResult.submission_date),
+          },
+        },
+      });
+
+      // create assessment survey
+      const result =
+        await this.prismaService.assessment_survey_result_v2.create({
+          select: {
+            submission_date: true,
+            grade: true,
+            actor_id: true,
+            mentor_id: true,
+            subject_id: true,
+            udise: true,
+            created_at: true,
+            assessment_survey_result_questions: true,
+          },
+          data: {
+            submission_date: new Date(assessmentSurveyResult.submission_date),
+            grade: assessmentSurveyResult.grade_id,
+            actor_id: assessmentSurveyResult.actor_id,
+            mentor_id: assessmentSurveyResult.mentor_id,
+            subject_id: assessmentSurveyResult.subject_id || 0,
+            udise: assessmentSurveyResult.udise,
+            assessment_survey_result_questions: {
+              createMany: {
+                data: assessmentSurveyResult.questions.map((x) => ({
+                  qid: x.question_id,
+                  value: x.value,
+                })),
+              },
+            },
+          },
+        });
+
+      this.logger.debug('Assessment survey result created');
+
+      return result;
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();

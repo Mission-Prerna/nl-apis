@@ -13,6 +13,7 @@ import { JwtAuthGuard } from './auth/auth-jwt.guard';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
+import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
@@ -58,5 +59,17 @@ export class AppController {
       queryParams.month,
       queryParams.year,
     );
+  }
+
+  @Post('/api/assessment-survey-results')
+  @Roles('Admin', 'OpenRole')
+  @UseGuards(JwtAuthGuard)
+  async createAssessmentSurveyResult(
+    @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
+  ) {
+    const result = await this.appService.createAssessmentSurveyResult(
+      assessmentSurveyResult,
+    );
+    return result;
   }
 }

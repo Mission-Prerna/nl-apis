@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AppService {
@@ -157,6 +158,37 @@ export class AppService {
           skipDuplicates: true,
         });
       });
+    } catch (e) {
+      this.logger.error(`Prisma error: ${e}`);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async getMentorSchoolListIfHeHasVisited(
+    mentorPhoneNumber: string,
+    month: number,
+    year: number,
+  ) {
+    try {
+      return await this.prismaService.$queryRaw(Prisma.sql`SELECT 
+        s.id as school_id,
+        s."name" as school_name, 
+        s.udise,
+        d.name as district_name,
+        b.name as block_name,
+        s.nypanchayat as nypanchayat,
+        (case when EXISTS(SELECT avr2.id from assessment_visit_results_v2 as avr2 
+            where avr2.udise = 	s.udise 
+            and EXTRACT(MONTH from avr2.submission_date) = ${month} 
+            and EXTRACT(YEAR FROM avr2.submission_date) = ${year})
+          THEN true 
+          ELSE false
+        end) as is_visited
+      from school_list as s
+      join districts d on d.id = s.district_id
+      join blocks b on b.id = s.block_id
+      join mentor m on m.district_id = d.id and m.block_id = b.id
+      where m.phone_no = ${mentorPhoneNumber}`);
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();

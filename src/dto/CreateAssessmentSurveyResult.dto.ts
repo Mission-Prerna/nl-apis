@@ -1,6 +1,5 @@
 import {
   IsArray,
-  IsDateString,
   IsInt,
   IsOptional,
   ValidateNested,
@@ -9,14 +8,15 @@ import { CreateAssessmentSurveyResultQuestion } from './CreateAssessmentSurveyRe
 import { Type } from 'class-transformer';
 
 export class CreateAssessmentSurveyResult {
-  @IsDateString()
-  submission_date!: Date;
+  @IsInt()
+  submission_timestamp!: number;
 
   @IsInt()
-  mentor_id!: number;
+  @IsOptional()
+  mentor_id?: number;
 
   @IsInt()
-  grade_id!: number;
+  grade!: number;
 
   @IsInt()
   @IsOptional()

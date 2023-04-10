@@ -15,6 +15,8 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
+import { Mentor } from './enums';
+
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
@@ -24,39 +26,48 @@ export class AppController {
     private readonly jwtService: JwtService,
   ) {}
 
-  @Get()
-  getHello(): string {
-    return 'NL Assessments Visit Result App';
+  @Get('/health')
+  getHealth(): string {
+    return 'Ok';
+  }
+
+  private async getLoggedInMentor(
+    authorizationHeader: string,
+  ): Promise<Mentor> {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authorizationHeader.split(' ')[1])
+    );
+    // TODO add caching here
+    return this.appService.findMentorByPhoneNumber(
+      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'],
+    );
   }
 
   @Roles('Admin', 'OpenRole')
   @UseGuards(JwtAuthGuard)
-  @Post('/assessment-visit-results')
+  @Post('/api/assessment-visit-results')
   async createAssessmentVisitResults(
     @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
+    @Headers('authorization') authToken: string,
   ) {
-    await this.appService.createAssessmentVisitResult(
+    createAssessmentVisitResultDto.mentor_id = Number(
+      (await this.getLoggedInMentor(authToken)).id,
+    ); // assign mentor_id for logged in user
+    return await this.appService.createAssessmentVisitResult(
       createAssessmentVisitResultDto,
     );
-    return 'Created';
   }
 
   @Get('/api/mentor/schools')
   @Roles('Admin', 'OpenRole')
   @UseGuards(JwtAuthGuard)
-  getMentorSchoolList(
+  async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
     @Headers('authorization') authToken: string,
   ) {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    const mentorPhoneNumber =
-      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'];
-
+    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorSchoolListIfHeHasVisited(
-      mentorPhoneNumber,
+      mentor,
       queryParams.month,
       queryParams.year,
     );
@@ -67,11 +78,14 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async createAssessmentSurveyResult(
     @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
+    @Headers('authorization') authToken: string,
   ) {
-    const result = await this.appService.createAssessmentSurveyResult(
+    assessmentSurveyResult.mentor_id = Number(
+      (await this.getLoggedInMentor(authToken)).id,
+    ); // assign mentor_id for logged in user
+    return await this.appService.createAssessmentSurveyResult(
       assessmentSurveyResult,
     );
-    return result;
   }
 
   @Get('/api/mentor/dashboard-overview')

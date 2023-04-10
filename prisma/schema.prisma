@@ -85,14 +85,15 @@ model assessment_survey_result_v2 {
   actor_id                           Int
   created_at                         DateTime                             @default(now()) @db.Timestamptz(6)
   udise                              BigInt
-  submission_date                    DateTime                             @db.Date
+  submission_timestamp               BigInt                               @default(0)
+  app_version_code                   Int                                  @default(0)
   assessment_survey_result_questions assessment_survey_result_questions[]
   actors                             actors                               @relation(fields: [actor_id], references: [id])
   mentor                             mentor                               @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
   subjects                           subjects?                            @relation(fields: [subject_id], references: [id], onDelete: Restrict)
   school_list                        school_list                          @relation(fields: [udise], references: [udise])
 
-  @@unique([mentor_id, grade, subject_id, submission_date], map: "assessment_survey_result_v2_mentor_id_grade_subject_id_submissi")
+  @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_survey_result_v2_subject_id_submission_timestamp_men")
   @@index([actor_id], map: "assessment_survey_result_actor_id_idx", type: Hash)
   @@index([grade], map: "assessment_survey_result_grade_idx")
   @@index([mentor_id], map: "assessment_survey_result_mentor_id_idx")
@@ -229,7 +230,6 @@ model assessment_visit_results_students {
   start_time                                   BigInt
   statement                                    String?
   achievement                                  Int
-  app_version_code                             Int
   total_questions                              Int
   success_criteria                             Int
   session_completed                            Boolean
@@ -257,7 +257,8 @@ model assessment_visit_results_v2 {
   block_id                          Int?
   assessment_type_id                Int?
   udise                             BigInt
-  submission_date                   DateTime                            @db.Date
+  submission_timestamp              BigInt                              @default(0)
+  app_version_code                  Int                                 @default(0)
   assessment_visit_results_students assessment_visit_results_students[]
   actors                            actors                              @relation(fields: [actor_id], references: [id])
   blocks                            blocks?                             @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -265,7 +266,7 @@ model assessment_visit_results_v2 {
   subjects                          subjects                            @relation(fields: [subject_id], references: [id])
   school_list                       school_list                         @relation(fields: [udise], references: [udise])
 
-  @@unique([mentor_id, grade, subject_id, submission_date], map: "assessment_visit_results_v2_mentor_id_grade_subject_id_submissi")
+  @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_visit_results_v2_subject_id_submission_timestamp_men")
   @@index([actor_id, block_id], map: "assessment_visit_results_v2_actor_block_id_idx")
   @@index([actor_id])
   @@index([assessment_type_id], map: "assessment_visit_results_v2_ass_type_id_idx")
@@ -275,6 +276,7 @@ model assessment_visit_results_v2 {
   @@index([mentor_id])
   @@index([subject_id])
   @@index([udise])
+  @@index([submission_timestamp])
 }
 
 model auth_group {

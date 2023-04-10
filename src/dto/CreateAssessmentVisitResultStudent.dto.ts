@@ -37,9 +37,6 @@ export class CreateAssessmentVisitResultStudent {
   achievement!: number;
 
   @IsInt()
-  app_version_code!: number;
-
-  @IsInt()
   total_questions!: number;
 
   @IsInt()

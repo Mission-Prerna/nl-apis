@@ -220,73 +220,174 @@ export class AppService {
       }
 
       // create assessment survey
-      const result =
-        await this.prismaService.assessment_survey_result_v2.create({
-          select: {
-            id: true,
-            submission_timestamp: true,
-            grade: true,
-            actor_id: true,
-            mentor_id: true,
-            subject_id: true,
-            udise: true,
-            created_at: true,
-            assessment_survey_result_questions: true,
-          },
-          data: {
-            submission_timestamp: assessmentSurveyResult.submission_timestamp,
-            grade: assessmentSurveyResult.grade,
-            actor_id: assessmentSurveyResult.actor_id,
-            mentor_id: assessmentSurveyResult.mentor_id,
-            subject_id: assessmentSurveyResult.subject_id || 0,
-            udise: assessmentSurveyResult.udise,
-            assessment_survey_result_questions: {
-              createMany: {
-                data: assessmentSurveyResult.questions.map((x) => ({
-                  qid: x.question_id,
-                  value: x.value,
-                })),
-              },
+      return await this.prismaService.assessment_survey_result_v2.create({
+        select: {
+          id: true,
+          submission_timestamp: true,
+          grade: true,
+          actor_id: true,
+          mentor_id: true,
+          subject_id: true,
+          udise: true,
+          created_at: true,
+          assessment_survey_result_questions: true,
+        },
+        data: {
+          submission_timestamp: assessmentSurveyResult.submission_timestamp,
+          grade: assessmentSurveyResult.grade,
+          actor_id: assessmentSurveyResult.actor_id,
+          mentor_id: assessmentSurveyResult.mentor_id,
+          subject_id: assessmentSurveyResult.subject_id || 0,
+          udise: assessmentSurveyResult.udise,
+          assessment_survey_result_questions: {
+            createMany: {
+              data: assessmentSurveyResult.questions.map((x) => ({
+                qid: x.question_id,
+                value: x.value,
+              })),
             },
           },
-        });
-
-      this.logger.debug('Assessment survey result created');
-
-      return result;
+        },
+      });
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();
     }
   }
 
-  // TODO:
-  async getHomeScreenMetric(
-    mentorPhoneNumber: string,
-    month: number,
-    year: number,
-  ) {
+  async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
+    const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
+
     try {
-      const result = await this.prismaService.$queryRaw(Prisma.sql`select 
-          count(DISTINCT udise) as visited_schools
-        from assessment_visit_results_v2 as avr2
-        join mentor as m on avr2.mentor_id = m.id
-        where m.id = 25868
-        and EXTRACT(MONTH FROM avr2.submission_date) = 4
-        and EXTRACT(YEAR FROM avr2.submission_date) = 2023;
-        
-        select count(*) as total_assessments
-        from assessment_visit_results_students as avrs
-        where avrs.assessment_visit_results_v2_id in (21,22,23);
-        
-        select count(*) as grades1
-        from assessment_visit_results_students as avrs
-        where avrs.assessment_visit_results_v2_id in (
-          select avr2.id
-          from assessment_visit_results_v2 as avr2
-          where avr2.grade = 1
-        );`);
-      return result;
+      const result: Record<string, any> = await this.prismaService
+        .$queryRaw(Prisma.sql`
+          select
+              a.visited_schools,
+              b.average_assessment_time :: int8,
+              c.total_assessments,
+              d.grade1_assessments,
+              e.grade2_assessments,
+              f.grade3_assessments
+          from
+              (
+                  select
+                      count(DISTINCT udise) as visited_schools
+                  from
+                      assessment_visit_results_v2 as avr2
+                  where
+                      avr2.mentor_id = ${mentor.id}
+                      and avr2.submission_timestamp > ${firstDayTimestamp} 
+                      and avr2.submission_timestamp < ${lastDayTimestamp}
+              ) as a,
+              (
+                  select
+                      COALESCE(AVG(avrs.total_time_taken), 0) as average_assessment_time
+                  from
+                      assessment_visit_results_students as avrs
+                  where
+                      avrs.assessment_visit_results_v2_id in (
+                          select
+                              avr2.id
+                          from
+                              assessment_visit_results_v2 as avr2
+                          where
+                              avr2.mentor_id = ${mentor.id}
+                              and avr2.submission_timestamp > ${firstDayTimestamp} 
+                              and avr2.submission_timestamp < ${lastDayTimestamp}
+                      )
+              ) as b,
+              (
+                  select
+                      count(*) as total_assessments
+                  from
+                      assessment_visit_results_students as avrs
+                  where
+                      avrs.assessment_visit_results_v2_id in (
+                          select
+                              avr2.id
+                          from
+                              assessment_visit_results_v2 as avr2
+                          where
+                              avr2.mentor_id = ${mentor.id}
+                              and avr2.submission_timestamp > ${firstDayTimestamp} 
+                              and avr2.submission_timestamp < ${lastDayTimestamp}
+                      )
+              ) as c,
+              (
+                  select
+                      count(*) as grade1_assessments
+                  from
+                      assessment_visit_results_students as avrs
+                  where
+                      avrs.assessment_visit_results_v2_id in (
+                          select
+                              avr2.id
+                          from
+                              assessment_visit_results_v2 as avr2
+                          where
+                              avr2.grade = 1
+                              and avr2.mentor_id = ${mentor.id}
+                              and avr2.submission_timestamp > ${firstDayTimestamp} 
+                              and avr2.submission_timestamp < ${lastDayTimestamp}
+                      )
+              ) as d,
+              (
+                  select
+                      count(*) as grade2_assessments
+                  from
+                      assessment_visit_results_students as avrs
+                  where
+                      avrs.assessment_visit_results_v2_id in (
+                          select
+                              avr2.id
+                          from
+                              assessment_visit_results_v2 as avr2
+                          where
+                              avr2.grade = 2
+                              and avr2.mentor_id = ${mentor.id}
+                              and avr2.submission_timestamp > ${firstDayTimestamp} 
+                              and avr2.submission_timestamp < ${lastDayTimestamp}
+                      )
+              ) as e,
+              (
+                  select
+                      count(*) as grade3_assessments
+                  from
+                      assessment_visit_results_students as avrs
+                  where
+                      avrs.assessment_visit_results_v2_id in (
+                          select
+                              avr2.id
+                          from
+                              assessment_visit_results_v2 as avr2
+                          where
+                              avr2.grade = 3
+                              and avr2.mentor_id = ${mentor.id}
+                              and avr2.submission_timestamp > ${firstDayTimestamp} 
+                              and avr2.submission_timestamp < ${lastDayTimestamp}
+                      )
+              ) as f`);
+
+      return {
+        visited_schools: result[0]['visited_schools'],
+        total_assessments: result[0]['total_assessments'],
+        average_assessment_time: result[0]['average_assessment_time'],
+        grades: [
+          {
+            grade: 1,
+            total_assessments: result[0]['grade1_assessments'],
+          },
+          {
+            grade: 2,
+            total_assessments: result[0]['grade2_assessments'],
+          },
+          {
+            grade: 3,
+            total_assessments: result[0]['grade3_assessments'],
+          },
+        ],
+      };
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();

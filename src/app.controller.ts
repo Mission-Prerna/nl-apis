@@ -91,19 +91,13 @@ export class AppController {
   @Get('/api/mentor/dashboard-overview')
   @Roles('Admin', 'OpenRole')
   @UseGuards(JwtAuthGuard)
-  getHomeScreenMetric(
+  async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,
     @Headers('authorization') authToken: string,
   ) {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    const mentorPhoneNumber =
-      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'];
-
+    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getHomeScreenMetric(
-      mentorPhoneNumber,
+      mentor,
       queryParams.month,
       queryParams.year,
     );

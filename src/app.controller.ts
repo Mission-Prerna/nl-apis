@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Headers, Post, Query, SetMetadata, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Query,
+  SetMetadata,
+  UseGuards,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
@@ -21,12 +30,16 @@ export class AppController {
     return 'Ok';
   }
 
-  private async getLoggedInMentor(authorizationHeader: string): Promise<Mentor> {
+  private async getLoggedInMentor(
+    authorizationHeader: string,
+  ): Promise<Mentor> {
     const decodedAuthTokenData = <Record<string, any>>(
       this.jwtService.decode(authorizationHeader.split(' ')[1])
     );
     // TODO add caching here
-    return this.appService.findMentorByPhoneNumber(decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id']);
+    return this.appService.findMentorByPhoneNumber(
+      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'],
+    );
   }
 
   @Roles('Admin', 'OpenRole')
@@ -36,7 +49,9 @@ export class AppController {
     @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
     @Headers('authorization') authToken: string,
   ) {
-    createAssessmentVisitResultDto.mentor_id = Number((await this.getLoggedInMentor(authToken)).id);  // assign mentor_id for logged in user
+    createAssessmentVisitResultDto.mentor_id = Number(
+      (await this.getLoggedInMentor(authToken)).id,
+    ); // assign mentor_id for logged in user
     return await this.appService.createAssessmentVisitResult(
       createAssessmentVisitResultDto,
     );
@@ -49,7 +64,7 @@ export class AppController {
     @Query() queryParams: GetMentorSchoolList,
     @Headers('authorization') authToken: string,
   ) {
-    const mentor = (await this.getLoggedInMentor(authToken));
+    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorSchoolListIfHeHasVisited(
       mentor,
       queryParams.month,
@@ -64,7 +79,9 @@ export class AppController {
     @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
     @Headers('authorization') authToken: string,
   ) {
-    assessmentSurveyResult.mentor_id = Number((await this.getLoggedInMentor(authToken)).id);  // assign mentor_id for logged in user
+    assessmentSurveyResult.mentor_id = Number(
+      (await this.getLoggedInMentor(authToken)).id,
+    ); // assign mentor_id for logged in user
     return await this.appService.createAssessmentSurveyResult(
       assessmentSurveyResult,
     );

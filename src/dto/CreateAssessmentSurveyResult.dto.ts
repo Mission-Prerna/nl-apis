@@ -1,9 +1,4 @@
-import {
-  IsArray,
-  IsInt,
-  IsOptional,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsInt, IsOptional, ValidateNested } from 'class-validator';
 import { CreateAssessmentSurveyResultQuestion } from './CreateAssessmentSurveyResultQuestion.dto';
 import { Type } from 'class-transformer';
 

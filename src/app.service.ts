@@ -24,18 +24,20 @@ export class AppService {
         let assessmentVisitResult =
           await tx.assessment_visit_results_v2.findFirst({
             where: {
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
+              submission_timestamp:
+                createAssessmentVisitResultData.submission_timestamp,
               mentor_id: createAssessmentVisitResultData.mentor_id,
               grade: createAssessmentVisitResultData.grade,
               subject_id: createAssessmentVisitResultData.subject_id,
-              udise: createAssessmentVisitResultData.udise
+              udise: createAssessmentVisitResultData.udise,
             },
           });
 
         if (!assessmentVisitResult) {
           assessmentVisitResult = await tx.assessment_visit_results_v2.create({
             data: {
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
+              submission_timestamp:
+                createAssessmentVisitResultData.submission_timestamp,
               grade: createAssessmentVisitResultData.grade,
               subject_id: createAssessmentVisitResultData.subject_id,
               mentor_id: createAssessmentVisitResultData.mentor_id,
@@ -45,8 +47,9 @@ export class AppService {
                 createAssessmentVisitResultData.assessment_type_id,
               udise: createAssessmentVisitResultData.udise,
               no_of_student: createAssessmentVisitResultData.no_of_student,
-              app_version_code: createAssessmentVisitResultData.app_version_code,
-              module_result: {},  // populating it default
+              app_version_code:
+                createAssessmentVisitResultData.app_version_code,
+              module_result: {}, // populating it default
             },
           });
         }
@@ -54,13 +57,15 @@ export class AppService {
         // filtering student whose module is 'odk'
         const assessmentVisitResultStudents =
           createAssessmentVisitResultData.results.filter(
-            (result) => result.module === AssessmentVisitResultsStudentModule.ODK,
+            (result) =>
+              result.module === AssessmentVisitResultsStudentModule.ODK,
           );
 
         for (const student of assessmentVisitResultStudents) {
           // Checking if Assessment visit result student already exist; if not then creating it
           let assessmentVisitResultStudent =
-            await tx.assessment_visit_results_students.findFirst({  // TODO instead of find first use exists() or count() query instead
+            await tx.assessment_visit_results_students.findFirst({
+              // TODO instead of find first use exists() or count() query instead
               where: {
                 competency_id: student.competency_id,
                 student_session: student.student_session,
@@ -117,7 +122,10 @@ export class AppService {
 
         // filtering student whose module is not 'odk'
         const nonOdkModuleStudents = createAssessmentVisitResultData.results
-          .filter((result) => result.module !== AssessmentVisitResultsStudentModule.ODK)
+          .filter(
+            (result) =>
+              result.module !== AssessmentVisitResultsStudentModule.ODK,
+          )
           .map((result) => {
             return {
               student_name: result.student_name,
@@ -158,7 +166,7 @@ export class AppService {
     year: number,
   ) {
     const mentorId = Number(mentor.id);
-    const firstDayTimestamp = Date.UTC(year, month-1, 1, 0, 0, 0);
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
     const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
     try {
       return await this.prismaService.$queryRaw(Prisma.sql`SELECT 
@@ -203,8 +211,8 @@ export class AppService {
               subject_id: assessmentSurveyResult.subject_id ?? 0,
               grade: assessmentSurveyResult.grade,
               submission_timestamp: assessmentSurveyResult.submission_timestamp,
-              udise: assessmentSurveyResult.udise
-            }
+              udise: assessmentSurveyResult.udise,
+            },
           },
         });
       } catch (e) {
@@ -255,14 +263,14 @@ export class AppService {
   async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor> {
     return this.prismaService.mentor.findFirst({
       where: {
-        phone_no: `${phoneNumber}`
+        phone_no: `${phoneNumber}`,
       },
       select: {
         id: true,
         phone_no: true,
         district_id: true,
         block_id: true,
-      }
+      },
     });
   }
 }

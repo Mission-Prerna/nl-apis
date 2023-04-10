@@ -6,7 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: implicit any type
 BigInt.prototype['toJSON'] = function () {
-  return this.toString();
+  return Number(this);
 };
 
 async function bootstrap() {

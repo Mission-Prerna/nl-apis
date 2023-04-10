@@ -169,7 +169,7 @@ export class AppService {
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
     const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
     try {
-      return await this.prismaService.$queryRaw(Prisma.sql`SELECT 
+      return await this.prismaService.$queryRawUnsafe(`SELECT 
         s.id as school_id,
         s."name" as school_name, 
         s.udise,
@@ -191,7 +191,8 @@ export class AppService {
       join districts d on d.id = s.district_id
       join blocks b on b.id = s.block_id
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
-      where s.district_id = ${mentor.district_id} and s.block_id = ${mentor.block_id}`);
+      where s.district_id = ${mentor.district_id}
+      ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
     } catch (e) {
       this.logger.error(`Prisma error: ${e}`);
       throw new InternalServerErrorException();

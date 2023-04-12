@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -8,12 +9,16 @@ import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.d
 import { Prisma } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { AssessmentVisitResultsStudentModule, Mentor } from './enums';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
@@ -155,8 +160,8 @@ export class AppService {
         return assessmentVisitResult;
       });
     } catch (e) {
-      this.logger.error(`Prisma error: ${e}`);
-      throw new InternalServerErrorException();
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
     }
   }
 
@@ -194,8 +199,8 @@ export class AppService {
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
     } catch (e) {
-      this.logger.error(`Prisma error: ${e}`);
-      throw new InternalServerErrorException();
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
     }
   }
 
@@ -251,8 +256,8 @@ export class AppService {
         },
       });
     } catch (e) {
-      this.logger.error(`Prisma error: ${e}`);
-      throw new InternalServerErrorException();
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
     }
   }
 
@@ -390,8 +395,8 @@ export class AppService {
         ],
       };
     } catch (e) {
-      this.logger.error(`Prisma error: ${e}`);
-      throw new InternalServerErrorException();
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
     }
   }
 
@@ -407,5 +412,23 @@ export class AppService {
         block_id: true,
       },
     });
+  }
+
+  handleRequestError(e: any) {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError ||
+      e instanceof Prisma.PrismaClientUnknownRequestError ||
+      e instanceof Prisma.PrismaClientValidationError
+    ) {
+      if (Number(this.configService.get('DEBUG', 1)) === 1) {
+        throw new BadRequestException(e);
+      }
+      throw new BadRequestException();
+    }
+
+    if (Number(this.configService.get('DEBUG', 1)) === 1) {
+      throw new InternalServerErrorException(e);
+    }
+    throw new InternalServerErrorException();
   }
 }

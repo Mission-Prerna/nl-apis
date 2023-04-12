@@ -401,7 +401,7 @@ export class AppService {
   }
 
   async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor> {
-    return this.prismaService.mentor.findFirst({
+    const mentor = await this.prismaService.mentor.findFirst({
       where: {
         phone_no: `${phoneNumber}`,
       },
@@ -412,6 +412,12 @@ export class AppService {
         block_id: true,
       },
     });
+
+    if (!mentor) {
+      throw new BadRequestException("User's token is invalid!");
+    }
+
+    return mentor;
   }
 
   handleRequestError(e: any) {

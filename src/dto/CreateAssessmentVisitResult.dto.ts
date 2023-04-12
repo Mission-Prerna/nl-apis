@@ -20,9 +20,7 @@ export class CreateAssessmentVisitResult {
   @IsIn([0, 1, 2, 3])
   subject_id!: number;
 
-  @IsInt()
-  @IsOptional()
-  mentor_id?: number;
+  mentor_id!: number;
 
   @IsInt()
   no_of_student!: number;

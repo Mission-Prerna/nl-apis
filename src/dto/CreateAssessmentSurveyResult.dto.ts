@@ -12,9 +12,7 @@ export class CreateAssessmentSurveyResult {
   @IsInt()
   submission_timestamp!: number;
 
-  @IsInt()
-  @IsOptional()
-  mentor_id?: number;
+  mentor_id!: number;
 
   @IsInt()
   @IsIn([1, 2, 3])
@@ -31,6 +29,9 @@ export class CreateAssessmentSurveyResult {
 
   @IsInt()
   udise!: number;
+
+  @IsInt()
+  app_version_code!: number;
 
   @IsArray()
   @ValidateNested({ each: true })

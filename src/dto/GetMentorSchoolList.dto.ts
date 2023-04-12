@@ -6,11 +6,11 @@ export class GetMentorSchoolList {
   @IsInt()
   @Min(1)
   @Max(12)
-  month: number;
+  month!: number;
 
   @Type(() => Number)
   @IsInt()
   @Min(1000)
   @Max(9999)
-  year: number;
+  year!: number;
 }

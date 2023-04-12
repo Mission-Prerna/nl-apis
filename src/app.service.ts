@@ -59,6 +59,8 @@ export class AppService {
           });
         }
 
+        const assessmentVisitResultId = assessmentVisitResult.id;
+
         // filtering student whose module is 'odk'
         const assessmentVisitResultStudents =
           createAssessmentVisitResultData.results.filter(
@@ -110,6 +112,9 @@ export class AppService {
               });
           }
 
+          const assessmentVisitResultStudentId =
+            assessmentVisitResultStudent.id;
+
           // creating multiple Assessment visit results student odk results
           // noinspection TypeScriptValidateJSTypes
           await tx.assessment_visit_results_student_odk_results.createMany({
@@ -118,7 +123,7 @@ export class AppService {
                 question: odkResult.question,
                 answer: odkResult.answer,
                 assessment_visit_results_students_id:
-                  assessmentVisitResultStudent.id,
+                  assessmentVisitResultStudentId,
               };
             }),
             skipDuplicates: true,
@@ -148,7 +153,7 @@ export class AppService {
               workflow_ref_id: result.workflow_ref_id,
               total_time_taken: result.total_time_taken,
               student_session: result.student_session,
-              assessment_visit_results_v2_id: assessmentVisitResult.id,
+              assessment_visit_results_v2_id: assessmentVisitResultId,
             };
           });
 
@@ -237,6 +242,7 @@ export class AppService {
           udise: true,
           created_at: true,
           assessment_survey_result_questions: true,
+          app_version_code: true,
         },
         data: {
           submission_timestamp: assessmentSurveyResult.submission_timestamp,
@@ -245,6 +251,7 @@ export class AppService {
           mentor_id: assessmentSurveyResult.mentor_id,
           subject_id: assessmentSurveyResult.subject_id || 0,
           udise: assessmentSurveyResult.udise,
+          app_version_code: assessmentSurveyResult.app_version_code,
           assessment_survey_result_questions: {
             createMany: {
               data: assessmentSurveyResult.questions.map((x) => ({
@@ -400,8 +407,8 @@ export class AppService {
     }
   }
 
-  async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor> {
-    const mentor = await this.prismaService.mentor.findFirst({
+  async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor | null> {
+    return await this.prismaService.mentor.findFirst({
       where: {
         phone_no: `${phoneNumber}`,
       },
@@ -412,12 +419,6 @@ export class AppService {
         block_id: true,
       },
     });
-
-    if (!mentor) {
-      throw new BadRequestException("User's token is invalid!");
-    }
-
-    return mentor;
   }
 
   handleRequestError(e: any) {

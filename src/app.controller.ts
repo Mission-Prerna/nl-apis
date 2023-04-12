@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -37,10 +38,19 @@ export class AppController {
     const decodedAuthTokenData = <Record<string, any>>(
       this.jwtService.decode(authorizationHeader.split(' ')[1])
     );
+
     // TODO add caching here
-    return this.appService.findMentorByPhoneNumber(
-      decodedAuthTokenData['https://hasura.io/jwt/claims']['X-Hasura-User-Id'],
+    const mentor = await this.appService.findMentorByPhoneNumber(
+      decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
+        'X-Hasura-User-Id'
+      ],
     );
+
+    if (!mentor) {
+      throw new BadRequestException('User is invalid!');
+    }
+
+    return mentor;
   }
 
   @Roles('Admin', 'OpenRole')

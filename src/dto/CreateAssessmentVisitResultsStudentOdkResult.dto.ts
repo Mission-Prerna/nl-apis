@@ -1,9 +1,9 @@
-import { IsInt, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateAssessmentVisitResultStudentOdkResult {
   @IsString()
   question!: string;
 
-  @IsInt()
-  answer!: number;
+  @IsString()
+  answer!: string;
 }

@@ -79,19 +79,20 @@ model assessment_survey_result_questions {
 
 model assessment_survey_result_v2 {
   id                                 BigInt                               @id @default(autoincrement())
-  mentor_id                          BigInt
+  mentor_id                          BigInt?
   grade                              Int
   subject_id                         Int?
   actor_id                           Int
   created_at                         DateTime                             @default(now()) @db.Timestamptz(6)
-  udise                              BigInt
+  udise                              BigInt?
   submission_timestamp               BigInt                               @default(0)
   app_version_code                   Int                                  @default(0)
+  v                                  Int                                  @default(2) @db.SmallInt
   assessment_survey_result_questions assessment_survey_result_questions[]
   actors                             actors                               @relation(fields: [actor_id], references: [id])
-  mentor                             mentor                               @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  mentor                             mentor?                              @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
   subjects                           subjects?                            @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  school_list                        school_list                          @relation(fields: [udise], references: [udise])
+  school_list                        school_list?                         @relation(fields: [udise], references: [udise], onDelete: Restrict)
 
   @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_survey_result_v2_subject_id_submission_timestamp_men")
   @@index([actor_id], map: "assessment_survey_result_actor_id_idx", type: Hash)
@@ -215,7 +216,7 @@ model assessment_visit_results_module_results {
 model assessment_visit_results_student_odk_results {
   id                                   BigInt                            @id @default(autoincrement())
   question                             String
-  answer                               Int
+  answer                               String                            @db.VarChar
   assessment_visit_results_students_id BigInt
   assessment_visit_results_students    assessment_visit_results_students @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_stud_assessment_visit_results_stu_fkey")
 }
@@ -236,7 +237,7 @@ model assessment_visit_results_students {
   is_network_active                            Boolean
   workflow_ref_id                              String                                         @db.VarChar
   assessment_visit_results_v2_id               BigInt
-  student_session                              String                                         @db.Uuid
+  student_session                              String?                                        @db.Uuid
   total_time_taken                             Int?
   assessment_visit_results_student_odk_results assessment_visit_results_student_odk_results[]
   assessment_visit_results_v2                  assessment_visit_results_v2                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_assessment_visit_results_v")
@@ -256,15 +257,16 @@ model assessment_visit_results_v2 {
   actor_id                          Int
   block_id                          Int?
   assessment_type_id                Int?
-  udise                             BigInt
+  udise                             BigInt?
   submission_timestamp              BigInt                              @default(0)
   app_version_code                  Int                                 @default(0)
+  v                                 Int                                 @default(2) @db.SmallInt
   assessment_visit_results_students assessment_visit_results_students[]
   actors                            actors                              @relation(fields: [actor_id], references: [id])
   blocks                            blocks?                             @relation(fields: [block_id], references: [id], onDelete: Restrict)
   mentor                            mentor?                             @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
   subjects                          subjects                            @relation(fields: [subject_id], references: [id])
-  school_list                       school_list                         @relation(fields: [udise], references: [udise])
+  school_list                       school_list?                        @relation(fields: [udise], references: [udise], onDelete: Restrict)
 
   @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_visit_results_v2_subject_id_submission_timestamp_men")
   @@index([actor_id, block_id], map: "assessment_visit_results_v2_actor_block_id_idx")

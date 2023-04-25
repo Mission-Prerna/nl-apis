@@ -62,15 +62,21 @@ export class AppController {
   async createAssessmentVisitResults(
     @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
     @Headers('authorization') authToken: string,
+    @Query('useQueue') useQueue: number,
   ) {
     createAssessmentVisitResultDto.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
-    await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
-      attempts: 3,
-      removeOnComplete: true,
-    });
-    return 'Queued!';
+    console.log(useQueue);
+    if (isNaN(useQueue) || useQueue) {
+      await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
+        attempts: 3,
+        removeOnComplete: true,
+      });
+      return 'Queued!';
+    } else {
+      return await this.appService.createAssessmentVisitResult(createAssessmentVisitResultDto);
+    }
   }
 
   @Get('/api/mentor/schools')

@@ -9,3 +9,11 @@ export type Mentor = {
   district_id: number;
   block_id: number | null;
 };
+
+export enum QueueEnum {
+  AssessmentVisitResults = 'AssessmentVisitResults',
+}
+
+export enum JobEnum {
+  CreateAssessmentVisitResults = 'CreateAssessmentVisitResults',
+}

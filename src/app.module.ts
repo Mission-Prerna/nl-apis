@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
 import { JwtModule } from '@nestjs/jwt';
+import { BullModule } from '@nestjs/bull';
+import { QueueEnum } from './enums';
+import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
 
 @Module({
   imports: [
@@ -13,8 +16,28 @@ import { JwtModule } from '@nestjs/jwt';
     }),
     AuthModule,
     JwtModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('QUEUE_HOST'),
+          port: configService.get('QUEUE_PORT'),
+        },
+        /*limiter: {
+          max: 2,
+          duration: 1000,
+        },*/
+        prefix: configService.get('ENVIRONMENT', 'local') + ':',
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue(
+      {
+        name: QueueEnum.AssessmentVisitResults,
+      }
+    ),
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, AssessmentVisitResultsProcessor],
 })
 export class AppModule {}

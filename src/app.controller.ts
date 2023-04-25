@@ -16,7 +16,9 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { Mentor } from './enums';
+import { JobEnum, Mentor, QueueEnum } from './enums';
+import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -25,6 +27,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly jwtService: JwtService,
+    @InjectQueue(QueueEnum.AssessmentVisitResults) private readonly assessmentVisitResultQueue: Queue,
   ) {}
 
   @Get('/health')
@@ -63,9 +66,11 @@ export class AppController {
     createAssessmentVisitResultDto.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
-    return await this.appService.createAssessmentVisitResult(
-      createAssessmentVisitResultDto,
-    );
+    await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
+      attempts: 3,
+      removeOnComplete: true,
+    });
+    return 'Queued!';
   }
 
   @Get('/api/mentor/schools')

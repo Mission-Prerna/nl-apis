@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { BullModule } from '@nestjs/bull';
 import { QueueEnum } from './enums';
 import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
+import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-result.processor';
 
 @Module({
   imports: [
@@ -34,10 +35,13 @@ import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-r
     BullModule.registerQueue(
       {
         name: QueueEnum.AssessmentVisitResults,
+      },
+      {
+        name: QueueEnum.AssessmentSurveyResult,
       }
     ),
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService, AssessmentVisitResultsProcessor],
+  providers: [AppService, PrismaService, AssessmentVisitResultsProcessor, AssessmentSurveyResultProcessor],
 })
 export class AppModule {}

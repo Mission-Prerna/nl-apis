@@ -28,6 +28,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly jwtService: JwtService,
     @InjectQueue(QueueEnum.AssessmentVisitResults) private readonly assessmentVisitResultQueue: Queue,
+    @InjectQueue(QueueEnum.AssessmentSurveyResult) private readonly assessmentSurveyResultQueue: Queue,
   ) {}
 
   @Get('/health')
@@ -67,7 +68,6 @@ export class AppController {
     createAssessmentVisitResultDto.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
-    console.log(useQueue);
     if (isNaN(useQueue) || useQueue) {
       await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
         attempts: 3,
@@ -100,13 +100,21 @@ export class AppController {
   async createAssessmentSurveyResult(
     @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
     @Headers('authorization') authToken: string,
+    @Query('useQueue') useQueue: number,
   ) {
     assessmentSurveyResult.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
-    return await this.appService.createAssessmentSurveyResult(
-      assessmentSurveyResult,
-    );
+
+    if (isNaN(useQueue) || useQueue) {
+      await this.assessmentSurveyResultQueue.add(JobEnum.CreateAssessmentSurveyResult, assessmentSurveyResult, {
+        attempts: 3,
+        removeOnComplete: true,
+      });
+      return 'Queued!';
+    } else {
+      return await this.appService.createAssessmentSurveyResult(assessmentSurveyResult);
+    }
   }
 
   @Get('/api/mentor/dashboard-overview')

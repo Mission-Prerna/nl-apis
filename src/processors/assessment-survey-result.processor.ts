@@ -4,17 +4,17 @@ import { Logger } from '@nestjs/common';
 import { AppService } from '../app.service';
 import { QueueEnum, JobEnum as JobEnum } from '../enums';
 
-@Processor(QueueEnum.AssessmentVisitResults)
-export class AssessmentVisitResultsProcessor {
-  private readonly logger = new Logger(AssessmentVisitResultsProcessor.name);
+@Processor(QueueEnum.AssessmentSurveyResult)
+export class AssessmentSurveyResultProcessor {
+  private readonly logger = new Logger(AssessmentSurveyResultProcessor.name);
   constructor(
     private readonly appService: AppService,
   ) {}
 
-  @Process(JobEnum.CreateAssessmentVisitResults)
-  async createAssessmentVisitResults(job: Job) {
+  @Process(JobEnum.CreateAssessmentSurveyResult)
+  async createSurveyResult(job: Job) {
     // @ts-ignore
-    return await this.appService.createAssessmentVisitResult(job.data);
+    return await this.appService.createAssessmentSurveyResult(job.data);
   }
 
   @OnQueueActive()

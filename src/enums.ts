@@ -12,8 +12,10 @@ export type Mentor = {
 
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
+  AssessmentSurveyResult = 'AssessmentSurveyResult',
 }
 
 export enum JobEnum {
   CreateAssessmentVisitResults = 'CreateAssessmentVisitResults',
+  CreateAssessmentSurveyResult = 'CreateAssessmentSurveyResult',
 }

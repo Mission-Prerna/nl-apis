@@ -73,7 +73,9 @@ export class AppController {
         attempts: 3,
         removeOnComplete: true,
       });
-      return 'Queued!';
+      return {
+        msg: "Queued!"
+      };
     } else {
       return await this.appService.createAssessmentVisitResult(createAssessmentVisitResultDto);
     }
@@ -111,7 +113,9 @@ export class AppController {
         attempts: 3,
         removeOnComplete: true,
       });
-      return 'Queued!';
+      return {
+        msg: "Queued!"
+      };
     } else {
       return await this.appService.createAssessmentSurveyResult(assessmentSurveyResult);
     }

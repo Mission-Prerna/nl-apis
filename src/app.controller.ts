@@ -57,7 +57,7 @@ export class AppController {
     return mentor;
   }
 
-  @Roles('Admin', 'OpenRole')
+  @Roles('Admin', 'OpenRole', 'DIET')
   @UseGuards(JwtAuthGuard)
   @Post('/api/assessment-visit-results')
   async createAssessmentVisitResults(
@@ -82,7 +82,7 @@ export class AppController {
   }
 
   @Get('/api/mentor/schools')
-  @Roles('Admin', 'OpenRole')
+  @Roles('Admin', 'OpenRole', 'DIET')
   @UseGuards(JwtAuthGuard)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
@@ -97,7 +97,7 @@ export class AppController {
   }
 
   @Post('/api/assessment-survey-results')
-  @Roles('Admin', 'OpenRole')
+  @Roles('Admin', 'OpenRole', 'DIET')
   @UseGuards(JwtAuthGuard)
   async createAssessmentSurveyResult(
     @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
@@ -122,7 +122,7 @@ export class AppController {
   }
 
   @Get('/api/mentor/dashboard-overview')
-  @Roles('Admin', 'OpenRole')
+  @Roles('Admin', 'OpenRole', 'DIET')
   @UseGuards(JwtAuthGuard)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,

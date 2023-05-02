@@ -17,7 +17,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
     let isAllowed = false;
     const request: Record<string, any> = context.switchToHttp().getRequest();
     try {
-      const tokenRoles: string[] = request['user']['roles'];
+      const tokenRoles: string[] = request['user']['apiRoles'] ?? [];
       for (const role of roles) {
         if (tokenRoles?.indexOf(role) > -1) {
           isAllowed = true;
@@ -30,6 +30,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
     return isAllowed;
   }
 
+  // noinspection JSUnusedLocalSymbols
   handleRequest(err: any, user: any, info: any) {
     return user;
   }

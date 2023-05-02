@@ -18,42 +18,81 @@ export class AppService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+  }
+
+  private monthQuarterMap = {
+    '1': 'jan_mar',
+    '2': 'jan_mar',
+    '3': 'jan_mar',
+    '4': 'apr_jun',
+    '5': 'apr_jun',
+    '6': 'apr_jun',
+    '7': 'jul_sep',
+    '8': 'jul_sep',
+    '9': 'jul_sep',
+    '10': 'oct_dec',
+    '11': 'oct_dec',
+    '12': 'oct_dec',
+  };
+
+  private getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): {
+    assessment_visit_results_v2: string,
+    assessment_visit_results_students: string,
+    assessment_visit_results_student_odk_results: string,
+  } {
+    if (year === null) {
+      year = new Date(2025, 11, 1).getFullYear();
+    }
+    if (month === null) {
+      month = new Date(2025, 11, 1).getMonth();
+    }
+
+    // @ts-ignore
+    const quarter: string = this.monthQuarterMap[month.toString()];
+    return {
+      assessment_visit_results_v2: `assessment_visit_results_v2_${year.toString()}_${quarter}`,
+      assessment_visit_results_students: `assessment_visit_results_students_${year.toString()}_${quarter}`,
+      assessment_visit_results_student_odk_results: `assessment_visit_results_student_odk_results_${year.toString()}_${quarter}`,
+    };
+  }
 
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
+    const tables = this.getAssessmentVisitResultsTables();
     try {
       return await this.prismaService.$transaction(async (tx) => {
         // Checking if Assessment visit result already exist; if not then creating it
-        let assessmentVisitResult =
-          await tx.assessment_visit_results_v2.findFirst({
-            where: {
-              submission_timestamp:
-                createAssessmentVisitResultData.submission_timestamp,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              grade: createAssessmentVisitResultData.grade,
-              subject_id: createAssessmentVisitResultData.subject_id,
-              udise: createAssessmentVisitResultData.udise,
-            },
-          });
+        // @ts-ignore
+        let assessmentVisitResult = await tx[tables.assessment_visit_results_v2].findFirst({
+          where: {
+            submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            udise: createAssessmentVisitResultData.udise,
+          },
+        });
 
         if (!assessmentVisitResult) {
-          assessmentVisitResult = await tx.assessment_visit_results_v2.create({
+          // @ts-ignore
+          assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
             data: {
               submission_timestamp:
-                createAssessmentVisitResultData.submission_timestamp,
+              createAssessmentVisitResultData.submission_timestamp,
               grade: createAssessmentVisitResultData.grade,
               subject_id: createAssessmentVisitResultData.subject_id,
               mentor_id: createAssessmentVisitResultData.mentor_id,
               actor_id: createAssessmentVisitResultData.actor_id,
               block_id: createAssessmentVisitResultData.block_id,
               assessment_type_id:
-                createAssessmentVisitResultData.assessment_type_id,
+              createAssessmentVisitResultData.assessment_type_id,
               udise: createAssessmentVisitResultData.udise,
               no_of_student: createAssessmentVisitResultData.no_of_student,
               app_version_code:
-                createAssessmentVisitResultData.app_version_code,
+              createAssessmentVisitResultData.app_version_code,
               module_result: {}, // populating it default
             },
           });
@@ -70,46 +109,47 @@ export class AppService {
 
         for (const student of assessmentVisitResultStudents) {
           // Checking if Assessment visit result student already exist; if not then creating it
-          let assessmentVisitResultStudent =
-            await tx.assessment_visit_results_students.findFirst({
-              // TODO instead of find first use exists() or count() query instead
+          // @ts-ignore
+          let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
+            // TODO instead of find first use exists() or count() query instead
+            where: {
+              competency_id: student.competency_id,
+              student_session: student.student_session,
+              assessment_visit_results_v2_id: assessmentVisitResult.id,
+            },
+          });
+
+          if (assessmentVisitResultStudent) {
+            // Assessment visit result student exist; delete its odk submissions
+            // @ts-ignore
+            await tx[tables.assessment_visit_results_student_odk_results].deleteMany({
               where: {
+                assessment_visit_results_students_id:
+                assessmentVisitResultStudent.id,
+              },
+            });
+          } else {
+            // @ts-ignore
+            assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
+              data: {
+                student_name: student.student_name,
                 competency_id: student.competency_id,
+                module: student.module,
+                end_time: student.end_time,
+                is_passed: student.is_passed,
+                start_time: student.start_time,
+                statement: student.statement,
+                achievement: student.achievement,
+                total_questions: student.total_questions,
+                success_criteria: student.success_criteria,
+                session_completed: student.session_completed,
+                is_network_active: student.is_network_active,
+                workflow_ref_id: student.workflow_ref_id,
+                total_time_taken: student.total_time_taken,
                 student_session: student.student_session,
                 assessment_visit_results_v2_id: assessmentVisitResult.id,
               },
             });
-
-          if (assessmentVisitResultStudent) {
-            // Assessment visit result student exist; delete its odk submissions
-            await tx.assessment_visit_results_student_odk_results.deleteMany({
-              where: {
-                assessment_visit_results_students_id:
-                  assessmentVisitResultStudent.id,
-              },
-            });
-          } else {
-            assessmentVisitResultStudent =
-              await tx.assessment_visit_results_students.create({
-                data: {
-                  student_name: student.student_name,
-                  competency_id: student.competency_id,
-                  module: student.module,
-                  end_time: student.end_time,
-                  is_passed: student.is_passed,
-                  start_time: student.start_time,
-                  statement: student.statement,
-                  achievement: student.achievement,
-                  total_questions: student.total_questions,
-                  success_criteria: student.success_criteria,
-                  session_completed: student.session_completed,
-                  is_network_active: student.is_network_active,
-                  workflow_ref_id: student.workflow_ref_id,
-                  total_time_taken: student.total_time_taken,
-                  student_session: student.student_session,
-                  assessment_visit_results_v2_id: assessmentVisitResult.id,
-                },
-              });
           }
 
           const assessmentVisitResultStudentId =
@@ -117,13 +157,14 @@ export class AppService {
 
           // creating multiple Assessment visit results student odk results
           // noinspection TypeScriptValidateJSTypes
-          await tx.assessment_visit_results_student_odk_results.createMany({
+          // @ts-ignore
+          await tx[tables.assessment_visit_results_student_odk_results].createMany({
             data: student.odk_results.map((odkResult) => {
               return {
                 question: odkResult.question,
                 answer: odkResult.answer,
                 assessment_visit_results_students_id:
-                  assessmentVisitResultStudentId,
+                assessmentVisitResultStudentId,
               };
             }),
             skipDuplicates: true,
@@ -158,7 +199,8 @@ export class AppService {
           });
 
         // noinspection TypeScriptValidateJSTypes
-        await tx.assessment_visit_results_students.createMany({
+        // @ts-ignore
+        await tx[tables.assessment_visit_results_students].createMany({
           data: nonOdkModuleStudents,
           skipDuplicates: true,
         });
@@ -175,6 +217,7 @@ export class AppService {
     month: number,
     year: number,
   ) {
+    const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
     const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
@@ -189,7 +232,7 @@ export class AppService {
         b.name as block_name,
         s.nyay_panchayat_id,
         n.name as nyay_panchayat_name,
-        (case when EXISTS(SELECT avr2.id from assessment_visit_results_v2 as avr2 
+        (case when EXISTS(SELECT avr2.id from ${tables.assessment_visit_results_v2} as avr2 
             where avr2.udise = 	s.udise 
             and avr2.mentor_id = ${mentorId}
             and avr2.submission_timestamp > ${firstDayTimestamp} 
@@ -234,15 +277,6 @@ export class AppService {
       return await this.prismaService.assessment_survey_result_v2.create({
         select: {
           id: true,
-          submission_timestamp: true,
-          grade: true,
-          actor_id: true,
-          mentor_id: true,
-          subject_id: true,
-          udise: true,
-          created_at: true,
-          assessment_survey_result_questions: true,
-          app_version_code: true,
         },
         data: {
           submission_timestamp: assessmentSurveyResult.submission_timestamp,
@@ -269,12 +303,13 @@ export class AppService {
   }
 
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
+    const tables = this.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
     const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
 
     try {
       const result: Record<string, any> = await this.prismaService
-        .$queryRaw(Prisma.sql`
+        .$queryRawUnsafe(`
           select
               a.visited_schools,
               b.average_assessment_time :: int8,
@@ -287,7 +322,7 @@ export class AppService {
                   select
                       count(DISTINCT udise) as visited_schools
                   from
-                      assessment_visit_results_v2 as avr2
+                      ${tables.assessment_visit_results_v2} as avr2
                   where
                       avr2.mentor_id = ${mentor.id}
                       and avr2.submission_timestamp > ${firstDayTimestamp} 
@@ -297,13 +332,13 @@ export class AppService {
                   select
                       COALESCE(AVG(avrs.total_time_taken), 0) as average_assessment_time
                   from
-                      assessment_visit_results_students as avrs
+                      ${tables.assessment_visit_results_students} as avrs
                   where
                       avrs.assessment_visit_results_v2_id in (
                           select
                               avr2.id
                           from
-                              assessment_visit_results_v2 as avr2
+                              ${tables.assessment_visit_results_v2} as avr2
                           where
                               avr2.mentor_id = ${mentor.id}
                               and avr2.submission_timestamp > ${firstDayTimestamp} 
@@ -314,13 +349,13 @@ export class AppService {
                   select
                       count(*) as total_assessments
                   from
-                      assessment_visit_results_students as avrs
+                      ${tables.assessment_visit_results_students} as avrs
                   where
                       avrs.assessment_visit_results_v2_id in (
                           select
                               avr2.id
                           from
-                              assessment_visit_results_v2 as avr2
+                              ${tables.assessment_visit_results_v2} as avr2
                           where
                               avr2.mentor_id = ${mentor.id}
                               and avr2.submission_timestamp > ${firstDayTimestamp} 
@@ -331,13 +366,13 @@ export class AppService {
                   select
                       count(*) as grade1_assessments
                   from
-                      assessment_visit_results_students as avrs
+                      ${tables.assessment_visit_results_students} as avrs
                   where
                       avrs.assessment_visit_results_v2_id in (
                           select
                               avr2.id
                           from
-                              assessment_visit_results_v2 as avr2
+                              ${tables.assessment_visit_results_v2} as avr2
                           where
                               avr2.grade = 1
                               and avr2.mentor_id = ${mentor.id}
@@ -349,13 +384,13 @@ export class AppService {
                   select
                       count(*) as grade2_assessments
                   from
-                      assessment_visit_results_students as avrs
+                      ${tables.assessment_visit_results_students} as avrs
                   where
                       avrs.assessment_visit_results_v2_id in (
                           select
                               avr2.id
                           from
-                              assessment_visit_results_v2 as avr2
+                              ${tables.assessment_visit_results_v2} as avr2
                           where
                               avr2.grade = 2
                               and avr2.mentor_id = ${mentor.id}
@@ -367,13 +402,13 @@ export class AppService {
                   select
                       count(*) as grade3_assessments
                   from
-                      assessment_visit_results_students as avrs
+                      ${tables.assessment_visit_results_students} as avrs
                   where
                       avrs.assessment_visit_results_v2_id in (
                           select
                               avr2.id
                           from
-                              assessment_visit_results_v2 as avr2
+                              ${tables.assessment_visit_results_v2} as avr2
                           where
                               avr2.grade = 3
                               and avr2.mentor_id = ${mentor.id}

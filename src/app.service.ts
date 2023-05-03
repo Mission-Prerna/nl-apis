@@ -44,10 +44,10 @@ export class AppService {
     assessment_visit_results_student_odk_results: string,
   } {
     if (year === null) {
-      year = new Date(2025, 11, 1).getFullYear();
+      year = new Date().getFullYear();
     }
     if (month === null) {
-      month = new Date(2025, 11, 1).getMonth();
+      month = new Date().getMonth();
     }
 
     // @ts-ignore

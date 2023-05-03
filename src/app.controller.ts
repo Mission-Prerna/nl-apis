@@ -43,7 +43,6 @@ export class AppController {
       this.jwtService.decode(authorizationHeader.split(' ')[1])
     );
 
-    // TODO add caching here
     const mentor = await this.appService.findMentorByPhoneNumber(
       decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
         'X-Hasura-User-Id'

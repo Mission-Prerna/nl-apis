@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { CacheModule, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -40,6 +40,7 @@ import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-
         name: QueueEnum.AssessmentSurveyResult,
       }
     ),
+    CacheModule.register({isGlobal: true})
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, AssessmentVisitResultsProcessor, AssessmentSurveyResultProcessor],

@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  BadRequestException, CACHE_MANAGER, Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -8,8 +8,9 @@ import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 import { Prisma } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
-import { AssessmentVisitResultsStudentModule, Mentor } from './enums';
+import { AssessmentVisitResultsStudentModule, CacheConstants, Mentor } from './enums';
 import { ConfigService } from '@nestjs/config';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AppService {
@@ -18,6 +19,7 @@ export class AppService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
   }
 
@@ -443,7 +445,15 @@ export class AppService {
   }
 
   async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor | null> {
-    return await this.prismaService.mentor.findFirst({
+    // We'll check if there is Mentor in the cache
+    const cachedData = await this.cacheService.get<Mentor | null>(
+      phoneNumber,
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const mentor = await this.prismaService.mentor.findFirst({
       where: {
         phone_no: `${phoneNumber}`,
       },
@@ -454,6 +464,8 @@ export class AppService {
         block_id: true,
       },
     });
+    await this.cacheService.set(phoneNumber, mentor, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    return mentor;
   }
 
   handleRequestError(e: any) {

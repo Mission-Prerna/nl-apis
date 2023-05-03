@@ -19,3 +19,7 @@ export enum JobEnum {
   CreateAssessmentVisitResults = 'CreateAssessmentVisitResults',
   CreateAssessmentSurveyResult = 'CreateAssessmentSurveyResult',
 }
+
+export enum CacheConstants {
+  TTL_MENTOR_FROM_TOKEN = 30 * 1000, // converted to milliseconds
+}

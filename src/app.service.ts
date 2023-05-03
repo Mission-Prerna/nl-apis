@@ -68,6 +68,9 @@ export class AppService {
         // Checking if Assessment visit result already exist; if not then creating it
         // @ts-ignore
         let assessmentVisitResult = await tx[tables.assessment_visit_results_v2].findFirst({
+          select: {
+            id: true
+          },
           where: {
             submission_timestamp:
             createAssessmentVisitResultData.submission_timestamp,
@@ -81,6 +84,9 @@ export class AppService {
         if (!assessmentVisitResult) {
           // @ts-ignore
           assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
+            select: {
+              id: true
+            },
             data: {
               submission_timestamp:
               createAssessmentVisitResultData.submission_timestamp,
@@ -114,6 +120,9 @@ export class AppService {
           // @ts-ignore
           let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
             // TODO instead of find first use exists() or count() query instead
+            select: {
+              id: true
+            },
             where: {
               competency_id: student.competency_id,
               student_session: student.student_session,

@@ -23,3 +23,8 @@ export enum JobEnum {
 export enum CacheConstants {
   TTL_MENTOR_FROM_TOKEN = 30 * 1000, // converted to milliseconds
 }
+
+export enum Role {
+  OpenRole = 'OpenRole',
+  Diet = 'DIET',
+}

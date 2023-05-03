@@ -16,20 +16,25 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { JobEnum, Mentor, QueueEnum } from './enums';
+import { JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { ConfigService } from '@nestjs/config';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
 export class AppController {
+  private readonly useQueues: boolean;
   constructor(
     private readonly appService: AppService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     @InjectQueue(QueueEnum.AssessmentVisitResults) private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult) private readonly assessmentSurveyResultQueue: Queue,
-  ) {}
+  ) {
+    this.useQueues = configService.get<string>('API_QUEUES', 'false') === 'true';
+  }
 
   @Get('/health')
   getHealth(): string {
@@ -56,18 +61,17 @@ export class AppController {
     return mentor;
   }
 
-  @Roles('Admin', 'OpenRole', 'DIET')
-  @UseGuards(JwtAuthGuard)
   @Post('/api/assessment-visit-results')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
   async createAssessmentVisitResults(
     @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
     @Headers('authorization') authToken: string,
-    @Query('useQueue') useQueue: number,
   ) {
     createAssessmentVisitResultDto.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
-    if (isNaN(useQueue) || useQueue) {
+    if (this.useQueues) {
       await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
         attempts: 3,
         removeOnComplete: true,
@@ -81,7 +85,7 @@ export class AppController {
   }
 
   @Get('/api/mentor/schools')
-  @Roles('Admin', 'OpenRole', 'DIET')
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
@@ -96,18 +100,17 @@ export class AppController {
   }
 
   @Post('/api/assessment-survey-results')
-  @Roles('Admin', 'OpenRole', 'DIET')
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async createAssessmentSurveyResult(
     @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
     @Headers('authorization') authToken: string,
-    @Query('useQueue') useQueue: number,
   ) {
     assessmentSurveyResult.mentor_id = Number(
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
 
-    if (isNaN(useQueue) || useQueue) {
+    if (this.useQueues) {
       await this.assessmentSurveyResultQueue.add(JobEnum.CreateAssessmentSurveyResult, assessmentSurveyResult, {
         attempts: 3,
         removeOnComplete: true,
@@ -121,7 +124,7 @@ export class AppController {
   }
 
   @Get('/api/mentor/dashboard-overview')
-  @Roles('Admin', 'OpenRole', 'DIET')
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,

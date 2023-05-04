@@ -20,6 +20,11 @@ import { JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
+import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+import { PrismaHealthIndicator } from 'prisma/prisma.health';
+import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { Redis } from 'ioredis';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -27,18 +32,34 @@ export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 export class AppController {
   private readonly useQueues: boolean;
   constructor(
+    private healthCheckService: HealthCheckService,
+    private prismaIndicator: PrismaHealthIndicator,
+    private redisIndicator: RedisHealthIndicator,
+    @InjectRedis() private readonly redis: Redis,
     private readonly appService: AppService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    @InjectQueue(QueueEnum.AssessmentVisitResults) private readonly assessmentVisitResultQueue: Queue,
-    @InjectQueue(QueueEnum.AssessmentSurveyResult) private readonly assessmentSurveyResultQueue: Queue,
+    @InjectQueue(QueueEnum.AssessmentVisitResults)
+    private readonly assessmentVisitResultQueue: Queue,
+    @InjectQueue(QueueEnum.AssessmentSurveyResult)
+    private readonly assessmentSurveyResultQueue: Queue,
   ) {
-    this.useQueues = configService.get<string>('API_QUEUES', 'false') === 'true';
+    this.useQueues =
+      configService.get<string>('API_QUEUES', 'false') === 'true';
   }
 
   @Get('/health')
-  getHealth(): string {
-    return 'Ok';
+  @HealthCheck()
+  async getHealth() {
+    return this.healthCheckService.check([
+      async () =>
+        this.redisIndicator.checkHealth('Redis', {
+          type: 'redis',
+          client: this.redis,
+          timeout: 500,
+        }),
+      async () => this.prismaIndicator.isHealthy('Db'),
+    ]);
   }
 
   private async getLoggedInMentor(
@@ -72,15 +93,21 @@ export class AppController {
       (await this.getLoggedInMentor(authToken)).id,
     ); // assign mentor_id for logged in user
     if (this.useQueues) {
-      await this.assessmentVisitResultQueue.add(JobEnum.CreateAssessmentVisitResults, createAssessmentVisitResultDto, {
-        attempts: 3,
-        removeOnComplete: true,
-      });
+      await this.assessmentVisitResultQueue.add(
+        JobEnum.CreateAssessmentVisitResults,
+        createAssessmentVisitResultDto,
+        {
+          attempts: 3,
+          removeOnComplete: true,
+        },
+      );
       return {
-        msg: "Queued!"
+        msg: 'Queued!',
       };
     } else {
-      return await this.appService.createAssessmentVisitResult(createAssessmentVisitResultDto);
+      return await this.appService.createAssessmentVisitResult(
+        createAssessmentVisitResultDto,
+      );
     }
   }
 
@@ -111,15 +138,21 @@ export class AppController {
     ); // assign mentor_id for logged in user
 
     if (this.useQueues) {
-      await this.assessmentSurveyResultQueue.add(JobEnum.CreateAssessmentSurveyResult, assessmentSurveyResult, {
-        attempts: 3,
-        removeOnComplete: true,
-      });
+      await this.assessmentSurveyResultQueue.add(
+        JobEnum.CreateAssessmentSurveyResult,
+        assessmentSurveyResult,
+        {
+          attempts: 3,
+          removeOnComplete: true,
+        },
+      );
       return {
-        msg: "Queued!"
+        msg: 'Queued!',
       };
     } else {
-      return await this.appService.createAssessmentSurveyResult(assessmentSurveyResult);
+      return await this.appService.createAssessmentSurveyResult(
+        assessmentSurveyResult,
+      );
     }
   }
 

@@ -13,3 +13,20 @@ services:
       - ./src:/app/src
       - ./test:/app/test
     entrypoint: [ "yarn", "start:dev" ]
+
+  redis:
+    image: redis
+    ports:
+      - ${FORWARD_QUEUE_PORT}:6379
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--replica-read-only",
+        "no"
+      ]
+    volumes:
+      - ./redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    restart: on-failure

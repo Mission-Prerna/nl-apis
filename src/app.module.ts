@@ -9,6 +9,10 @@ import { BullModule } from '@nestjs/bull';
 import { QueueEnum } from './enums';
 import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
 import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-result.processor';
+import { TerminusModule } from '@nestjs/terminus';
+import { PrismaHealthIndicator } from 'prisma/prisma.health';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 
 @Module({
   imports: [
@@ -38,11 +42,30 @@ import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-
       },
       {
         name: QueueEnum.AssessmentSurveyResult,
-      }
+      },
     ),
-    CacheModule.register({isGlobal: true})
+    RedisModule.forRootAsync({
+      useFactory: (config: ConfigService) => {
+        return {
+          config: {
+            host: config.get('QUEUE_HOST'),
+            port: config.get('QUEUE_PORT'),
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
+    CacheModule.register({ isGlobal: true }),
+    TerminusModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService, AssessmentVisitResultsProcessor, AssessmentSurveyResultProcessor],
+  providers: [
+    AppService,
+    PrismaService,
+    AssessmentVisitResultsProcessor,
+    AssessmentSurveyResultProcessor,
+    PrismaHealthIndicator,
+    RedisHealthIndicator,
+  ],
 })
 export class AppModule {}

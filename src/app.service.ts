@@ -62,7 +62,8 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    const tables = this.getAssessmentVisitResultsTables();
+    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp)
+    const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth());
     try {
       return await this.prismaService.$transaction(async (tx) => {
         // Checking if Assessment visit result already exist; if not then creating it

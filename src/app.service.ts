@@ -231,8 +231,8 @@ export class AppService {
   ) {
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
-    const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
+    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // first day of next month
     try {
       return await this.prismaService.$queryRawUnsafe(`SELECT 
         s.id as school_id,
@@ -316,8 +316,8 @@ export class AppService {
 
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
     const tables = this.getAssessmentVisitResultsTables(year, month);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);
-    const lastDayTimestamp = Date.UTC(year, month, 0, 23, 59, 59);
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
+    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     try {
       const result: Record<string, any> = await this.prismaService
@@ -337,6 +337,7 @@ export class AppService {
                       ${tables.assessment_visit_results_v2} as avr2
                   where
                       avr2.mentor_id = ${mentor.id}
+                      and avr2.udise > 0
                       and avr2.submission_timestamp > ${firstDayTimestamp} 
                       and avr2.submission_timestamp < ${lastDayTimestamp}
               ) as a,

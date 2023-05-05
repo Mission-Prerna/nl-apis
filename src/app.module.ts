@@ -10,7 +10,7 @@ import { QueueEnum } from './enums';
 import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
 import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-result.processor';
 import { TerminusModule } from '@nestjs/terminus';
-import { PrismaHealthIndicator } from 'prisma/prisma.health';
+import { PrismaHealthIndicator } from './prisma.health';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 

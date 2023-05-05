@@ -21,7 +21,7 @@ import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
-import { PrismaHealthIndicator } from 'prisma/prisma.health';
+import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';

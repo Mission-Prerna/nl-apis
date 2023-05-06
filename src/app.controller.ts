@@ -3,7 +3,7 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
+  Headers, ParseArrayPipe,
   Post,
   Query,
   SetMetadata,
@@ -86,28 +86,38 @@ export class AppController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async createAssessmentVisitResults(
-    @Body() createAssessmentVisitResultDto: CreateAssessmentVisitResult,
+    @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
     @Headers('authorization') authToken: string,
   ) {
-    createAssessmentVisitResultDto.mentor_id = Number(
+    const mentorId = Number(
       (await this.getLoggedInMentor(authToken)).id,
-    ); // assign mentor_id for logged in user
+    );
+    if (!Array.isArray(body)) {
+      // if body is not an array, we make it an iterable array
+      body = [body];
+    }
     if (this.useQueues) {
-      await this.assessmentVisitResultQueue.add(
-        JobEnum.CreateAssessmentVisitResults,
-        createAssessmentVisitResultDto,
-        {
-          attempts: 3,
-          removeOnComplete: true,
-        },
-      );
+      for (const dto of body) { // iterate over objects & push to queue
+        dto.mentor_id = mentorId; // assign logged in mentor to dto
+        await this.assessmentVisitResultQueue.add(
+          JobEnum.CreateAssessmentVisitResults,
+          dto,
+          {
+            attempts: 3,
+            removeOnComplete: true,
+          },
+        );
+      }
       return {
         msg: 'Queued!',
       };
     } else {
-      return await this.appService.createAssessmentVisitResult(
-        createAssessmentVisitResultDto,
-      );
+      const response = [];
+      for (const dto of body) { // iterate over objects & push to DB
+        dto.mentor_id = mentorId; // assign logged in mentor to dto
+        response.push(await this.appService.createAssessmentVisitResult(dto));
+      }
+      return response;
     }
   }
 
@@ -130,29 +140,37 @@ export class AppController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async createAssessmentSurveyResult(
-    @Body() assessmentSurveyResult: CreateAssessmentSurveyResult,
+    @Body(new ParseArrayPipe({ items: CreateAssessmentSurveyResult })) body: CreateAssessmentSurveyResult[],
     @Headers('authorization') authToken: string,
   ) {
-    assessmentSurveyResult.mentor_id = Number(
+    const mentorId = Number(
       (await this.getLoggedInMentor(authToken)).id,
-    ); // assign mentor_id for logged in user
-
+    );
+    if (!Array.isArray(body)) {
+      // if body is not an array, we make it an iterable array
+      body = [body];
+    }
     if (this.useQueues) {
-      await this.assessmentSurveyResultQueue.add(
-        JobEnum.CreateAssessmentSurveyResult,
-        assessmentSurveyResult,
-        {
-          attempts: 3,
-          removeOnComplete: true,
-        },
-      );
+      for (const dto of body) { // iterate over objects & push to queue
+        dto.mentor_id = mentorId; // assign logged in mentor to dto
+        await this.assessmentSurveyResultQueue.add(
+          JobEnum.CreateAssessmentSurveyResult,
+          dto,
+          {
+            attempts: 3,
+            removeOnComplete: true,
+          },
+        );
+      }
       return {
         msg: 'Queued!',
       };
     } else {
-      return await this.appService.createAssessmentSurveyResult(
-        assessmentSurveyResult,
-      );
+      const response = [];
+      for (const dto of body) {
+        response.push(await this.appService.createAssessmentSurveyResult(dto));
+      }
+      return response;
     }
   }
 

@@ -105,11 +105,13 @@ export class AppController {
           {
             attempts: 3,
             removeOnComplete: true,
+            backoff: 60000,
           },
         );
       }
       return {
         msg: 'Queued!',
+        data: null,
       };
     } else {
       const response = [];
@@ -117,7 +119,10 @@ export class AppController {
         dto.mentor_id = mentorId; // assign logged in mentor to dto
         response.push(await this.appService.createAssessmentVisitResult(dto));
       }
-      return response;
+      return {
+        msg: 'Success!',
+        data: response,
+      };
     }
   }
 
@@ -159,18 +164,23 @@ export class AppController {
           {
             attempts: 3,
             removeOnComplete: true,
+            backoff: 60000
           },
         );
       }
       return {
         msg: 'Queued!',
+        data: null
       };
     } else {
       const response = [];
       for (const dto of body) {
         response.push(await this.appService.createAssessmentSurveyResult(dto));
       }
-      return response;
+      return {
+        msg: 'Success!',
+        data: response,
+      };
     }
   }
 

@@ -47,7 +47,7 @@ export class AppService {
       year = new Date().getFullYear();
     }
     if (month === null) {
-      month = new Date().getMonth();
+      month = new Date().getMonth() + 1;  // since getMonth() gives index
     }
 
     // @ts-ignore
@@ -63,7 +63,7 @@ export class AppService {
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
     const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp)
-    const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth());
+    const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
       return await this.prismaService.$transaction(async (tx) => {
         // Checking if Assessment visit result already exist; if not then creating it

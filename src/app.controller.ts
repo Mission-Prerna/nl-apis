@@ -175,6 +175,7 @@ export class AppController {
     } else {
       const response = [];
       for (const dto of body) {
+        dto.mentor_id = mentorId; // assign logged in mentor to dto
         response.push(await this.appService.createAssessmentSurveyResult(dto));
       }
       return {

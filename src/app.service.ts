@@ -536,6 +536,35 @@ export class AppService {
     }
   }
 
+  async getMetadata() {
+    return {
+      actors: await this.prismaService.actors.findMany(),
+      designations: await this.prismaService.designations.findMany(),
+      subjects: await this.prismaService.subjects.findMany(),
+      assessment_types: await this.prismaService.assessment_types.findMany(),
+      competency_mapping: await this.prismaService.competency_mapping.findMany({
+        select: {
+          grade: true,
+          learning_outcome: true,
+          competency_id: true,
+          flow_state: true,
+          subject_id: true,
+        }
+      }),
+      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
+        select: {
+          competency_id: true,
+          grade: true,
+          is_active: true,
+          ref_ids: true,
+          subject_id: true,
+          type: true,
+          assessment_type_id: true,
+        }
+      }),
+    }
+  }
+
   handleRequestError(e: any) {
     if (
       e instanceof Prisma.PrismaClientKnownRequestError ||

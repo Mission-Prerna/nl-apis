@@ -216,4 +216,11 @@ export class AppController {
       queryParams.year,
     );
   }
+
+  @Get('/api/metadata')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMetadata() {
+    return this.appService.getMetadata();
+  }
 }

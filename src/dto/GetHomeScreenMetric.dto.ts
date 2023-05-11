@@ -10,7 +10,7 @@ export class GetHomeScreenMetric {
 
   @Type(() => Number)
   @IsInt()
-  @Min(1000)
-  @Max(9999)
+  @Min(2000)
+  @Max(2030)
   year!: number;
 }

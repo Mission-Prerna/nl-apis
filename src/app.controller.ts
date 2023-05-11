@@ -25,6 +25,7 @@ import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
+import { GetMentorDetailsDto } from './dto/GetMentorDetails.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -194,6 +195,22 @@ export class AppController {
   ) {
     const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getHomeScreenMetric(
+      mentor,
+      queryParams.month,
+      queryParams.year,
+    );
+  }
+
+
+  @Get('/api/mentor/details')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMentorDetails(
+    @Query() queryParams: GetMentorDetailsDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor = await this.getLoggedInMentor(authToken);
+    return this.appService.getMentorDetails(
       mentor,
       queryParams.month,
       queryParams.year,

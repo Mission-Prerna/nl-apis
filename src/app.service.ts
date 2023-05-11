@@ -470,13 +470,70 @@ export class AppService {
       },
       select: {
         id: true,
-        phone_no: true,
+        designation_id: true,
         district_id: true,
+        districts: true,
         block_id: true,
+        blocks: true,
+        officer_name: true,
+        phone_no: true,
+        actor_id: true,
+        teacher_school_list_mapping: {
+          select: {
+            school_list: {
+              select: {
+                id: true,
+                district_id: true,
+                districts: true,
+                block_id: true,
+                blocks: true,
+                nyay_panchayat_id: true,
+                nyay_panchayats: true,
+                name: true,
+                udise: true
+              }
+            }
+          }
+        },
       },
     });
-    await this.cacheService.set(phoneNumber, mentor, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
-    return mentor;
+
+    let temp: any = mentor;
+    if (mentor) {
+      temp.district_name = mentor?.districts?.name ?? '';
+      temp.block_town_name = mentor?.blocks?.name ?? '';
+
+      const teacher_school_list_mapping: any = mentor?.teacher_school_list_mapping[0] ?? null;
+      if (teacher_school_list_mapping) {
+        teacher_school_list_mapping.school_list.district = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
+        teacher_school_list_mapping.school_list.block = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
+        teacher_school_list_mapping.school_list.nypanchayat = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
+
+        delete teacher_school_list_mapping.school_list.districts;
+        delete teacher_school_list_mapping.school_list.blocks;
+        delete teacher_school_list_mapping.school_list.nyay_panchayats;
+      }
+      temp.teacher_school_list_mapping = teacher_school_list_mapping;
+      delete temp.districts;
+      delete temp.blocks;
+    }
+    await this.cacheService.set(phoneNumber, temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    return temp;
+  }
+
+  async getMentorDetails(mentor: Mentor, month: null | number = null, year: null| number = null) {
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1;  // since getMonth() gives index
+    }
+
+    return {
+      mentor: mentor,
+      school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
+      home_overview: await this.getHomeScreenMetric(mentor, month, year),
+    }
   }
 
   handleRequestError(e: any) {

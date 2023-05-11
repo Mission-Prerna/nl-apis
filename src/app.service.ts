@@ -8,7 +8,13 @@ import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 import { Prisma } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
-import { AssessmentVisitResultsStudentModule, CacheConstants, Mentor } from './enums';
+import {
+  AssessmentVisitResultsStudentModule,
+  CacheConstants,
+  CacheKeyMentorDetail, CacheKeyMentorHomeOverview,
+  CacheKeyMentorSchoolList,
+  Mentor,
+} from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 
@@ -229,12 +235,20 @@ export class AppService {
     month: number,
     year: number,
   ) {
+    // We'll check if there is data in the cache
+    const cachedData = await this.cacheService.get<any>(
+      CacheKeyMentorSchoolList(mentor.phone_no, month, year),
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // first day of next month
     try {
-      return await this.prismaService.$queryRawUnsafe(`SELECT 
+      const response = await this.prismaService.$queryRawUnsafe(`SELECT 
         s.id as school_id,
         s."name" as school_name, 
         s.udise,
@@ -258,6 +272,8 @@ export class AppService {
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
+      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_SCHOOL_LIST); // Adding the data to cache
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -315,6 +331,14 @@ export class AppService {
   }
 
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
+    // We'll check if there is data in the cache
+    const cachedData = await this.cacheService.get<any>(
+      CacheKeyMentorHomeOverview(mentor.phone_no, month, year),
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
@@ -430,7 +454,7 @@ export class AppService {
                       )
               ) as f`);
 
-      return {
+      const response = {
         visited_schools: result[0]['visited_schools'],
         total_assessments: result[0]['total_assessments'],
         average_assessment_time: result[0]['average_assessment_time'],
@@ -449,6 +473,8 @@ export class AppService {
           },
         ],
       };
+      await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -458,7 +484,7 @@ export class AppService {
   async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor | null> {
     // We'll check if there is Mentor in the cache
     const cachedData = await this.cacheService.get<Mentor | null>(
-      phoneNumber,
+      CacheKeyMentorDetail(phoneNumber),
     );
     if (cachedData) {
       return cachedData;
@@ -517,7 +543,7 @@ export class AppService {
       delete temp.districts;
       delete temp.blocks;
     }
-    await this.cacheService.set(phoneNumber, temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
     return temp;
   }
 

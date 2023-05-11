@@ -1,13 +1,13 @@
 import {
   BadRequestException,
-  Body,
+  Body, CacheInterceptor, CacheTTL,
   Controller,
   Get,
   Headers, ParseArrayPipe,
   Post,
   Query,
   SetMetadata,
-  UseGuards,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { JobEnum, Mentor, QueueEnum, Role } from './enums';
+import { CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
@@ -220,6 +220,8 @@ export class AppController {
   @Get('/api/metadata')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(CacheInterceptor) // Automatically cache the response for this endpoint
+  @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
   async getMetadata() {
     return this.appService.getMetadata();
   }

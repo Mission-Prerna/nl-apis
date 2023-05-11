@@ -539,8 +539,18 @@ export class AppService {
   async getMetadata() {
     return {
       actors: await this.prismaService.actors.findMany(),
-      designations: await this.prismaService.designations.findMany(),
-      subjects: await this.prismaService.subjects.findMany(),
+      designations: await this.prismaService.designations.findMany({
+        select: {
+          id: true,
+          name: true
+        }
+      }),
+      subjects: await this.prismaService.subjects.findMany({
+        select: {
+          id: true,
+          name: true
+        }
+      }),
       assessment_types: await this.prismaService.assessment_types.findMany(),
       competency_mapping: await this.prismaService.competency_mapping.findMany({
         select: {
@@ -549,6 +559,9 @@ export class AppService {
           competency_id: true,
           flow_state: true,
           subject_id: true,
+        },
+        orderBy: {
+          learning_outcome: 'asc'
         }
       }),
       workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
@@ -560,6 +573,9 @@ export class AppService {
           subject_id: true,
           type: true,
           assessment_type_id: true,
+        },
+        where: {
+          is_active: true
         }
       }),
     }

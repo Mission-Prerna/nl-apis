@@ -531,6 +531,8 @@ export class AppService {
 
       const teacher_school_list_mapping: any = mentor?.teacher_school_list_mapping[0] ?? null;
       if (teacher_school_list_mapping) {
+        teacher_school_list_mapping.school_list.school_id = teacher_school_list_mapping?.school_list?.id ?? '';
+        teacher_school_list_mapping.school_list.school_name = teacher_school_list_mapping?.school_list?.name ?? '';
         teacher_school_list_mapping.school_list.district = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
         teacher_school_list_mapping.school_list.block = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
         teacher_school_list_mapping.school_list.nypanchayat = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
@@ -538,6 +540,8 @@ export class AppService {
         delete teacher_school_list_mapping.school_list.districts;
         delete teacher_school_list_mapping.school_list.blocks;
         delete teacher_school_list_mapping.school_list.nyay_panchayats;
+        delete teacher_school_list_mapping.school_list.id;
+        delete teacher_school_list_mapping.school_list.name;
       }
       temp.teacher_school_list_mapping = teacher_school_list_mapping;
       delete temp.districts;

@@ -218,8 +218,6 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(CacheInterceptor) // Automatically cache the response for this endpoint
   @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
   async getMetadata() {

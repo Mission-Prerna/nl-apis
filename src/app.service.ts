@@ -68,31 +68,38 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp)
+    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp);
     const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
-      return await this.prismaService.$transaction(async (tx) => {
-        // Checking if Assessment visit result already exist; if not then creating it
-        // @ts-ignore
-        let assessmentVisitResult = await tx[tables.assessment_visit_results_v2].findFirst({
-          select: {
-            id: true
-          },
-          where: {
-            submission_timestamp:
-            createAssessmentVisitResultData.submission_timestamp,
-            mentor_id: createAssessmentVisitResultData.mentor_id,
-            grade: createAssessmentVisitResultData.grade,
-            subject_id: createAssessmentVisitResultData.subject_id,
-            udise: createAssessmentVisitResultData.udise,
-          },
-        });
+      // Checking if Assessment visit result already exist; if not we'll create it
+      // @ts-ignore
+      let assessmentVisitResult = await this.prismaService[tables.assessment_visit_results_v2].findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          submission_timestamp:
+          createAssessmentVisitResultData.submission_timestamp,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          grade: createAssessmentVisitResultData.grade,
+          subject_id: createAssessmentVisitResultData.subject_id,
+          udise: createAssessmentVisitResultData.udise,
+        },
+      });
 
+      // filtering student whose module is 'odk'
+      const assessmentVisitResultStudents =
+        createAssessmentVisitResultData.results.filter(
+          (result) =>
+            result.module === AssessmentVisitResultsStudentModule.ODK,
+        );
+
+      return await this.prismaService.$transaction(async (tx) => {
         if (!assessmentVisitResult) {
           // @ts-ignore
           assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
             select: {
-              id: true
+              id: true,
             },
             data: {
               submission_timestamp:
@@ -115,20 +122,12 @@ export class AppService {
 
         const assessmentVisitResultId = assessmentVisitResult.id;
 
-        // filtering student whose module is 'odk'
-        const assessmentVisitResultStudents =
-          createAssessmentVisitResultData.results.filter(
-            (result) =>
-              result.module === AssessmentVisitResultsStudentModule.ODK,
-          );
-
         for (const student of assessmentVisitResultStudents) {
           // Checking if Assessment visit result student already exist; if not then creating it
           // @ts-ignore
           let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
-            // TODO instead of find first use exists() or count() query instead
             select: {
-              id: true
+              id: true,
             },
             where: {
               competency_id: student.competency_id,
@@ -170,8 +169,7 @@ export class AppService {
             });
           }
 
-          const assessmentVisitResultStudentId =
-            assessmentVisitResultStudent.id;
+          const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
 
           // creating multiple Assessment visit results student odk results
           // noinspection TypeScriptValidateJSTypes
@@ -223,6 +221,8 @@ export class AppService {
           skipDuplicates: true,
         });
         return assessmentVisitResult;
+      }, {
+        timeout: 15000,
       });
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -516,10 +516,10 @@ export class AppService {
                 nyay_panchayat_id: true,
                 nyay_panchayats: true,
                 name: true,
-                udise: true
-              }
-            }
-          }
+                udise: true,
+              },
+            },
+          },
         },
       },
     });
@@ -551,7 +551,7 @@ export class AppService {
     return temp;
   }
 
-  async getMentorDetails(mentor: Mentor, month: null | number = null, year: null| number = null) {
+  async getMentorDetails(mentor: Mentor, month: null | number = null, year: null | number = null) {
     if (year === null) {
       year = new Date().getFullYear();
     }
@@ -563,7 +563,7 @@ export class AppService {
       mentor: mentor,
       school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
-    }
+    };
   }
 
   async getMetadata() {
@@ -572,14 +572,14 @@ export class AppService {
       designations: await this.prismaService.designations.findMany({
         select: {
           id: true,
-          name: true
-        }
+          name: true,
+        },
       }),
       subjects: await this.prismaService.subjects.findMany({
         select: {
           id: true,
-          name: true
-        }
+          name: true,
+        },
       }),
       assessment_types: await this.prismaService.assessment_types.findMany(),
       competency_mapping: await this.prismaService.competency_mapping.findMany({
@@ -591,8 +591,8 @@ export class AppService {
           subject_id: true,
         },
         orderBy: {
-          learning_outcome: 'asc'
-        }
+          learning_outcome: 'asc',
+        },
       }),
       workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
         select: {
@@ -605,10 +605,10 @@ export class AppService {
           assessment_type_id: true,
         },
         where: {
-          is_active: true
-        }
+          is_active: true,
+        },
       }),
-    }
+    };
   }
 
   handleRequestError(e: any) {

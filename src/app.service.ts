@@ -612,7 +612,6 @@ export class AppService {
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
-    await this.cacheService.del(CacheKeyMentorDetail(mentor.phone_no));
     return await this.prismaService.mentor.update({
       where: {
         id: mentor.id,

@@ -5,9 +5,17 @@ export enum AssessmentVisitResultsStudentModule {
 
 export type Mentor = {
   id: bigint;
-  phone_no: string;
+  designation_id: number;
   district_id: number;
   block_id: number | null;
+  officer_name: string;
+  phone_no: string;
+  actor_id: number;
+  district_name: string;
+  block_town_name: string;
+  teacher_school_list_mapping?: null | {
+    school_list: null | object
+  }
 };
 
 export enum QueueEnum {

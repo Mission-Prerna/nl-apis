@@ -3,7 +3,7 @@ import {
   Body, CacheInterceptor, CacheTTL,
   Controller,
   Get,
-  Headers, ParseArrayPipe,
+  Headers, ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata,
@@ -26,6 +26,7 @@ import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
 import { GetMentorDetailsDto } from './dto/GetMentorDetails.dto';
+import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -222,5 +223,18 @@ export class AppController {
   @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
   async getMetadata() {
     return this.appService.getMetadata();
+  }
+
+  @Patch('/api/mentor/pin')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async setMentorPin(
+    @Body() body: UpdateMentorPinDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    delete mentor.teacher_school_list_mapping;
+    this.appService.updateMentorPin(mentor, body.pin).then(r => true);
+    return mentor;
   }
 }

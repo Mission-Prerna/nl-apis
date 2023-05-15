@@ -1,13 +1,13 @@
 import {
   BadRequestException,
-  Body,
+  Body, CacheInterceptor, CacheTTL,
   Controller,
   Get,
-  Headers, ParseArrayPipe,
+  Headers, ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata,
-  UseGuards,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { JobEnum, Mentor, QueueEnum, Role } from './enums';
+import { CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,8 @@ import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
+import { GetMentorDetailsDto } from './dto/GetMentorDetails.dto';
+import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -198,5 +200,40 @@ export class AppController {
       queryParams.month,
       queryParams.year,
     );
+  }
+
+
+  @Get('/api/mentor/details')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMentorDetails(
+    @Query() queryParams: GetMentorDetailsDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor = await this.getLoggedInMentor(authToken);
+    return this.appService.getMentorDetails(
+      mentor,
+      queryParams.month,
+      queryParams.year,
+    );
+  }
+
+  @Get('/api/metadata')
+  @UseInterceptors(CacheInterceptor) // Automatically cache the response for this endpoint
+  @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
+  async getMetadata() {
+    return this.appService.getMetadata();
+  }
+
+  @Patch('/api/mentor/pin')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async setMentorPin(
+    @Body() body: UpdateMentorPinDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    this.appService.updateMentorPin(mentor, body.pin).then(r => true);
+    return mentor;
   }
 }

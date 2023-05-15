@@ -8,7 +8,13 @@ import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
 import { Prisma } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
-import { AssessmentVisitResultsStudentModule, CacheConstants, Mentor } from './enums';
+import {
+  AssessmentVisitResultsStudentModule,
+  CacheConstants,
+  CacheKeyMentorDetail, CacheKeyMentorHomeOverview,
+  CacheKeyMentorSchoolList,
+  Mentor,
+} from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 
@@ -62,31 +68,38 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp)
+    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp);
     const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
-      return await this.prismaService.$transaction(async (tx) => {
-        // Checking if Assessment visit result already exist; if not then creating it
-        // @ts-ignore
-        let assessmentVisitResult = await tx[tables.assessment_visit_results_v2].findFirst({
-          select: {
-            id: true
-          },
-          where: {
-            submission_timestamp:
-            createAssessmentVisitResultData.submission_timestamp,
-            mentor_id: createAssessmentVisitResultData.mentor_id,
-            grade: createAssessmentVisitResultData.grade,
-            subject_id: createAssessmentVisitResultData.subject_id,
-            udise: createAssessmentVisitResultData.udise,
-          },
-        });
+      // Checking if Assessment visit result already exist; if not we'll create it
+      // @ts-ignore
+      let assessmentVisitResult = await this.prismaService[tables.assessment_visit_results_v2].findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          submission_timestamp:
+          createAssessmentVisitResultData.submission_timestamp,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          grade: createAssessmentVisitResultData.grade,
+          subject_id: createAssessmentVisitResultData.subject_id,
+          udise: createAssessmentVisitResultData.udise,
+        },
+      });
 
+      // filtering student whose module is 'odk'
+      const assessmentVisitResultStudents =
+        createAssessmentVisitResultData.results.filter(
+          (result) =>
+            result.module === AssessmentVisitResultsStudentModule.ODK,
+        );
+
+      return await this.prismaService.$transaction(async (tx) => {
         if (!assessmentVisitResult) {
           // @ts-ignore
           assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
             select: {
-              id: true
+              id: true,
             },
             data: {
               submission_timestamp:
@@ -109,20 +122,12 @@ export class AppService {
 
         const assessmentVisitResultId = assessmentVisitResult.id;
 
-        // filtering student whose module is 'odk'
-        const assessmentVisitResultStudents =
-          createAssessmentVisitResultData.results.filter(
-            (result) =>
-              result.module === AssessmentVisitResultsStudentModule.ODK,
-          );
-
         for (const student of assessmentVisitResultStudents) {
           // Checking if Assessment visit result student already exist; if not then creating it
           // @ts-ignore
           let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
-            // TODO instead of find first use exists() or count() query instead
             select: {
-              id: true
+              id: true,
             },
             where: {
               competency_id: student.competency_id,
@@ -164,8 +169,7 @@ export class AppService {
             });
           }
 
-          const assessmentVisitResultStudentId =
-            assessmentVisitResultStudent.id;
+          const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
 
           // creating multiple Assessment visit results student odk results
           // noinspection TypeScriptValidateJSTypes
@@ -217,6 +221,8 @@ export class AppService {
           skipDuplicates: true,
         });
         return assessmentVisitResult;
+      }, {
+        timeout: 15000,
       });
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -229,12 +235,20 @@ export class AppService {
     month: number,
     year: number,
   ) {
+    // We'll check if there is data in the cache
+    const cachedData = await this.cacheService.get<any>(
+      CacheKeyMentorSchoolList(mentor.phone_no, month, year),
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // first day of next month
     try {
-      return await this.prismaService.$queryRawUnsafe(`SELECT 
+      const response = await this.prismaService.$queryRawUnsafe(`SELECT 
         s.id as school_id,
         s."name" as school_name, 
         s.udise,
@@ -258,6 +272,8 @@ export class AppService {
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
+      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_SCHOOL_LIST); // Adding the data to cache
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -315,6 +331,14 @@ export class AppService {
   }
 
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
+    // We'll check if there is data in the cache
+    const cachedData = await this.cacheService.get<any>(
+      CacheKeyMentorHomeOverview(mentor.phone_no, month, year),
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
@@ -430,7 +454,7 @@ export class AppService {
                       )
               ) as f`);
 
-      return {
+      const response = {
         visited_schools: result[0]['visited_schools'],
         total_assessments: result[0]['total_assessments'],
         average_assessment_time: result[0]['average_assessment_time'],
@@ -449,6 +473,8 @@ export class AppService {
           },
         ],
       };
+      await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -458,7 +484,7 @@ export class AppService {
   async findMentorByPhoneNumber(phoneNumber: string): Promise<Mentor | null> {
     // We'll check if there is Mentor in the cache
     const cachedData = await this.cacheService.get<Mentor | null>(
-      phoneNumber,
+      CacheKeyMentorDetail(phoneNumber),
     );
     if (cachedData) {
       return cachedData;
@@ -470,13 +496,133 @@ export class AppService {
       },
       select: {
         id: true,
-        phone_no: true,
+        designation_id: true,
         district_id: true,
+        districts: true,
         block_id: true,
+        blocks: true,
+        officer_name: true,
+        phone_no: true,
+        actor_id: true,
+        teacher_school_list_mapping: {
+          select: {
+            school_list: {
+              select: {
+                id: true,
+                district_id: true,
+                districts: true,
+                block_id: true,
+                blocks: true,
+                nyay_panchayat_id: true,
+                nyay_panchayats: true,
+                name: true,
+                udise: true,
+              },
+            },
+          },
+        },
       },
     });
-    await this.cacheService.set(phoneNumber, mentor, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
-    return mentor;
+
+    let temp: any = mentor;
+    if (mentor) {
+      temp.district_name = mentor?.districts?.name ?? '';
+      temp.block_town_name = mentor?.blocks?.name ?? '';
+
+      const teacher_school_list_mapping: any = mentor?.teacher_school_list_mapping[0] ?? null;
+      if (teacher_school_list_mapping) {
+        teacher_school_list_mapping.school_list.school_id = teacher_school_list_mapping?.school_list?.id ?? '';
+        teacher_school_list_mapping.school_list.school_name = teacher_school_list_mapping?.school_list?.name ?? '';
+        teacher_school_list_mapping.school_list.district = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
+        teacher_school_list_mapping.school_list.block = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
+        teacher_school_list_mapping.school_list.nypanchayat = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
+
+        delete teacher_school_list_mapping.school_list.districts;
+        delete teacher_school_list_mapping.school_list.blocks;
+        delete teacher_school_list_mapping.school_list.nyay_panchayats;
+        delete teacher_school_list_mapping.school_list.id;
+        delete teacher_school_list_mapping.school_list.name;
+      }
+      temp.teacher_school_list_mapping = teacher_school_list_mapping;
+      delete temp.districts;
+      delete temp.blocks;
+    }
+    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    return temp;
+  }
+
+  async getMentorDetails(mentor: Mentor, month: null | number = null, year: null | number = null) {
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1;  // since getMonth() gives index
+    }
+
+    return {
+      mentor: mentor,
+      school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
+      home_overview: await this.getHomeScreenMetric(mentor, month, year),
+    };
+  }
+
+  async getMetadata() {
+    return {
+      actors: await this.prismaService.actors.findMany(),
+      designations: await this.prismaService.designations.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      subjects: await this.prismaService.subjects.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      assessment_types: await this.prismaService.assessment_types.findMany(),
+      competency_mapping: await this.prismaService.competency_mapping.findMany({
+        select: {
+          grade: true,
+          learning_outcome: true,
+          competency_id: true,
+          flow_state: true,
+          subject_id: true,
+        },
+        orderBy: {
+          learning_outcome: 'asc',
+        },
+      }),
+      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
+        select: {
+          competency_id: true,
+          grade: true,
+          is_active: true,
+          ref_ids: true,
+          subject_id: true,
+          type: true,
+          assessment_type_id: true,
+        },
+        where: {
+          is_active: true,
+        },
+      }),
+    };
+  }
+
+  async updateMentorPin(mentor: Mentor, pin: number) {
+    return await this.prismaService.mentor.update({
+      where: {
+        id: mentor.id,
+      },
+      data: {
+        pin: pin.toString(),
+      },
+      select: {
+        id: true,
+      }
+    });
   }
 
   handleRequestError(e: any) {

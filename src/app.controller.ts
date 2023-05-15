@@ -94,10 +94,7 @@ export class AppController {
     const mentorId = Number(
       (await this.getLoggedInMentor(authToken)).id,
     );
-    if (!Array.isArray(body)) {
-      // if body is not an array, we make it an iterable array
-      body = [body];
-    }
+    console.debug(mentorId, JSON.stringify(body));
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
@@ -153,10 +150,6 @@ export class AppController {
     const mentorId = Number(
       (await this.getLoggedInMentor(authToken)).id,
     );
-    if (!Array.isArray(body)) {
-      // if body is not an array, we make it an iterable array
-      body = [body];
-    }
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto

@@ -233,7 +233,6 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    delete mentor.teacher_school_list_mapping;
     this.appService.updateMentorPin(mentor, body.pin).then(r => true);
     return mentor;
   }

@@ -94,7 +94,6 @@ export class AppController {
     const mentorId = Number(
       (await this.getLoggedInMentor(authToken)).id,
     );
-    console.debug(mentorId, JSON.stringify(body));
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto

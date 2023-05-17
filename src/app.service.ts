@@ -533,9 +533,9 @@ export class AppService {
       if (teacher_school_list_mapping) {
         teacher_school_list_mapping.school_list.school_id = teacher_school_list_mapping?.school_list?.id ?? '';
         teacher_school_list_mapping.school_list.school_name = teacher_school_list_mapping?.school_list?.name ?? '';
-        teacher_school_list_mapping.school_list.district = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
-        teacher_school_list_mapping.school_list.block = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
-        teacher_school_list_mapping.school_list.nypanchayat = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
+        teacher_school_list_mapping.school_list.district_name = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
+        teacher_school_list_mapping.school_list.block_name = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
+        teacher_school_list_mapping.school_list.nyay_panchayat_name = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
 
         delete teacher_school_list_mapping.school_list.districts;
         delete teacher_school_list_mapping.school_list.blocks;

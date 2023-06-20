@@ -15,7 +15,6 @@ import {
   AssessmentTypeEnum,
   AssessmentVisitResultsStudentModule,
   CacheConstants,
-  CacheKeyActorHomeOverview,
   CacheKeyMentorDetail,
   CacheKeyMentorHomeOverview,
   CacheKeyMentorSchoolList,
@@ -477,6 +476,10 @@ export class AppService {
           },
         ],
       };
+      if (mentor.actor_id == ActorEnum.TEACHER) {
+        // @ts-ignore
+        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+      }
       await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
       return response;
     } catch (e) {
@@ -637,10 +640,10 @@ export class AppService {
     try {
       const result: Record<string, any> = await this.prismaService
         .$queryRawUnsafe(`
-            select a.total_assessments_7_days, c.nipun_7_days, b.total_assessments_today, d.nipun_today from
+            select a.assessments_total, c.nipun_total, b.assessments_today, d.nipun_today from
               (
                 select
-                  count(distinct student_session) as total_assessments_7_days
+                  count(distinct student_session) as assessments_total
                 from
                   ${tables.assessment_visit_results_students} as avrs
                 where
@@ -659,7 +662,7 @@ export class AppService {
               ) as a,
               (
                 select
-                  count(distinct student_session) as total_assessments_today
+                  count(distinct student_session) as assessments_today
                 from
                   ${tables.assessment_visit_results_students} as avrs
                 where
@@ -678,7 +681,7 @@ export class AppService {
               ) as b,
               (
                 select
-                  count(distinct student_session) as nipun_7_days
+                  count(distinct student_session) as nipun_total
                 from
                   ${tables.assessment_visit_results_students} as avrs
                 where
@@ -717,9 +720,9 @@ export class AppService {
           `);
 
       return {
-        total_assessments_7_days: result[0]['total_assessments_7_days'],
-        nipun_7_days: result[0]['nipun_7_days'],
-        total_assessments_today: result[0]['total_assessments_today'],
+        assessments_total: result[0]['assessments_total'],
+        nipun_total: result[0]['nipun_total'],
+        assessments_today: result[0]['assessments_today'],
         nipun_today: result[0]['nipun_today'],
       };
     } catch (e) {
@@ -731,14 +734,6 @@ export class AppService {
 
   async getActorHomeScreenMetric(mentor: Mentor) {
     const lastDate = new Date();  // it's now() basically
-    // We'll check if there is data in the cache
-    const cachedData = await this.cacheService.get<any>(
-      CacheKeyActorHomeOverview(mentor.phone_no, mentor.actor_id, lastDate.getDate()),
-    );
-    if (cachedData) {
-      return cachedData;
-    }
-
     const temp = new Date();
     const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
     const firstDate = new Date(temp.setDate(diff));
@@ -784,13 +779,12 @@ export class AppService {
     if (responseSecondTable) {
       // we need to merge both table's response
       response = {
-        total_assessments_7_days: (responseFirstTable?.total_assessments_7_days || 0) + (responseSecondTable?.total_assessments_7_days || 0),
-        nipun_7_days: (responseFirstTable?.nipun_7_days || 0) + (responseSecondTable?.nipun_7_days || 0),
-        total_assessments_today: (responseFirstTable?.total_assessments_today || 0) + (responseSecondTable?.total_assessments_today || 0),
+        assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
+        nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
+        assessments_today: (responseFirstTable?.assessments_today || 0) + (responseSecondTable?.assessments_today || 0),
         nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
       }
     }
-    await this.cacheService.set(CacheKeyActorHomeOverview(mentor.phone_no, mentor.actor_id, lastDate.getDate()), response, CacheConstants.TTL_ACTOR_HOME_OVERVIEW); // Adding the data to cache
     return response;
   }
 

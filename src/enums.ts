@@ -56,7 +56,6 @@ export enum CacheConstants {
   TTL_MENTOR_FROM_TOKEN = 600 * 1000, // converted to milliseconds
   TTL_MENTOR_SCHOOL_LIST = 600 * 1000, // converted to milliseconds
   TTL_MENTOR_HOME_OVERVIEW = 600 * 1000, // converted to milliseconds
-  TTL_ACTOR_HOME_OVERVIEW = 600 * 1000, // converted to milliseconds
   TTL_METADATA = 86400, // in seconds
 }
 
@@ -72,9 +71,9 @@ export type TypeAssessmentQuarterTables = {
 }
 
 export type TypeActorHomeOverview = {
-  total_assessments_7_days: number,
-  nipun_7_days: number,
-  total_assessments_today: number,
+  assessments_total: number,
+  nipun_total: number,
+  assessments_today: number,
   nipun_today: number
 }
 
@@ -88,8 +87,4 @@ export function CacheKeyMentorSchoolList (phoneNumber: string, month: number, ye
 
 export function CacheKeyMentorHomeOverview (phoneNumber: string, month: number, year: number) {
   return `mentor:home_overview:${phoneNumber}:${year.toString()}:${month.toString()}`;
-}
-
-export function CacheKeyActorHomeOverview (phoneNumber: string, actorId: number, date: number) {
-  return `actor:home_overview:${phoneNumber}:${actorId.toString()}:${date.toString()}}`;
 }

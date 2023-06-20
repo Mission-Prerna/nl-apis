@@ -3,7 +3,7 @@ import {
   Body, CacheInterceptor, CacheTTL,
   Controller,
   Get,
-  Headers, ParseArrayPipe, Patch,
+  Headers, NotImplementedException, Param, ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata,
@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
+import { ActorEnum, CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
@@ -227,5 +227,22 @@ export class AppController {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
     this.appService.updateMentorPin(mentor, body.pin).then(r => true);
     return mentor;
+  }
+
+  @Get('/api/actor/dashboard-overview')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getActorHomeScreenMetric(
+    @Param() id: number,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor = await this.getLoggedInMentor(authToken);
+    switch (mentor.actor_id) {
+      case ActorEnum.TEACHER:
+        break;
+      default:
+        throw new NotImplementedException('Only Teachers are allowed to access this endpoint.')
+    }
+    return this.appService.getActorHomeScreenMetric(mentor);
   }
 }

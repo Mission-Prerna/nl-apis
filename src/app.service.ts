@@ -457,7 +457,7 @@ export class AppService {
                       )
               ) as f`);
 
-      const response = {
+      const response: Record<string, any> = {
         visited_schools: result[0]['visited_schools'],
         total_assessments: result[0]['total_assessments'],
         average_assessment_time: result[0]['average_assessment_time'],
@@ -477,7 +477,6 @@ export class AppService {
         ],
       };
       if (mentor.actor_id == ActorEnum.TEACHER) {
-        // @ts-ignore
         response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
       }
       await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache

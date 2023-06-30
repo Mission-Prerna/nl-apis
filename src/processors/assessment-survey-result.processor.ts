@@ -3,6 +3,7 @@ import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { AppService } from '../app.service';
 import { QueueEnum, JobEnum as JobEnum } from '../enums';
+import * as Sentry from '@sentry/node';
 
 @Processor(QueueEnum.AssessmentSurveyResult)
 export class AssessmentSurveyResultProcessor {
@@ -34,6 +35,7 @@ export class AssessmentSurveyResultProcessor {
   // noinspection JSUnusedLocalSymbols
   @OnQueueFailed()
   onFailed(job: Job, err: Error) {
+    Sentry.captureException(err);
     this.logger.error(
       `Failed job ${job.id} of type ${job.name}...`,
     );

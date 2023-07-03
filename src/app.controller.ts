@@ -227,7 +227,6 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    console.log(12)
     this.appService.updateMentorPin(mentor, body.pin).then(r => true);
     return mentor;
   }

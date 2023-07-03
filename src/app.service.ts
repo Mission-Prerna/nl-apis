@@ -1,5 +1,7 @@
 import {
-  BadRequestException, CACHE_MANAGER, Inject,
+  BadRequestException,
+  CACHE_MANAGER,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -9,11 +11,16 @@ import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.d
 import { Prisma } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import {
+  ActorEnum,
+  AssessmentTypeEnum,
   AssessmentVisitResultsStudentModule,
   CacheConstants,
-  CacheKeyMentorDetail, CacheKeyMentorHomeOverview,
+  CacheKeyMentorDetail,
+  CacheKeyMentorHomeOverview,
   CacheKeyMentorSchoolList,
   Mentor,
+  TypeActorHomeOverview,
+  TypeAssessmentQuarterTables,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -44,11 +51,7 @@ export class AppService {
     '12': 'oct_dec',
   };
 
-  private getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): {
-    assessment_visit_results_v2: string,
-    assessment_visit_results_students: string,
-    assessment_visit_results_student_odk_results: string,
-  } {
+  private getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): TypeAssessmentQuarterTables {
     if (year === null) {
       year = new Date().getFullYear();
     }
@@ -454,7 +457,7 @@ export class AppService {
                       )
               ) as f`);
 
-      const response = {
+      const response: Record<string, any> = {
         visited_schools: result[0]['visited_schools'],
         total_assessments: result[0]['total_assessments'],
         average_assessment_time: result[0]['average_assessment_time'],
@@ -473,6 +476,9 @@ export class AppService {
           },
         ],
       };
+      if (mentor.actor_id == ActorEnum.TEACHER) {
+        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+      }
       await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
       return response;
     } catch (e) {
@@ -623,6 +629,162 @@ export class AppService {
         id: true,
       }
     });
+  }
+
+  async getActorHomeScreenRawQueryResult(
+    tables: TypeAssessmentQuarterTables,
+    mentor: Mentor,
+    firstDayTimestamp: number,
+    lastDayTimestamp:number): Promise<TypeActorHomeOverview|null> {
+    try {
+      const result: Record<string, any> = await this.prismaService
+        .$queryRawUnsafe(`
+            select a.assessments_total, c.nipun_total, b.assessments_today, d.nipun_today from
+              (
+                select
+                  count(distinct student_session) as assessments_total
+                from
+                  ${tables.assessment_visit_results_students} as avrs
+                where
+                  avrs.assessment_visit_results_v2_id in (
+                    select
+                      avr2.id
+                    from
+                      ${tables.assessment_visit_results_v2} as avr2
+                    where
+                      avr2.mentor_id = ${mentor.id}
+                      and avr2.actor_id = ${ActorEnum.TEACHER}
+                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp < ${lastDayTimestamp}
+                   )
+              ) as a,
+              (
+                select
+                  count(distinct student_session) as assessments_today
+                from
+                  ${tables.assessment_visit_results_students} as avrs
+                where
+                  avrs.assessment_visit_results_v2_id in (
+                    select
+                      avr2.id
+                    from
+                      ${tables.assessment_visit_results_v2} as avr2
+                    where
+                      avr2.mentor_id = ${mentor.id}
+                      and avr2.actor_id = ${ActorEnum.TEACHER}
+                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp < ${lastDayTimestamp}
+                  )
+              ) as b,
+              (
+                select
+                  count(distinct student_session) as nipun_total
+                from
+                  ${tables.assessment_visit_results_students} as avrs
+                where
+                  avrs.assessment_visit_results_v2_id in (
+                    select
+                      avr2.id
+                    from
+                      ${tables.assessment_visit_results_v2} as avr2
+                    where
+                      avr2.mentor_id = ${mentor.id}
+                      and avr2.actor_id = ${ActorEnum.TEACHER}
+                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp < ${lastDayTimestamp}
+                    ) and avrs.is_passed = true
+              ) as c,
+              (
+                select
+                  count(distinct student_session) as nipun_today
+                from
+                  ${tables.assessment_visit_results_students} as avrs
+                where
+                  avrs.assessment_visit_results_v2_id in (
+                    select
+                      avr2.id
+                    from
+                      ${tables.assessment_visit_results_v2} as avr2
+                    where
+                      avr2.mentor_id = ${mentor.id}
+                      and avr2.actor_id = ${ActorEnum.TEACHER}
+                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp < ${lastDayTimestamp}
+                  ) and avrs.is_passed = true
+              ) as d
+          `);
+
+      return {
+        assessments_total: result[0]['assessments_total'],
+        nipun_total: result[0]['nipun_total'],
+        assessments_today: result[0]['assessments_today'],
+        nipun_today: result[0]['nipun_today'],
+      };
+    } catch (e) {
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
+    }
+    return null;
+  }
+
+  async getActorHomeScreenMetric(mentor: Mentor) {
+    const lastDate = new Date();  // it's now() basically
+    const temp = new Date();
+    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
+    const firstDate = new Date(temp.setDate(diff));
+
+    const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth()+1);
+    const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth()+1);
+
+    let responseFirstTable: TypeActorHomeOverview|null;
+    let responseSecondTable = null;
+    if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
+      // both tables are same
+      const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      const lastDayTimestamp = lastDate.getTime();
+
+      responseFirstTable = await this.getActorHomeScreenRawQueryResult(
+        tablesForFirstDate,
+        mentor,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+    } else {
+      // if the data needs to queried from two tables, we'll query for both separately
+      let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      let lastDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth() + 1, 1, 0, 0, 0); // next month's first date
+      responseFirstTable = await this.getActorHomeScreenRawQueryResult(
+        tablesForFirstDate,
+        mentor,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+
+      firstDayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), 1, 0, 0, 0);  // first day of current month
+      lastDayTimestamp = lastDate.getTime();
+
+      responseSecondTable = await this.getActorHomeScreenRawQueryResult(
+        tablesForLastDate,
+        mentor,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+    }
+    let response = responseFirstTable;
+    if (responseSecondTable) {
+      // we need to merge both table's response
+      response = {
+        assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
+        nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
+        assessments_today: (responseFirstTable?.assessments_today || 0) + (responseSecondTable?.assessments_today || 0),
+        nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
+      }
+    }
+    return response;
   }
 
   handleRequestError(e: any) {

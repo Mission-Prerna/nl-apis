@@ -28,6 +28,30 @@ export enum JobEnum {
   CreateAssessmentSurveyResult = 'CreateAssessmentSurveyResult',
 }
 
+export enum ActorEnum {
+  NULL = 0,
+  MENTOR = 1,
+  EXAMINER = 2,
+  TEACHER = 3,
+  DIET_MENTOR = 4,
+  PARENT = 5,
+}
+
+export enum AssessmentTypeEnum {
+  NIPUN_ABHYAS = 1,
+  SUCHI_ABHYAS = 2,
+  NIPUN_LAKSHYA = 3,
+  NIPUN_SUCHI = 4,
+  STATE_LED_ASSESSMENT = 5,
+}
+
+export enum SubjectEnum {
+  NULL = 0,
+  MATH = 1,
+  HINDI = 2,
+  ENGLISH = 2,
+}
+
 export enum CacheConstants {
   TTL_MENTOR_FROM_TOKEN = 600 * 1000, // converted to milliseconds
   TTL_MENTOR_SCHOOL_LIST = 600 * 1000, // converted to milliseconds
@@ -38,6 +62,19 @@ export enum CacheConstants {
 export enum Role {
   OpenRole = 'OpenRole',
   Diet = 'DIET',
+}
+
+export type TypeAssessmentQuarterTables = {
+  assessment_visit_results_v2: string;
+  assessment_visit_results_students: string;
+  assessment_visit_results_student_odk_results: string;
+}
+
+export type TypeActorHomeOverview = {
+  assessments_total: number,
+  nipun_total: number,
+  assessments_today: number,
+  nipun_today: number
 }
 
 export function CacheKeyMentorDetail (phoneNumber: string) {

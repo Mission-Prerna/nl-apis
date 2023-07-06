@@ -678,7 +678,8 @@ export class AppService {
     tables: TypeAssessmentQuarterTables,
     mentor: Mentor,
     firstDayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeActorHomeOverview | null> {
+    todayTimestamp: number,
+    lastDayTimestamp: number): Promise<TypeActorHomeOverview|null> {
     try {
       const result: Record<string, any> = await this.prismaService
         .$queryRawUnsafe(`
@@ -717,7 +718,7 @@ export class AppService {
                       avr2.mentor_id = ${mentor.id}
                       and avr2.actor_id = ${ActorEnum.TEACHER}
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
                   )
               ) as b,
@@ -755,7 +756,7 @@ export class AppService {
                       avr2.mentor_id = ${mentor.id}
                       and avr2.actor_id = ${ActorEnum.TEACHER}
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${firstDayTimestamp}
+                      and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
                   ) and avrs.is_passed = true
               ) as d
@@ -788,22 +789,26 @@ export class AppService {
     if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
       // both tables are same
       const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      const todayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 0, 0, 0);
       const lastDayTimestamp = lastDate.getTime();
 
       responseFirstTable = await this.getActorHomeScreenRawQueryResult(
         tablesForFirstDate,
         mentor,
         firstDayTimestamp,
+        todayTimestamp,
         lastDayTimestamp
       );
     } else {
       // if the data needs to queried from two tables, we'll query for both separately
       let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      const todayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 0, 0, 0);
       let lastDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth() + 1, 1, 0, 0, 0); // next month's first date
       responseFirstTable = await this.getActorHomeScreenRawQueryResult(
         tablesForFirstDate,
         mentor,
         firstDayTimestamp,
+        todayTimestamp,
         lastDayTimestamp
       );
 
@@ -814,6 +819,7 @@ export class AppService {
         tablesForLastDate,
         mentor,
         firstDayTimestamp,
+        todayTimestamp,
         lastDayTimestamp
       );
     }

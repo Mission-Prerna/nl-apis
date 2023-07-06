@@ -782,7 +782,6 @@ export class AppService {
 
     const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth()+1);
     const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth()+1);
-    console.log(tablesForFirstDate, tablesForLastDate);
 
     let responseFirstTable: TypeActorHomeOverview|null;
     let responseSecondTable = null;
@@ -790,8 +789,6 @@ export class AppService {
       // both tables are same
       const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
       const lastDayTimestamp = lastDate.getTime();
-
-      console.log(firstDayTimestamp, lastDayTimestamp);
 
       responseFirstTable = await this.getActorHomeScreenRawQueryResult(
         tablesForFirstDate,
@@ -844,7 +841,6 @@ export class AppService {
       }
       throw new BadRequestException();
     }
-    console.log(111111111111, this.configService.get('DEBUG', 1))
 
     if (Number(this.configService.get('DEBUG', 1)) === 1) {
       throw new InternalServerErrorException(e);

@@ -1,11 +1,12 @@
 import {
-  IsInt,
-  Max, Min,
+  IsString, Matches,
+  MaxLength, MinLength,
 } from 'class-validator';
 
 export class UpdateMentorPinDto {
-  @IsInt()
-  @Min(1000)
-  @Max(9999)
+  @IsString()
+  @MaxLength(4)
+  @MinLength(4)
+  @Matches('[0-9\-]+')
   pin!: number;
 }

@@ -27,10 +27,12 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
 import { GetMentorDetailsDto } from './dto/GetMentorDetails.dto';
 import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
+import { SentryInterceptor } from './interceptors/sentry.interceptor';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
+@UseInterceptors(SentryInterceptor)
 export class AppController {
   private readonly useQueues: boolean;
   constructor(

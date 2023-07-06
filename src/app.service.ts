@@ -24,16 +24,35 @@ import {
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
+import {
+  getAssessmentVisitResultStudentOdkResultsQuery,
+  getAssessmentVisitResultsQuery,
+  getAssessmentVisitResultsStudentsQuery,
+} from './queries.template';
+import { DbTableNotFoundException } from './exceptions/db-table-not-found.exception';
 
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
+  private allTables: Record<string, any> = {};
 
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
+    this.prismaService.$queryRawUnsafe(`
+      SELECT table_name
+        FROM information_schema.tables
+       WHERE table_schema='public'
+         AND table_type='BASE TABLE';    
+    `).then((response) => {
+      // @ts-ignore
+      for (const table of response) {
+        this.allTables[table.table_name] = true;  // push to object map
+      }
+      this.logger.log('Tables list loaded...');
+    }).catch(error => this.logger.error('Unable to fetch tables list from DB!!!', error));
   }
 
   private monthQuarterMap = {
@@ -61,10 +80,34 @@ export class AppService {
 
     // @ts-ignore
     const quarter: string = this.monthQuarterMap[month.toString()];
+    const assessmentVisitResultsTable = `assessment_visit_results_v2_${year.toString()}_${quarter}`;
+    const assessmentVisitResultsStudentsTable = `assessment_visit_results_students_${year.toString()}_${quarter}`;
+    const assessmentVisitResultStudentOdkResultsTable = `assessment_visit_results_student_odk_results_${year.toString()}_${quarter}`;
+
+    if (!this.allTables[assessmentVisitResultsTable]) {
+      const error = `Missing quarter table ${assessmentVisitResultsTable}.`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsQuery(assessmentVisitResultsTable)}`;
+      this.logger.error(error);
+      this.logger.debug(description);
+      throw new DbTableNotFoundException(error, description);
+    } else if (!this.allTables[assessmentVisitResultsStudentsTable]) {
+      const error = `Missing quarter table ${assessmentVisitResultsStudentsTable}.`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsStudentsQuery(assessmentVisitResultsStudentsTable, assessmentVisitResultsTable)}`;
+      this.logger.error(error);
+      this.logger.debug(description);
+      throw new DbTableNotFoundException(error, description);
+    } else if (!this.allTables[assessmentVisitResultStudentOdkResultsTable]) {
+      const error = `Missing quarter table ${assessmentVisitResultStudentOdkResultsTable}.`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultStudentOdkResultsQuery(assessmentVisitResultStudentOdkResultsTable, assessmentVisitResultsStudentsTable)}`;
+      this.logger.error(error);
+      this.logger.debug(description);
+      throw new DbTableNotFoundException(error, description);
+    }
+
     return {
-      assessment_visit_results_v2: `assessment_visit_results_v2_${year.toString()}_${quarter}`,
-      assessment_visit_results_students: `assessment_visit_results_students_${year.toString()}_${quarter}`,
-      assessment_visit_results_student_odk_results: `assessment_visit_results_student_odk_results_${year.toString()}_${quarter}`,
+      assessment_visit_results_v2: assessmentVisitResultsTable,
+      assessment_visit_results_students: assessmentVisitResultsStudentsTable,
+      assessment_visit_results_student_odk_results: assessmentVisitResultStudentOdkResultsTable,
     };
   }
 
@@ -627,7 +670,7 @@ export class AppService {
       },
       select: {
         id: true,
-      }
+      },
     });
   }
 
@@ -636,7 +679,7 @@ export class AppService {
     mentor: Mentor,
     firstDayTimestamp: number,
     todayTimestamp: number,
-    lastDayTimestamp:number): Promise<TypeActorHomeOverview|null> {
+    lastDayTimestamp: number): Promise<TypeActorHomeOverview|null> {
     try {
       const result: Record<string, any> = await this.prismaService
         .$queryRawUnsafe(`

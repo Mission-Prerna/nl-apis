@@ -14,7 +14,7 @@ export class CreateAssessmentVisitResult {
   submission_timestamp!: number;
 
   @IsInt()
-  @IsIn([1, 2, 3])
+  @IsIn([1, 2, 3, 4, 5, 6, 7, 8])
   grade!: number;
 
   @IsInt()

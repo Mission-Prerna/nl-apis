@@ -430,7 +430,7 @@ export class AppService {
               ) as b,
               (
                   select
-                      count(*) as total_assessments
+                      count(distinct student_session) as total_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -447,7 +447,7 @@ export class AppService {
               ) as c,
               (
                   select
-                      count(*) as grade1_assessments
+                      count(distinct student_session) as grade1_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -465,7 +465,7 @@ export class AppService {
               ) as d,
               (
                   select
-                      count(*) as grade2_assessments
+                      count(distinct student_session) as grade2_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -483,7 +483,7 @@ export class AppService {
               ) as e,
               (
                   select
-                      count(*) as grade3_assessments
+                      count(distinct student_session) as grade3_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where

@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { CreateAssessmentSurveyResultQuestion } from './CreateAssessmentSurveyResultQuestion.dto';
 import { Type } from 'class-transformer';
+import { ActorEnum, SubjectEnum } from '../enums';
 
 export class CreateAssessmentSurveyResult {
   @IsInt()
@@ -15,16 +16,27 @@ export class CreateAssessmentSurveyResult {
   mentor_id!: number;
 
   @IsInt()
-  @IsIn([1, 2, 3])
+  @IsIn([1, 2, 3, 4, 5, 6, 7, 8])
   grade!: number;
 
   @IsInt()
   @IsOptional()
-  @IsIn([0, 1, 2, 3])
+  @IsIn([
+    SubjectEnum.NULL,
+    SubjectEnum.MATH,
+    SubjectEnum.ENGLISH,
+    SubjectEnum.HINDI,
+  ])
   subject_id?: number;
 
   @IsInt()
-  @IsIn([1, 2, 3, 4, 5])
+  @IsIn([
+    ActorEnum.MENTOR,
+    ActorEnum.EXAMINER,
+    ActorEnum.TEACHER,
+    ActorEnum.DIET_MENTOR,
+    ActorEnum.PARENT,
+  ])
   actor_id!: number;
 
   @IsInt()

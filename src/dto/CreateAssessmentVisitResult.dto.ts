@@ -7,17 +7,22 @@ import {
 } from 'class-validator';
 import { CreateAssessmentVisitResultStudent } from './CreateAssessmentVisitResultStudent.dto';
 import { Type } from 'class-transformer';
+import { ActorEnum, AssessmentTypeEnum, SubjectEnum } from '../enums';
 
 export class CreateAssessmentVisitResult {
   @IsInt()
   submission_timestamp!: number;
 
   @IsInt()
-  @IsIn([1, 2, 3])
+  @IsIn([1, 2, 3, 4, 5, 6, 7, 8])
   grade!: number;
 
   @IsInt()
-  @IsIn([0, 1, 2, 3])
+  @IsIn([
+    SubjectEnum.MATH,
+    SubjectEnum.ENGLISH,
+    SubjectEnum.HINDI,
+  ])
   subject_id!: number;
 
   mentor_id!: number;
@@ -26,7 +31,13 @@ export class CreateAssessmentVisitResult {
   no_of_student!: number;
 
   @IsInt()
-  @IsIn([1, 2, 3, 4, 5])
+  @IsIn([
+    ActorEnum.MENTOR,
+    ActorEnum.EXAMINER,
+    ActorEnum.TEACHER,
+    ActorEnum.DIET_MENTOR,
+    ActorEnum.PARENT,
+  ])
   actor_id!: number;
 
   @IsInt()
@@ -35,7 +46,13 @@ export class CreateAssessmentVisitResult {
 
   @IsInt()
   @IsOptional()
-  @IsIn([1, 2, 3, 4, 5])
+  @IsIn([
+    AssessmentTypeEnum.NIPUN_ABHYAS,
+    AssessmentTypeEnum.SUCHI_ABHYAS,
+    AssessmentTypeEnum.NIPUN_SUCHI,
+    AssessmentTypeEnum.NIPUN_LAKSHYA,
+    AssessmentTypeEnum.STATE_LED_ASSESSMENT,
+  ])
   assessment_type_id?: number;
 
   @IsInt()

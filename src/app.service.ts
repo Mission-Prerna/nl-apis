@@ -568,6 +568,8 @@ export class AppService {
                 nyay_panchayats: true,
                 name: true,
                 udise: true,
+                lat: true,
+                long: true,
               },
             },
           },

@@ -311,7 +311,9 @@ export class AppService {
             and avr2.submission_timestamp < ${lastDayTimestamp})
           THEN true 
           ELSE false
-        end) as is_visited
+        end) as is_visited,
+        s.lat,
+        s.long
       from school_list as s
       join districts d on d.id = s.district_id
       join blocks b on b.id = s.block_id

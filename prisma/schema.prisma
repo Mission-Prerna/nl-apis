@@ -390,7 +390,6 @@ model blocks {
   mentor                                   mentor[]
   nyay_panchayats                          nyay_panchayats[]
   school_list                              school_list[]
-  school_list_backup                       school_list_backup[]
 
   @@unique([district_id, name])
   @@index([name], map: "blocks_name_key")
@@ -417,14 +416,13 @@ model designations {
 }
 
 model districts {
-  id                 Int                  @id @default(autoincrement())
-  name               String               @unique @db.Char
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
-  mentor             mentor[]
-  nyay_panchayats    nyay_panchayats[]
-  school_list        school_list[]
-  school_list_backup school_list_backup[]
+  id              Int               @id @default(autoincrement())
+  name            String            @unique @db.Char
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  mentor          mentor[]
+  nyay_panchayats nyay_panchayats[]
+  school_list     school_list[]
 }
 
 model django_admin_log {
@@ -598,12 +596,6 @@ model employees {
   @@id([id, erhms_code])
 }
 
-model fcm_tokens {
-  user_id BigInt @id
-  token   String
-  mentor  mentor @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
 model form_config {
   id                Int @id @default(autoincrement())
   grade             Int
@@ -695,6 +687,8 @@ model mentor {
   block_id                                 Int?
   designation_id                           Int
   actor_id                                 Int                                        @default(1)
+  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
   assessment_survey_result_v2              assessment_survey_result_v2[]
   assessment_visit_results_v2              assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
@@ -708,13 +702,13 @@ model mentor {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  fcm_tokens                               fcm_tokens?
   actors                                   actors                                     @relation(fields: [actor_id], references: [id])
   blocks                                   blocks?                                    @relation(fields: [block_id], references: [id], onDelete: Restrict)
   designations                             designations                               @relation(fields: [designation_id], references: [id])
   districts                                districts                                  @relation(fields: [district_id], references: [id])
   mentor_segmentation                      mentor_segmentation[]
   mentor_tokens                            mentor_tokens?
+  mentor_update_logs                       mentor_update_logs[]
   teacher_school_list_mapping              teacher_school_list_mapping[]
 
   @@index([actor_id], map: "mentor_actor_id_key")
@@ -813,6 +807,8 @@ model school_list {
   block_id                                 Int
   udise                                    BigInt                                     @unique @default(0)
   nyay_panchayat_id                        Int?
+  lat                                      Decimal?                                   @db.Decimal
+  long                                     Decimal?                                   @db.Decimal
   assessment_survey_result_v2              assessment_survey_result_v2[]
   assessment_visit_results_v2              assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
@@ -840,31 +836,6 @@ model school_list {
   @@index([district], map: "schl_list_district_index")
   @@index([nyay_panchayat_id], map: "schl_list_ny_panchayat_id_index")
   @@index([type], map: "schl_list_type_index")
-}
-
-model school_list_backup {
-  id                       Int        @id @default(autoincrement())
-  district                 String     @default("") @db.VarChar
-  area_type                String     @db.VarChar
-  block                    String     @default("") @db.VarChar
-  nypanchayat              String     @db.VarChar
-  type                     String?    @db.VarChar
-  category                 String?    @db.VarChar
-  name                     String?    @db.VarChar
-  udise_code               String?    @unique @db.VarChar
-  total_student_registered Int?
-  is_sankul                Boolean    @default(false)
-  district_id              Int?
-  block_id                 Int?
-  udise                    BigInt     @unique @default(0)
-  nyay_panchayat_id        Int?
-  blocks                   blocks?    @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  districts                districts? @relation(fields: [district_id], references: [id], onDelete: Restrict)
-
-  @@index([block, district], map: "sch_list_backup_block_dist_index")
-  @@index([block], map: "schl_list_backup_block_index")
-  @@index([district], map: "schl_list_backup_district_index")
-  @@index([type], map: "schl_list_backup_type_index")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -1882,4 +1853,15 @@ model assessment_visit_results_v2_2025_oct_dec {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_oct_dec_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
+}
+
+model mentor_update_logs {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  old_record Json
+  new_record Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+
+  @@index([mentor_id])
 }

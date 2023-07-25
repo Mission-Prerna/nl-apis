@@ -313,7 +313,8 @@ export class AppService {
           ELSE false
         end) as is_visited,
         s.lat,
-        s.long
+        s.long,
+        s.geo_fence_enabled
       from school_list as s
       join districts d on d.id = s.district_id
       join blocks b on b.id = s.block_id
@@ -570,6 +571,7 @@ export class AppService {
                 udise: true,
                 lat: true,
                 long: true,
+                geo_fence_enabled: true,
               },
             },
           },

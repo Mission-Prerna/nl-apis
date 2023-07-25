@@ -809,6 +809,7 @@ model school_list {
   nyay_panchayat_id                        Int?
   lat                                      Decimal?                                   @db.Decimal
   long                                     Decimal?                                   @db.Decimal
+  geo_fence_enabled                        Boolean                                    @default(true)
   assessment_survey_result_v2              assessment_survey_result_v2[]
   assessment_visit_results_v2              assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]

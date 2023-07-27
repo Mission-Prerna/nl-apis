@@ -13,6 +13,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { PrismaHealthIndicator } from './prisma.health';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
+import { FusionauthService } from './fusionauth.service';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
     AssessmentSurveyResultProcessor,
     PrismaHealthIndicator,
     RedisHealthIndicator,
+    FusionauthService,
   ],
 })
 export class AppModule {}

@@ -62,6 +62,7 @@ export enum CacheConstants {
 export enum Role {
   OpenRole = 'OpenRole',
   Diet = 'DIET',
+  Admin = 'Admin',
 }
 
 export type TypeAssessmentQuarterTables = {

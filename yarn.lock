@@ -428,6 +428,13 @@
     path-to-regexp "^6.1.0"
     reusify "^1.0.4"
 
+"@fusionauth/typescript-client@^1.46.0":
+  version "1.46.0"
+  resolved "https://registry.yarnpkg.com/@fusionauth/typescript-client/-/typescript-client-1.46.0.tgz#d16bee8daccbb9412900b6162f08a424418509e8"
+  integrity sha512-VH8YFX+ceqkKqVogUThfaiuNXoyGKEBmyETJiBRLnkjyGAsDk/Y3xDLItTYiOtp9ZsU8p5nVpfiCp+4BVu4BJw==
+  dependencies:
+    node-fetch "^2.6.1"
+
 "@humanwhocodes/config-array@^0.11.8":
   version "0.11.8"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/config-array/-/config-array-0.11.8.tgz#03595ac2075a4dc0f191cc2131de14fbd7d410b9"

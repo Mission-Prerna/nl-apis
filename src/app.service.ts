@@ -25,11 +25,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import {
-  getAssessmentVisitResultStudentOdkResultsQuery,
   getAssessmentVisitResultsQuery,
   getAssessmentVisitResultsStudentsQuery,
+  getAssessmentVisitResultStudentOdkResultsQuery,
 } from './queries.template';
 import { DbTableNotFoundException } from './exceptions/db-table-not-found.exception';
+import { CreateMentorDto } from './dto/CreateMentor.dto';
+import { FusionauthService } from './fusionauth.service';
+import { MentorCreationFailedException } from './exceptions/mentor-creation-failed.exception';
+import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 
 @Injectable()
 export class AppService {
@@ -39,6 +43,7 @@ export class AppService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly faService: FusionauthService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
     this.prismaService.$queryRawUnsafe(`
@@ -834,6 +839,121 @@ export class AppService {
       }
     }
     return response;
+  }
+
+  async createMentorOld(data: CreateMentorOldDto) {
+    let actorId = ActorEnum.MENTOR;
+    const designationId = (await this.prismaService.designations.findFirstOrThrow({where: {name: data.designation}})).id;
+    switch (data.designation) {
+      case 'teacher':
+        actorId = ActorEnum.TEACHER;
+        break;
+      case 'examiner':
+        actorId = ActorEnum.EXAMINER;
+        break;
+      case 'Diet Mentor':
+        actorId = ActorEnum.DIET_MENTOR;
+        break;
+    }
+    const newDto: CreateMentorDto = {
+      phone_no: data.phone_no,
+      officer_name: data.officer_name,
+      district_id: (await this.prismaService.districts.findFirstOrThrow({where: {name: data.district_name}})).id,
+      block_id: (await this.prismaService.blocks.findFirstOrThrow({where: {name: data.block_town_name}})).id,
+      designation_id: designationId,
+      actor_id: actorId,
+      area_type: data.area_type,
+      subject_of_matter: data.subject_of_matter,
+      udise: data.udise,
+    }
+    return this.createMentor(newDto);
+  }
+
+  async createMentor(data: CreateMentorDto) {
+    if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
+      throw new BadRequestException(['udise is needed when actor is "Teacher".']);
+    }
+    /*
+      It's a 2-step process:
+      1. Create a user on Fusion auth if not already exists.
+      2. Create mentor at backend.
+     */
+    const applicationId = this.configService.getOrThrow<string>('FA_APPLICATION_ID');
+    const response = await this.faService.createAndRegisterUser({
+      user: {
+        username: data.phone_no,
+        mobilePhone: data.phone_no,
+        password: this.configService.getOrThrow<string>('FA_DEFAULT_PASSWORD'),
+        fullName: data.officer_name ?? '',
+      },
+      registration: {
+        applicationId: applicationId,
+        username: data.phone_no,
+        roles: [],
+      },
+    });
+    if (
+      (
+        // @ts-ignore
+        response.statusCode == 400 && response.exception['fieldErrors']['user.username'][0]['code'] == '[duplicate]user.username'
+      ) || response.statusCode == 200
+    ) {
+      // if success or duplicate username error, we consider it as success
+      const mentor = await this.prismaService.mentor.upsert({
+        where: {
+          phone_no: data.phone_no
+        },
+        create: {
+          phone_no: data.phone_no,
+          area_type: data.area_type ?? null,
+          officer_name: data.officer_name ?? null,
+          subject_of_matter: data.subject_of_matter ?? null,
+          district_id: data.district_id,
+          block_id: data.block_id,
+          designation_id: data.designation_id,
+          actor_id: data.actor_id,
+        },
+        update: {
+          area_type: data.area_type ?? null,
+          officer_name: data.officer_name ?? null,
+          subject_of_matter: data.subject_of_matter ?? null,
+          district_id: data.district_id,
+          block_id: data.block_id,
+          designation_id: data.designation_id,
+          actor_id: data.actor_id,
+        }
+      });
+
+      if (data.actor_id == ActorEnum.TEACHER && data.udise) {
+        const school = await this.prismaService.school_list.findFirstOrThrow({
+          where: {
+            udise: data.udise
+          }
+        });
+
+        // delete all previous entries for mentor
+        await this.prismaService.teacher_school_list_mapping.deleteMany({
+          where: {
+            mentor_id: mentor.id
+          }
+        });
+
+        // create new teacher school mapping
+        await this.prismaService.teacher_school_list_mapping.create({
+          data: {
+            mentor_id: mentor.id,
+            school_list_id: school.id
+          }
+        })
+      }
+
+      return mentor;
+    }
+    let description = '';
+    if (Number(this.configService.get('DEBUG', 1)) === 1) {
+      description = JSON.stringify(response);
+    }
+    throw new MentorCreationFailedException('Mentor creation failed!!', description);
   }
 
   handleRequestError(e: any) {

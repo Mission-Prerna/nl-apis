@@ -28,6 +28,8 @@ import { Redis } from 'ioredis';
 import { GetMentorDetailsDto } from './dto/GetMentorDetails.dto';
 import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
 import { SentryInterceptor } from './interceptors/sentry.interceptor';
+import { CreateMentorDto } from './dto/CreateMentor.dto';
+import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -72,6 +74,11 @@ export class AppController {
     const decodedAuthTokenData = <Record<string, any>>(
       this.jwtService.decode(authorizationHeader.split(' ')[1])
     );
+
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
 
     const mentor = await this.appService.findMentorByPhoneNumber(
       decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
@@ -246,5 +253,41 @@ export class AppController {
         throw new NotImplementedException('Only Teachers are allowed to access this endpoint.')
     }
     return this.appService.getActorHomeScreenMetric(mentor);
+  }
+
+  @Post('/api/mentor')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async createMentor(
+    @Body() body: CreateMentorDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
+    return this.appService.createMentor(body);
+  }
+
+  @Post('/api/mentor/old')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async createMentorOld(
+    @Body() body: CreateMentorOldDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
+    return this.appService.createMentorOld(body);
   }
 }

@@ -17,7 +17,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
     let isAllowed = false;
     const request: Record<string, any> = context.switchToHttp().getRequest();
     try {
-      const tokenRoles: string[] = request['user']['apiRoles'] ?? [];
+      const tokenRoles: string[] = request['user']['apiRoles'] ?? request['user']['roles'] ?? [];
       for (const role of roles) {
         if (tokenRoles?.indexOf(role) > -1) {
           isAllowed = true;

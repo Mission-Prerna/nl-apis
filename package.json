@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@fusionauth/typescript-client": "^1.46.0",
     "@liaoliaots/nestjs-redis": "^9.0.5",
     "@liaoliaots/nestjs-redis-health": "^9.0.4",
     "@nestjs/bull": "^0.6.3",

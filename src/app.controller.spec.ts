@@ -14,6 +14,7 @@ import { BullModule } from '@nestjs/bull';
 import { QueueEnum } from './enums';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+import { FusionauthService } from './fusionauth.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -72,6 +73,7 @@ describe('AppController', () => {
         AssessmentSurveyResultProcessor,
         PrismaHealthIndicator,
         RedisHealthIndicator,
+        FusionauthService,
       ],
     }).compile();
 

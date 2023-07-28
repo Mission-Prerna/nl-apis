@@ -78,19 +78,6 @@ export type TypeActorHomeOverview = {
   nipun_today: number
 }
 
-export type TypeAssessmentQuarterTables = {
-  assessment_visit_results_v2: string;
-  assessment_visit_results_students: string;
-  assessment_visit_results_student_odk_results: string;
-}
-
-export type TypeActorHomeOverview = {
-  assessments_total: number,
-  nipun_total: number,
-  assessments_today: number,
-  nipun_today: number
-}
-
 export function CacheKeyMentorDetail (phoneNumber: string) {
   return `mentor:detail:${phoneNumber}`;
 }

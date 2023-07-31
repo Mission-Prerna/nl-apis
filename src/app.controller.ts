@@ -30,6 +30,7 @@ import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
 import { SentryInterceptor } from './interceptors/sentry.interceptor';
 import { CreateMentorDto } from './dto/CreateMentor.dto';
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
+import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -289,5 +290,23 @@ export class AppController {
       throw new BadRequestException('Token is invalid!');
     }
     return this.appService.createMentorOld(body);
+  }
+
+  @Post('/api/school/geo-fencing')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async schoolGeofencingBlacklist(
+    @Body() body: SchoolGeofencingBlacklistDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
+    return this.appService.schoolGeofencingBlacklist(body);
   }
 }

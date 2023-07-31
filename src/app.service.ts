@@ -34,6 +34,7 @@ import { CreateMentorDto } from './dto/CreateMentor.dto';
 import { FusionauthService } from './fusionauth.service';
 import { MentorCreationFailedException } from './exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
+import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 
 @Injectable()
 export class AppService {
@@ -960,6 +961,35 @@ export class AppService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  }
+
+  async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {
+    // disable the geo-fencing if the udise list is not empty
+    if (data.blacklist.length) {
+      await this.prismaService.school_list.updateMany({
+        where: {
+          udise: {
+            in: data.blacklist
+          }
+        },
+        data: {
+          geo_fence_enabled: false
+        }
+      });
+    }
+    if (data.whitelist.length) {
+      await this.prismaService.school_list.updateMany({
+        where: {
+          udise: {
+            in: data.whitelist
+          }
+        },
+        data: {
+          geo_fence_enabled: true
+        }
+      });
+    }
+    return 'ok';
   }
 
   handleRequestError(e: any) {

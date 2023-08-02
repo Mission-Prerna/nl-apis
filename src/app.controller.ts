@@ -6,7 +6,7 @@ import {
   Headers, NotImplementedException, Param, ParseArrayPipe, Patch,
   Post,
   Query,
-  SetMetadata,
+  SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AppService } from './app.service';
@@ -31,6 +31,7 @@ import { SentryInterceptor } from './interceptors/sentry.interceptor';
 import { CreateMentorDto } from './dto/CreateMentor.dto';
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
+import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -72,14 +73,7 @@ export class AppController {
   private async getLoggedInMentor(
     authorizationHeader: string,
   ): Promise<Mentor> {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authorizationHeader.split(' ')[1])
-    );
-
-    // We'll check if the token is from the very same application as needed in the app
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_APPLICATION_ID')) {
-      throw new BadRequestException('Token is invalid!');
-    }
+    const decodedAuthTokenData = this.checkTokenIfInvalid(authorizationHeader, false);
 
     const mentor = await this.appService.findMentorByPhoneNumber(
       decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
@@ -256,6 +250,20 @@ export class AppController {
     return this.appService.getActorHomeScreenMetric(mentor);
   }
 
+  private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    // We'll check if the token is from the very same application as needed in the app
+    const applicationId = admin ? this.configService.get<string>('FA_ADMIN_APPLICATION_ID') : this.configService.get<string>('FA_APPLICATION_ID');
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== applicationId) {
+      throw new UnauthorizedException('Token is invalid!');
+    }
+
+    return decodedAuthTokenData;
+  }
+
   @Post('/api/mentor')
   @Roles(Role.Admin)
   @UseGuards(JwtAuthGuard)
@@ -263,14 +271,7 @@ export class AppController {
     @Body() body: CreateMentorDto,
     @Headers('authorization') authToken: string,
   ) {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    // We'll check if the token is from the very same application as needed in the app
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
-      throw new BadRequestException('Token is invalid!');
-    }
+    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentor(body);
   }
 
@@ -281,32 +282,29 @@ export class AppController {
     @Body() body: CreateMentorOldDto,
     @Headers('authorization') authToken: string,
   ) {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    // We'll check if the token is from the very same application as needed in the app
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
-      throw new BadRequestException('Token is invalid!');
-    }
+    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentorOld(body);
   }
 
-  @Post('/api/school/geo-fencing')
+  @Post('/admin/school/geo-fencing')
   @Roles(Role.Admin)
   @UseGuards(JwtAuthGuard)
   async schoolGeofencingBlacklist(
     @Body() body: SchoolGeofencingBlacklistDto,
     @Headers('authorization') authToken: string,
   ) {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    // We'll check if the token is from the very same application as needed in the app
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_ADMIN_APPLICATION_ID')) {
-      throw new BadRequestException('Token is invalid!');
-    }
+    this.checkTokenIfInvalid(authToken, true);
     return this.appService.schoolGeofencingBlacklist(body);
+  }
+
+  @Get('/admin/assessment-visit-results')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async getAssessmentVisitResults(
+    @Query() queryParams: GetAssessmentVisitResultsDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    return this.appService.getAssessmentVisitResults(queryParams);
   }
 }

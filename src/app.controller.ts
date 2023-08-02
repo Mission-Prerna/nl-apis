@@ -75,6 +75,11 @@ export class AppController {
   ): Promise<Mentor> {
     const decodedAuthTokenData = this.checkTokenIfInvalid(authorizationHeader, false);
 
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
+
     const mentor = await this.appService.findMentorByPhoneNumber(
       decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
         'X-Hasura-User-Id'

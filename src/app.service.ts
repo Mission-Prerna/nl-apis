@@ -121,7 +121,7 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    const submissionDate = new Date(createAssessmentVisitResultData.submission_timestamp);
+    const submissionDate = new Date();  // we'll dump all records in the current quarter's table
     const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
       // Checking if Assessment visit result already exist; if not we'll create it

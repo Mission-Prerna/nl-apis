@@ -21,6 +21,7 @@ export class CreateMentorOldDto {
   district_name!: string;
 
   @IsString()
+  @IsOptional()
   @Validate(IsExist, ['blocks', 'name'], {
     message: '',
   })

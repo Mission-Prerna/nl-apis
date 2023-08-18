@@ -53,9 +53,9 @@ export enum SubjectEnum {
 }
 
 export enum CacheConstants {
-  TTL_MENTOR_FROM_TOKEN = 600 * 1000, // converted to milliseconds
+  TTL_MENTOR_FROM_TOKEN = 90000 * 1000, // converted to milliseconds
   TTL_MENTOR_SCHOOL_LIST = 600 * 1000, // converted to milliseconds
-  TTL_MENTOR_HOME_OVERVIEW = 600 * 1000, // converted to milliseconds
+  TTL_MENTOR_HOME_OVERVIEW = 90000 * 1000, // converted to milliseconds
   TTL_METADATA = 86400, // in seconds
 }
 

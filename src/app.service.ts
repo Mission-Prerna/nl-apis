@@ -1171,4 +1171,20 @@ export class AppService {
     }
     throw new InternalServerErrorException();
   }
+
+  async upsertMentorToken(mentor: Mentor, token: number) {
+    return await this.prismaService.mentor_tokens.upsert({
+      where: {
+        mentor_id: mentor.id,
+      },
+      update: {
+        token: token,
+      },
+      create: {
+        mentor_id: mentor.id,
+        token: token
+      },
+    });
+  }
+
 }

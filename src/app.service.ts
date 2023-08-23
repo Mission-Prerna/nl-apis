@@ -850,6 +850,14 @@ export class AppService {
   }
 
   async createMentorOld(data: CreateMentorOldDto) {
+    let blockId = null;
+    if (!['examiner', 'SRG'].includes(data.designation) && !data.block_town_name) {
+      throw new BadRequestException(['block_town_name is required when designation is not in [examiner, SRG]']);
+    } else {
+      if (data.block_town_name) {
+          blockId = (await this.prismaService.blocks.findFirstOrThrow({where: {name: data.block_town_name}})).id;
+      }
+    }
     let actorId = ActorEnum.MENTOR;
     const designationId = (await this.prismaService.designations.findFirstOrThrow({where: {name: data.designation}})).id;
     switch (data.designation) {
@@ -867,7 +875,7 @@ export class AppService {
       phone_no: data.phone_no,
       officer_name: data.officer_name,
       district_id: (await this.prismaService.districts.findFirstOrThrow({where: {name: data.district_name}})).id,
-      block_id: (await this.prismaService.blocks.findFirstOrThrow({where: {name: data.block_town_name}})).id,
+      block_id: blockId,
       designation_id: designationId,
       actor_id: actorId,
       area_type: data.area_type,
@@ -1163,4 +1171,20 @@ export class AppService {
     }
     throw new InternalServerErrorException();
   }
+
+  async upsertMentorToken(mentor: Mentor, token: string) {
+    return await this.prismaService.mentor_tokens.upsert({
+      where: {
+        mentor_id: mentor.id,
+      },
+      update: {
+        token: token,
+      },
+      create: {
+        mentor_id: mentor.id,
+        token: token
+      },
+    });
+  }
+
 }

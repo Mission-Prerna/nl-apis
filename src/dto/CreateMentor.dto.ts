@@ -25,9 +25,12 @@ export class CreateMentorDto {
   @Validate(IsExist, ['blocks', 'id'], {
     message: '',
   })
-  block_id!: number;
+  block_id!: number | null;
 
   @IsInt()
+  @Validate(IsExist, ['designations', 'id'], {
+    message: '',
+  })
   designation_id!: number;
 
   @IsInt()

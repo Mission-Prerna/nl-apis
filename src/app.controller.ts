@@ -8,6 +8,7 @@ import {
   Query,
   SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
+  Put
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -32,6 +33,7 @@ import { CreateMentorDto } from './dto/CreateMentor.dto';
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
+import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -82,7 +84,7 @@ export class AppController {
 
     const mentor = await this.appService.findMentorByPhoneNumber(
       decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
-        'X-Hasura-User-Id'
+      'X-Hasura-User-Id'
       ],
     );
 
@@ -312,4 +314,17 @@ export class AppController {
     this.checkTokenIfInvalid(authToken, true);
     return this.appService.getAssessmentVisitResults(queryParams);
   }
+
+  @Put('/api/mentor/token')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async setMentorToken(
+    @Body() body: UpsertMentorTokenDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    this.appService.upsertMentorToken(mentor, body.token).then(r => true);
+    return mentor;
+  }
+
 }

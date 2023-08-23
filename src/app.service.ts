@@ -133,7 +133,7 @@ export class AppService {
         },
         where: {
           submission_timestamp:
-          createAssessmentVisitResultData.submission_timestamp,
+            createAssessmentVisitResultData.submission_timestamp,
           mentor_id: createAssessmentVisitResultData.mentor_id,
           grade: createAssessmentVisitResultData.grade,
           subject_id: createAssessmentVisitResultData.subject_id,
@@ -157,18 +157,18 @@ export class AppService {
             },
             data: {
               submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
+                createAssessmentVisitResultData.submission_timestamp,
               grade: createAssessmentVisitResultData.grade,
               subject_id: createAssessmentVisitResultData.subject_id,
               mentor_id: createAssessmentVisitResultData.mentor_id,
               actor_id: createAssessmentVisitResultData.actor_id,
               block_id: createAssessmentVisitResultData.block_id,
               assessment_type_id:
-              createAssessmentVisitResultData.assessment_type_id,
+                createAssessmentVisitResultData.assessment_type_id,
               udise: createAssessmentVisitResultData.udise,
               no_of_student: createAssessmentVisitResultData.no_of_student,
               app_version_code:
-              createAssessmentVisitResultData.app_version_code,
+                createAssessmentVisitResultData.app_version_code,
               module_result: {}, // populating it default
             },
           });
@@ -211,7 +211,7 @@ export class AppService {
             await tx[tables.assessment_visit_results_student_odk_results].deleteMany({
               where: {
                 assessment_visit_results_students_id:
-                assessmentVisitResultStudent.id,
+                  assessmentVisitResultStudent.id,
               },
             });
           } else {
@@ -249,7 +249,7 @@ export class AppService {
                 question: odkResult.question,
                 answer: odkResult.answer,
                 assessment_visit_results_students_id:
-                assessmentVisitResultStudentId,
+                  assessmentVisitResultStudentId,
               };
             }),
             skipDuplicates: true,
@@ -708,7 +708,7 @@ export class AppService {
     mentor: Mentor,
     firstDayTimestamp: number,
     todayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeActorHomeOverview|null> {
+    lastDayTimestamp: number): Promise<TypeActorHomeOverview | null> {
     try {
       const result: Record<string, any> = await this.prismaService
         .$queryRawUnsafe(`
@@ -807,13 +807,13 @@ export class AppService {
   async getActorHomeScreenMetric(mentor: Mentor) {
     const lastDate = new Date();  // it's now() basically
     const temp = new Date();
-    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
+    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
     const firstDate = new Date(temp.setDate(diff));
 
-    const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth()+1);
-    const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth()+1);
+    const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
+    const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
 
-    let responseFirstTable: TypeActorHomeOverview|null;
+    let responseFirstTable: TypeActorHomeOverview | null;
     let responseSecondTable = null;
     if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
       // both tables are same
@@ -871,11 +871,11 @@ export class AppService {
       throw new BadRequestException(['block_town_name is required when designation is not in [examiner, SRG]']);
     } else {
       if (data.block_town_name) {
-          blockId = (await this.prismaService.blocks.findFirstOrThrow({where: {name: data.block_town_name}})).id;
+        blockId = (await this.prismaService.blocks.findFirstOrThrow({ where: { name: data.block_town_name } })).id;
       }
     }
     let actorId = ActorEnum.MENTOR;
-    const designationId = (await this.prismaService.designations.findFirstOrThrow({where: {name: data.designation}})).id;
+    const designationId = (await this.prismaService.designations.findFirstOrThrow({ where: { name: data.designation } })).id;
     switch (data.designation) {
       case 'teacher':
         actorId = ActorEnum.TEACHER;
@@ -890,7 +890,7 @@ export class AppService {
     const newDto: CreateMentorDto = {
       phone_no: data.phone_no,
       officer_name: data.officer_name,
-      district_id: (await this.prismaService.districts.findFirstOrThrow({where: {name: data.district_name}})).id,
+      district_id: (await this.prismaService.districts.findFirstOrThrow({ where: { name: data.district_name } })).id,
       block_id: blockId,
       designation_id: designationId,
       actor_id: actorId,
@@ -1026,12 +1026,12 @@ export class AppService {
     if (params.id < baseId) {
       params.id = baseId;
     }
-    const yearMonthIdentifier = (params.id+'').substring(0, 6);
+    const yearMonthIdentifier = (params.id + '').substring(0, 6);
     let yearIdentifier = yearMonthIdentifier.substring(0, 4);
     let year = parseInt(yearIdentifier);
     let monthIdentifier = yearMonthIdentifier.substring(4, 6);
     let month = parseInt(monthIdentifier);
-    const rawId = parseInt((params.id+'').substring(6));
+    const rawId = parseInt((params.id + '').substring(6));
     const tables = this.getAssessmentVisitResultsTables(year, month);
 
     try {
@@ -1120,7 +1120,7 @@ export class AppService {
 
         let idIdentifier;
         if (assessmentVisitResult.id < 10000) {
-          idIdentifier = BigInt(parseInt(`${yearIdentifier}${monthIdentifier}`)*10000) + BigInt(assessmentVisitResult.id);
+          idIdentifier = BigInt(parseInt(`${yearIdentifier}${monthIdentifier}`) * 10000) + BigInt(assessmentVisitResult.id);
         } else {
           idIdentifier = parseInt(`${yearIdentifier}${monthIdentifier}${assessmentVisitResult.id}`)
         }
@@ -1143,7 +1143,7 @@ export class AppService {
       if (results.length == 0) {
         const today = new Date();
         let newIdentifier = parseInt(`${yearIdentifier}${monthIdentifier}`);
-        if (today.getFullYear() == year && (month < today.getMonth()+1)) {
+        if (today.getFullYear() == year && (month < today.getMonth() + 1)) {
           // we'll call the same function recursively with next quarter's month identifier
           month = month + 3;  // as we want to go to next quarter's table
           monthIdentifier = (month < 10) ? `0${month}` : `${month}`;
@@ -1200,6 +1200,16 @@ export class AppService {
         mentor_id: mentor.id,
         token: token
       },
+    });
+  }
+
+  async setMentorBotTelemetry(mentorId: bigint, botId: string, action: number) {
+    return await this.prismaService.mentor_bot_telemetry.create({
+      data: {
+        "mentor_id": mentorId,
+        "bot_id": botId,
+        "action": action
+      }
     });
   }
 

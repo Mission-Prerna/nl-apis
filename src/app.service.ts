@@ -36,6 +36,7 @@ import { MentorCreationFailedException } from './exceptions/mentor-creation-fail
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
+import * as Sentry from '@sentry/minimal';
 
 @Injectable()
 export class AppService {
@@ -170,6 +171,21 @@ export class AppService {
               createAssessmentVisitResultData.app_version_code,
               module_result: {}, // populating it default
             },
+          });
+        } else {
+          // this is a duplicate submission; let's trigger Sentry event
+          Sentry.captureMessage('Duplicate submission detected', {
+            user: {
+              id: createAssessmentVisitResultData.mentor_id + '',
+            },
+            extra: {
+              submission_timestamp:
+              createAssessmentVisitResultData.submission_timestamp,
+              mentor_id: createAssessmentVisitResultData.mentor_id,
+              grade: createAssessmentVisitResultData.grade,
+              subject_id: createAssessmentVisitResultData.subject_id,
+              udise: createAssessmentVisitResultData.udise,
+            }
           });
         }
 

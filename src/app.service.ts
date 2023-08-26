@@ -16,11 +16,16 @@ import {
   AssessmentVisitResultsStudentModule,
   CacheConstants,
   CacheKeyMentorDetail,
-  CacheKeyMentorHomeOverview,
   CacheKeyMentorSchoolList,
+  CacheKeyMetadata,
+  CacheKeyMentorMonthlyMetrics,
   Mentor,
   TypeActorHomeOverview,
   TypeAssessmentQuarterTables,
+  CacheKeyMentorWeeklyMetrics,
+  CacheKeyMentorDailyMetrics,
+  MentorMonthlyMetrics,
+  MentorWeeklyMetrics, MentorDailyMetrics,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -37,6 +42,8 @@ import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import * as Sentry from '@sentry/minimal';
+import { RedisHelperService } from './RedisHelper.service';
+const moment = require('moment');
 
 @Injectable()
 export class AppService {
@@ -47,6 +54,7 @@ export class AppService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly faService: FusionauthService,
+    private readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
     this.prismaService.$queryRawUnsafe(`
@@ -402,13 +410,56 @@ export class AppService {
     }
   }
 
+  /**
+   * Transforms the cached redis hashmap response into the actual API response.
+   * @param cachedData
+   * @param mentor
+   * @param month
+   * @param year
+   * @private
+   */
+  private async transformHomeScreenMetricCache(cachedData: MentorMonthlyMetrics | Record<string, any>, mentor: Mentor, month: number, year: number) {
+    const response: Record<string, any> = {
+      visited_schools: parseInt(cachedData.schools_visited),
+      total_assessments: parseInt(cachedData.assessments_taken),
+      average_assessment_time: parseInt(cachedData.avg_time),
+      grades: [
+        {
+          grade: 1,
+          total_assessments: parseInt(cachedData.grade_1_assessments)
+        },
+        {
+          grade: 2,
+          total_assessments: parseInt(cachedData.grade_2_assessments)
+        },
+        {
+          grade: 3,
+          total_assessments: parseInt(cachedData.grade_3_assessments)
+        }
+      ],
+    };
+    if (mentor.actor_id == ActorEnum.TEACHER) {
+      const dailyData: MentorDailyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorDailyMetrics(mentor.id, month, moment().date(), year));
+      if (Object.keys(dailyData).length === 0) {
+        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+      } else {
+        const weeklyData: MentorWeeklyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), year));
+        response.teacher_overview = {
+          assessments_total: parseInt(weeklyData.assessments_taken),
+          nipun_total: parseInt(weeklyData.nipun_count),
+          assessments_today: parseInt(dailyData.assessments_taken),
+          nipun_today: parseInt(dailyData.nipun_count)
+        }
+      }
+    }
+    return response;
+  }
+
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
     // We'll check if there is data in the cache
-    const cachedData = await this.cacheService.get<any>(
-      CacheKeyMentorHomeOverview(mentor.phone_no, month, year),
-    );
-    if (cachedData) {
-      return cachedData;
+    const cachedData: MentorMonthlyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorMonthlyMetrics(mentor.id, month, year));
+    if (Object.keys(cachedData).length !== 0) {
+      return this.transformHomeScreenMetricCache(cachedData, mentor, month, year);
     }
 
     const tables = this.getAssessmentVisitResultsTables(year, month);
@@ -545,10 +596,19 @@ export class AppService {
           },
         ],
       };
+
+      // create the hashmap in redis
+      await this.redisHelper.createHash(CacheKeyMentorMonthlyMetrics(mentor.id, month, year), {
+        'schools_visited': parseInt(result[0]['visited_schools']),
+        'assessments_taken': parseInt(result[0]['total_assessments']),
+        'avg_time': parseInt(result[0]['average_assessment_time']),
+        'grade_1_assessments': parseInt(result[0]['grade1_assessments']),
+        'grade_2_assessments': parseInt(result[0]['grade2_assessments']),
+        'grade_3_assessments': parseInt(result[0]['grade3_assessments']),
+      });
       if (mentor.actor_id == ActorEnum.TEACHER) {
         response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
       }
-      await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
       return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -645,7 +705,10 @@ export class AppService {
   }
 
   async getMetadata() {
-    return {
+    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+    if (cacheData) return cacheData;
+
+    const resp = {
       actors: await this.prismaService.actors.findMany(),
       designations: await this.prismaService.designations.findMany({
         select: {
@@ -687,6 +750,9 @@ export class AppService {
         },
       }),
     };
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    return resp;
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
@@ -862,6 +928,18 @@ export class AppService {
         nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
       }
     }
+
+    // set weekly stats in redis
+    await this.redisHelper.createHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), lastDate.getFullYear()), {
+      'assessments_taken': response?.assessments_total ?? 0,
+      'nipun_count': response?.nipun_total ?? 0,
+    });
+
+    // set daily stats in redis
+    await this.redisHelper.createHash(CacheKeyMentorDailyMetrics(mentor.id, lastDate.getMonth()+1, lastDate.getDate(), lastDate.getFullYear()), {
+      'assessments_taken': response?.assessments_today ?? 0,
+      'nipun_count': response?.nipun_today ?? 0,
+    });
     return response;
   }
 

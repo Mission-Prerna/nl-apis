@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  Body, CacheInterceptor, CacheTTL,
+  Body,
   Controller,
   Get,
   Headers, NotImplementedException, Param, ParseArrayPipe, Patch,
@@ -17,7 +17,7 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { ActorEnum, CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
+import { ActorEnum, JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
@@ -222,8 +222,6 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  @UseInterceptors(CacheInterceptor) // Automatically cache the response for this endpoint
-  @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
   async getMetadata() {
     return this.appService.getMetadata();
   }

@@ -78,14 +78,45 @@ export type TypeActorHomeOverview = {
   nipun_today: number
 }
 
+export type MentorMonthlyMetrics = {
+  schools_visited: number,
+  assessments_taken: number,
+  avg_time: number,
+  grade_1_assessments: number,
+  grade_2_assessments: number,
+  grade_3_assessments: number
+}
+
+export type MentorWeeklyMetrics = {
+  assessments_taken: number,
+  nipun_count: number,
+}
+
+export type MentorDailyMetrics = {
+  assessments_taken: number,
+  nipun_count: number,
+}
+
+export function CacheKeyMetadata () {
+  return 'metadata';
+}
+
 export function CacheKeyMentorDetail (phoneNumber: string) {
   return `mentor:detail:${phoneNumber}`;
 }
 
 export function CacheKeyMentorSchoolList (phoneNumber: string, month: number, year: number) {
-  return `mentor:scl_list:${phoneNumber}:${year.toString()}:${month.toString()}`;
+  return `mentor:school-list:${phoneNumber}:${year.toString()}:${month.toString()}`;
 }
 
-export function CacheKeyMentorHomeOverview (phoneNumber: string, month: number, year: number) {
-  return `mentor:home_overview:${phoneNumber}:${year.toString()}:${month.toString()}`;
+export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, year: number) {
+  return `monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
+}
+
+export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {
+  return `weekly:${year.toString()}:${week.toString()}:mentor:${mentorId.toString()}`;
+}
+
+export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day: number, year: number) {
+  return `daily:${year.toString()}:${month.toString()}:${day.toString()}:mentor:${mentorId.toString()}`;
 }

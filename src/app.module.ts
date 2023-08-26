@@ -1,4 +1,4 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { CacheModule, CacheStore, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -14,6 +14,8 @@ import { PrismaHealthIndicator } from './prisma.health';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { FusionauthService } from './fusionauth.service';
+import { redisStore } from 'cache-manager-redis-store';
+import { RedisHelperService } from './RedisHelper.service';
 
 @Module({
   imports: [
@@ -48,15 +50,26 @@ import { FusionauthService } from './fusionauth.service';
     RedisModule.forRootAsync({
       useFactory: (config: ConfigService) => {
         return {
-          config: {
-            host: config.get('QUEUE_HOST'),
-            port: config.get('QUEUE_PORT'),
-          },
+          config: [
+            {
+              host: config.get('CACHE_HOST'),
+              port: config.get('CACHE_PORT'),
+            },
+          ],
         };
       },
       inject: [ConfigService],
     }),
-    CacheModule.register({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        store: (await redisStore({
+          url: `redis://${configService.get('CACHE_HOST')}:${configService.get('CACHE_PORT')}`,
+        })) as unknown as CacheStore,
+      }),
+      inject: [ConfigService],
+    }),
     TerminusModule,
   ],
   controllers: [AppController],
@@ -68,6 +81,7 @@ import { FusionauthService } from './fusionauth.service';
     PrismaHealthIndicator,
     RedisHealthIndicator,
     FusionauthService,
+    RedisHelperService,
   ],
 })
 export class AppModule {}

@@ -25,7 +25,7 @@ import {
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
   MentorMonthlyMetrics,
-  MentorWeeklyMetrics, MentorDailyMetrics,
+  MentorWeeklyMetrics, MentorDailyMetrics, CacheMentorMetricsEnum,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -666,6 +666,9 @@ export class AppService {
           'grade_3_assessments': parseInt(result[0]['grade3_assessments']),
         }), // create the hashmap in redis
       ]);
+
+      // creating DB table entry for the very first time
+      await this.upsertCacheMentorMetrics(mentor, year, month, result[0]);
 
       if (mentor.actor_id == ActorEnum.TEACHER) {
         response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
@@ -1345,4 +1348,35 @@ export class AppService {
     });
   }
 
+  private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: Record<any, any>) {
+    // creating DB table entry
+    return this.prismaService.cache_mentor_metrics.upsert({
+      where: {
+        mentor_id_type_type_value: {
+          mentor_id: mentor.id,
+          type: CacheMentorMetricsEnum.TYPE_MONTHLY,
+          type_value: `${year.toString()}.${month.toString()}`
+        }
+      },
+      create: {
+        mentor_id: mentor.id,
+        type: CacheMentorMetricsEnum.TYPE_MONTHLY,
+        type_value: `${year.toString()}.${month.toString()}`,
+        schools_visited: parseInt(result['visited_schools']),
+        assessments_taken: parseInt(result['total_assessments']),
+        avg_time: parseInt(result['average_assessment_time']),
+        grade_1_assessments: parseInt(result['grade1_assessments']),
+        grade_2_assessments: parseInt(result['grade2_assessments']),
+        grade_3_assessments: parseInt(result['grade3_assessments']),
+      },
+      update: {
+        schools_visited: parseInt(result['visited_schools']),
+        assessments_taken: parseInt(result['total_assessments']),
+        avg_time: parseInt(result['average_assessment_time']),
+        grade_1_assessments: parseInt(result['grade1_assessments']),
+        grade_2_assessments: parseInt(result['grade2_assessments']),
+        grade_3_assessments: parseInt(result['grade3_assessments']),
+      }
+    });
+  }
 }

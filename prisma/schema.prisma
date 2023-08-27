@@ -702,10 +702,12 @@ model mentor {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  cache_mentor_metrics                     cache_mentor_metrics[]
   actors                                   actors                                     @relation(fields: [actor_id], references: [id])
   blocks                                   blocks?                                    @relation(fields: [block_id], references: [id], onDelete: Restrict)
   designations                             designations                               @relation(fields: [designation_id], references: [id])
   districts                                districts                                  @relation(fields: [district_id], references: [id])
+  mentor_bot_telemetry                     mentor_bot_telemetry[]
   mentor_segmentation                      mentor_segmentation[]
   mentor_tokens                            mentor_tokens?
   mentor_update_logs                       mentor_update_logs[]
@@ -1865,4 +1867,84 @@ model mentor_update_logs {
   mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
 
   @@index([mentor_id])
+}
+
+model cache_mentor_metrics {
+  id                  BigInt   @id @default(autoincrement())
+  mentor_id           BigInt
+  type                Int      @db.SmallInt
+  type_value          String   @db.VarChar
+  schools_visited     Int      @default(0) @db.SmallInt
+  assessments_taken   Int      @default(0) @db.SmallInt
+  avg_time            Int      @default(0) @db.SmallInt
+  grade_1_assessments Int      @default(0) @db.SmallInt
+  grade_2_assessments Int      @default(0) @db.SmallInt
+  grade_3_assessments Int      @default(0) @db.SmallInt
+  nipun_count         Int      @default(0) @db.SmallInt
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+  mentor              mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, type, type_value])
+}
+
+model mentor_bot_telemetry {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  bot_id     String   @db.Uuid
+  action     Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, bot_id, action])
+  @@index([action])
+  @@index([bot_id])
+  @@index([mentor_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model new_schools_25_07_2023 {
+  id                       Int?
+  district                 String?
+  area_type                String?
+  block                    String?
+  nypanchayat              String?
+  type                     String?
+  category                 String?
+  name                     String?
+  udise_code               Decimal? @db.Decimal
+  total_student_registered String?
+  is_sankul                String?
+  district_id              Int?
+  block_id                 Int?
+  udise                    Decimal? @db.Decimal
+  nyay_panchayat_id        String?
+  lat                      String?
+  long                     String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model query_result_2023_07_20 {
+  id                       Int?
+  district                 String?
+  area_type                String?
+  block                    String?
+  nypanchayat              String?
+  type                     String?
+  category                 String?
+  name                     String?
+  udise_code               Decimal? @db.Decimal
+  total_student_registered Int?
+  is_sankul                String?
+  district_id              Int?
+  block_id                 Int?
+  udise                    Decimal? @db.Decimal
+  nyay_panchayat_id        Int?
+  lat                      Decimal? @db.Decimal
+  long                     Decimal? @db.Decimal
+
+  @@ignore
 }

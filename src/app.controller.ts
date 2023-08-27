@@ -234,7 +234,7 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    this.appService.updateMentorPin(mentor, body.pin).then(r => true);
+    this.appService.updateMentorPin(mentor, body.pin).then(() => true);
     return mentor;
   }
 
@@ -321,8 +321,61 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    this.appService.upsertMentorToken(mentor, body.token).then(r => true);
+    this.appService.upsertMentorToken(mentor, body.token).then(() => true);
     return mentor;
   }
 
+  @Post('/admin/queues/pause')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async pauseQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    await Promise.all([
+      this.assessmentVisitResultQueue.pause(false),
+      this.assessmentSurveyResultQueue.pause(false),
+    ]);
+    return 'ok';
+  }
+
+  @Post('/admin/queues/resume')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async resumeQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    await Promise.all([
+      this.assessmentVisitResultQueue.resume(false),
+      this.assessmentSurveyResultQueue.resume(false),
+    ]);
+    return 'ok';
+  }
+
+  @Get('/admin/queues/count')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async countQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    return {
+      assessment_visit_results: await this.assessmentVisitResultQueue.count(),
+      assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
+    };
+  }
+
+  @Get('/admin/queues/failed-count')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async countFailedQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    return {
+      assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
+      assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
+    };
+  }
 }

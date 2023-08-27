@@ -43,6 +43,7 @@ import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
+import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 const moment = require('moment');
 
 @Injectable()
@@ -130,7 +131,9 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
+    let totalTimeTaken: number = 0;
     const submissionDate = new Date();  // we'll dump all records in the current quarter's table
+    let uniqueStudents: Record<string, number> = {};
     const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
       // Checking if Assessment visit result already exist; if not we'll create it
@@ -149,6 +152,25 @@ export class AppService {
         },
       });
 
+      if (assessmentVisitResult) {
+        // this is a duplicate submission; let's trigger Sentry event
+        Sentry.captureMessage('Duplicate submission detected', {
+          user: {
+            id: createAssessmentVisitResultData.mentor_id + '',
+          },
+          extra: {
+            submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            udise: createAssessmentVisitResultData.udise,
+          }
+        });
+        this.logger.log('Duplicate found. Ignoring..');
+        return assessmentVisitResult; // we'll not process any further because it's a duplicate
+      }
+
       // filtering student whose module is 'odk'
       const assessmentVisitResultStudents =
         createAssessmentVisitResultData.results.filter(
@@ -156,95 +178,57 @@ export class AppService {
             result.module === AssessmentVisitResultsStudentModule.ODK,
         );
 
-      return await this.prismaService.$transaction(async (tx) => {
-        if (!assessmentVisitResult) {
-          // @ts-ignore
-          assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
-            select: {
-              id: true,
-            },
-            data: {
-              submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              subject_id: createAssessmentVisitResultData.subject_id,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              actor_id: createAssessmentVisitResultData.actor_id,
-              block_id: createAssessmentVisitResultData.block_id,
-              assessment_type_id:
-              createAssessmentVisitResultData.assessment_type_id,
-              udise: createAssessmentVisitResultData.udise,
-              no_of_student: createAssessmentVisitResultData.no_of_student,
-              app_version_code:
-              createAssessmentVisitResultData.app_version_code,
-              module_result: {}, // populating it default
-            },
-          });
-        } else {
-          // this is a duplicate submission; let's trigger Sentry event
-          Sentry.captureMessage('Duplicate submission detected', {
-            user: {
-              id: createAssessmentVisitResultData.mentor_id + '',
-            },
-            extra: {
-              submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              grade: createAssessmentVisitResultData.grade,
-              subject_id: createAssessmentVisitResultData.subject_id,
-              udise: createAssessmentVisitResultData.udise,
-            }
-          });
-        }
+      const response = await this.prismaService.$transaction(async (tx) => {
+        // @ts-ignore
+        assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
+          select: {
+            id: true,
+          },
+          data: {
+            submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            actor_id: createAssessmentVisitResultData.actor_id,
+            block_id: createAssessmentVisitResultData.block_id,
+            assessment_type_id:
+            createAssessmentVisitResultData.assessment_type_id,
+            udise: createAssessmentVisitResultData.udise,
+            no_of_student: createAssessmentVisitResultData.no_of_student,
+            app_version_code:
+            createAssessmentVisitResultData.app_version_code,
+            module_result: {}, // populating it default
+          },
+        });
 
         const assessmentVisitResultId = assessmentVisitResult.id;
 
         for (const student of assessmentVisitResultStudents) {
-          // Checking if Assessment visit result student already exist; if not then creating it
+          // Create student submission
           // @ts-ignore
-          let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
-            select: {
-              id: true,
-            },
-            where: {
+          const assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
+            data: {
+              student_name: student.student_name,
               competency_id: student.competency_id,
+              module: student.module,
+              end_time: student.end_time,
+              is_passed: student.is_passed,
+              start_time: student.start_time,
+              statement: student.statement,
+              achievement: student.achievement,
+              total_questions: student.total_questions,
+              success_criteria: student.success_criteria,
+              session_completed: student.session_completed,
+              is_network_active: student.is_network_active,
+              workflow_ref_id: student.workflow_ref_id,
+              total_time_taken: student.total_time_taken,
               student_session: student.student_session,
               assessment_visit_results_v2_id: assessmentVisitResult.id,
             },
           });
-
-          if (assessmentVisitResultStudent) {
-            // Assessment visit result student exist; delete its odk submissions
-            // @ts-ignore
-            await tx[tables.assessment_visit_results_student_odk_results].deleteMany({
-              where: {
-                assessment_visit_results_students_id:
-                assessmentVisitResultStudent.id,
-              },
-            });
-          } else {
-            // @ts-ignore
-            assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
-              data: {
-                student_name: student.student_name,
-                competency_id: student.competency_id,
-                module: student.module,
-                end_time: student.end_time,
-                is_passed: student.is_passed,
-                start_time: student.start_time,
-                statement: student.statement,
-                achievement: student.achievement,
-                total_questions: student.total_questions,
-                success_criteria: student.success_criteria,
-                session_completed: student.session_completed,
-                is_network_active: student.is_network_active,
-                workflow_ref_id: student.workflow_ref_id,
-                total_time_taken: student.total_time_taken,
-                student_session: student.student_session,
-                assessment_visit_results_v2_id: assessmentVisitResult.id,
-              },
-            });
-          }
+          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;
+          totalTimeTaken += student?.total_time_taken ?? 0;
 
           const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
 
@@ -271,6 +255,8 @@ export class AppService {
               result.module !== AssessmentVisitResultsStudentModule.ODK,
           )
           .map((result) => {
+            totalTimeTaken += result?.total_time_taken ?? 0;
+            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;
             return {
               student_name: result.student_name,
               competency_id: result.competency_id,
@@ -291,16 +277,69 @@ export class AppService {
             };
           });
 
-        // noinspection TypeScriptValidateJSTypes
-        // @ts-ignore
-        await tx[tables.assessment_visit_results_students].createMany({
-          data: nonOdkModuleStudents,
-          skipDuplicates: true,
-        });
+        if (nonOdkModuleStudents.length) {
+          // @ts-ignore
+          await tx[tables.assessment_visit_results_students].createMany({
+            data: nonOdkModuleStudents,
+            skipDuplicates: true,
+          });
+        }
         return assessmentVisitResult;
       }, {
         timeout: 15000,
       });
+
+      // update metrics in cache
+      const cache = new MonthlyCacheManager(
+        BigInt(createAssessmentVisitResultData.mentor_id),
+        submissionDate.getFullYear(),
+        submissionDate.getMonth() +1,
+        this.redisHelper
+      );
+      const existingCache: MentorMonthlyMetrics | Record<string, any> = (await cache.get());
+      if (Object.keys(existingCache.metrics).length) {
+        // if there already is existing cache, then only we'll update the metric;
+        // otherwise we'll wait for user to go on home screen, where all the
+        // cache will be populated from the very beginning
+        const assessmentsCount = Object.keys(uniqueStudents).length;
+        const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);
+        await Promise.all([
+          cache.updateSchools([createAssessmentVisitResultData.udise.toString()]),  // set the current udise
+          cache.incrementBy('assessments_taken', assessmentsCount), // increment the total assessments count
+          cache.incrementBy( `grade_${createAssessmentVisitResultData.grade.toString()}_assessments`,
+            assessmentsCount),  // increment this particular class's count
+          cache.update({
+            'schools_visited': await cache.getSchoolsCount(),
+            'avg_time': (
+              (parseInt(existingCache.metrics.avg_time) * parseInt(existingCache.metrics.assessments_taken))
+              +
+              totalTimeTaken
+            ) / (parseInt(existingCache.metrics.assessments_taken) + createAssessmentVisitResultData.results.length)
+          }), // update the below counts
+        ]);
+
+        // Let's now update teacher's metrics cache
+        if (createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER) {
+          const cacheWeekly = new WeeklyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
+            submissionDate.getFullYear(), moment().isoWeek(), this.redisHelper);
+          const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
+            submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
+          const dailyData: MentorDailyMetrics | Record<string, any> = await cacheDaily.get();
+          console.log(dailyData, 11111111);
+          if (Object.keys(dailyData).length) {
+            // if there already is existing cache, then only we'll update the metric;
+            // otherwise we'll wait for user to go on home screen, where all the
+            // cache will be populated from the very beginning
+            await Promise.all([
+              cacheDaily.incrementBy('assessments_taken', assessmentsCount),
+              cacheDaily.incrementBy('nipun_count', nipunCount),
+              cacheWeekly.incrementBy('assessments_taken', assessmentsCount),
+              cacheWeekly.incrementBy('nipun_count', nipunCount),
+            ]);
+          }
+        }
+      }
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -352,7 +391,8 @@ export class AppService {
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
-      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_SCHOOL_LIST); // Adding the data to cache
+      // @ts-ignore
+      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, { ttl: CacheConstants.TTL_MENTOR_SCHOOL_LIST }); // Adding the data to cache
       return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -441,7 +481,7 @@ export class AppService {
     if (mentor.actor_id == ActorEnum.TEACHER) {
       const dailyData: MentorDailyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorDailyMetrics(mentor.id, month, moment().date(), year));
       if (Object.keys(dailyData).length === 0) {
-        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
       } else {
         const weeklyData: MentorWeeklyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), year));
         response.teacher_overview = {
@@ -597,17 +637,38 @@ export class AppService {
         ],
       };
 
-      // create the hashmap in redis
-      await this.redisHelper.createHash(CacheKeyMentorMonthlyMetrics(mentor.id, month, year), {
-        'schools_visited': parseInt(result[0]['visited_schools']),
-        'assessments_taken': parseInt(result[0]['total_assessments']),
-        'avg_time': parseInt(result[0]['average_assessment_time']),
-        'grade_1_assessments': parseInt(result[0]['grade1_assessments']),
-        'grade_2_assessments': parseInt(result[0]['grade2_assessments']),
-        'grade_3_assessments': parseInt(result[0]['grade3_assessments']),
+      // find list of visited schools
+      const visitedSchoolsResult: Array<{udise: bigint}> = await this.prismaService.$queryRawUnsafe(`
+        select
+          DISTINCT udise as udise
+        from
+          ${tables.assessment_visit_results_v2} as avr2
+        where
+          avr2.mentor_id = ${mentor.id}
+          and avr2.udise > 0
+          and avr2.submission_timestamp > ${firstDayTimestamp} 
+          and avr2.submission_timestamp < ${lastDayTimestamp}      
+      `);
+
+      const visitedSchools = visitedSchoolsResult.map((item) => {
+        return item.udise.toString();
       });
+
+      const cache = new MonthlyCacheManager(BigInt(mentor.id), year, month, this.redisHelper);
+      await Promise.all([
+        cache.updateSchools(visitedSchools),  // add udise to current month's set
+        cache.update({
+          'schools_visited': parseInt(result[0]['visited_schools']),
+          'assessments_taken': parseInt(result[0]['total_assessments']),
+          'avg_time': parseInt(result[0]['average_assessment_time']),
+          'grade_1_assessments': parseInt(result[0]['grade1_assessments']),
+          'grade_2_assessments': parseInt(result[0]['grade2_assessments']),
+          'grade_3_assessments': parseInt(result[0]['grade3_assessments']),
+        }), // create the hashmap in redis
+      ]);
+
       if (mentor.actor_id == ActorEnum.TEACHER) {
-        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
       }
       return response;
     } catch (e) {
@@ -685,7 +746,8 @@ export class AppService {
       delete temp.districts;
       delete temp.blocks;
     }
-    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
     return temp;
   }
 
@@ -870,7 +932,7 @@ export class AppService {
     return null;
   }
 
-  async getActorHomeScreenMetric(mentor: Mentor) {
+  async getTeacherHomeScreenMetric(mentor: Mentor) {
     const lastDate = new Date();  // it's now() basically
     const temp = new Date();
     const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
@@ -929,17 +991,19 @@ export class AppService {
       }
     }
 
-    // set weekly stats in redis
-    await this.redisHelper.createHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), lastDate.getFullYear()), {
-      'assessments_taken': response?.assessments_total ?? 0,
-      'nipun_count': response?.nipun_total ?? 0,
-    });
-
-    // set daily stats in redis
-    await this.redisHelper.createHash(CacheKeyMentorDailyMetrics(mentor.id, lastDate.getMonth()+1, lastDate.getDate(), lastDate.getFullYear()), {
-      'assessments_taken': response?.assessments_today ?? 0,
-      'nipun_count': response?.nipun_today ?? 0,
-    });
+    const cacheWeekly = new WeeklyCacheManager(mentor.id, lastDate.getFullYear(), moment().isoWeek(), this.redisHelper);
+    const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,
+      lastDate.getDate(), this.redisHelper);
+    await Promise.all([
+      cacheWeekly.update({
+        'assessments_taken': response?.assessments_total ?? 0,
+        'nipun_count': response?.nipun_total ?? 0,
+      }),   // set weekly stats in redis
+      cacheDaily.update({
+        'assessments_taken': response?.assessments_today ?? 0,
+        'nipun_count': response?.nipun_today ?? 0,
+      }),   // set daily stats in redis
+    ])
     return response;
   }
 

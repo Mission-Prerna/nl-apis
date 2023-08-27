@@ -53,9 +53,8 @@ export enum SubjectEnum {
 }
 
 export enum CacheConstants {
-  TTL_MENTOR_FROM_TOKEN = 90000 * 1000, // converted to milliseconds
-  TTL_MENTOR_SCHOOL_LIST = 600 * 1000, // converted to milliseconds
-  TTL_MENTOR_HOME_OVERVIEW = 90000 * 1000, // converted to milliseconds
+  TTL_MENTOR_FROM_TOKEN = 90000, // in seconds
+  TTL_MENTOR_SCHOOL_LIST = 600, // in seconds
   TTL_METADATA = 86400, // in seconds
 }
 
@@ -109,14 +108,18 @@ export function CacheKeyMentorSchoolList (phoneNumber: string, month: number, ye
   return `mentor:school-list:${phoneNumber}:${year.toString()}:${month.toString()}`;
 }
 
+export function CacheKeyMentorMonthlyVisitedSchools(mentorId: bigint, month: number, year: number) {
+  return `vs.monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
+}
+
 export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, year: number) {
-  return `monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
+  return `hm.monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {
-  return `weekly:${year.toString()}:${week.toString()}:mentor:${mentorId.toString()}`;
+  return `hm.weekly:${year.toString()}:${week.toString()}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day: number, year: number) {
-  return `daily:${year.toString()}:${month.toString()}:${day.toString()}:mentor:${mentorId.toString()}`;
+  return `hm.daily:${year.toString()}:${month.toString()}:${day.toString()}:mentor:${mentorId.toString()}`;
 }

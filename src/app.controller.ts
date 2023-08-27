@@ -3,12 +3,12 @@ import {
   Body,
   Controller,
   Get,
-  Headers, NotImplementedException, Param, ParseArrayPipe, Patch,
+  Headers, ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
-  Put
+  Put, NotImplementedException, Param,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -252,7 +252,7 @@ export class AppController {
       default:
         throw new NotImplementedException('Only Teachers are allowed to access this endpoint.')
     }
-    return this.appService.getActorHomeScreenMetric(mentor);
+    return this.appService.getTeacherHomeScreenMetric(mentor);
   }
 
   private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {

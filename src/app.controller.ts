@@ -328,7 +328,7 @@ export class AppController {
   }
 
   @Get('/api/school/:udise/students')
-  //@Roles(Role.OpenRole, Role.Diet)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getSchoolStudents(
     @Headers('authorization') authToken: string,
@@ -416,7 +416,7 @@ export class AppController {
   }
 
   @Get('/api/school/:udise/students/result')
-  //@Roles(Role.OpenRole, Role.Diet)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResults(
     @Headers('authorization') authToken: string,
@@ -473,6 +473,37 @@ export class AppController {
     ];
   }
 
-
+  @Get('/api/school/:udise/students/result/summary')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudentsResultsSummary(
+    @Headers('authorization') authToken: string,
+    @Param() params: any,
+    @Query() query: any
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    const schoolUdise = params.udise;
+    const grade = query.grade;
+    if (!grade) throw new BadRequestException('Grade is missing!');
+    return [
+      {
+        "grade": grade,
+        "summary": [
+          {
+            "period": "August",
+            "total": 15,
+            "assessed": 10,
+            "successful": 5
+          },
+          {
+            "period": "July",
+            "total": 15,
+            "assessed": 8,
+            "successful": 4
+          }
+        ]
+      }
+    ];
+  }
 
 }

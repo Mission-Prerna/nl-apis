@@ -474,7 +474,7 @@ export class AppController {
   }
 
   @Get('/api/school/:udise/students/result/summary')
-  //@Roles(Role.OpenRole, Role.Diet)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResultsSummary(
     @Headers('authorization') authToken: string,

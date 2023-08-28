@@ -105,21 +105,27 @@ export function CacheKeyMentorDetail (phoneNumber: string) {
 }
 
 export function CacheKeyMentorSchoolList (phoneNumber: string, month: number, year: number) {
-  return `mentor:school-list:${phoneNumber}:${year.toString()}:${month.toString()}`;
+  const monthIdentifier = parseInt(month < 10 ? `0${month.toString()}` : `${month.toString()}`);
+  return `mentor:school-list:${phoneNumber}:${year.toString()}:${monthIdentifier}`;
 }
 
 export function CacheKeyMentorMonthlyVisitedSchools(mentorId: bigint, month: number, year: number) {
-  return `vs.monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
+  const monthIdentifier = parseInt(month < 10 ? `0${month.toString()}` : `${month.toString()}`);
+  return `vs.monthly:${year.toString()}:${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, year: number) {
-  return `hm.monthly:${year.toString()}:${month.toString()}:mentor:${mentorId.toString()}`;
+  const monthIdentifier = parseInt(month < 10 ? `0${month.toString()}` : `${month.toString()}`);
+  return `hm.monthly:${year.toString()}:${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {
-  return `hm.weekly:${year.toString()}:${week.toString()}:mentor:${mentorId.toString()}`;
+  const weekIdentifier = parseInt(week < 10 ? `0${week.toString()}` : `${week.toString()}`);
+  return `hm.weekly:${year.toString()}:${weekIdentifier}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day: number, year: number) {
-  return `hm.daily:${year.toString()}:${month.toString()}:${day.toString()}:mentor:${mentorId.toString()}`;
+  const monthIdentifier = parseInt(month < 10 ? `0${month.toString()}` : `${month.toString()}`);
+  const dayIdentifier = parseInt(day < 10 ? `0${day.toString()}` : `${day.toString()}`);
+  return `hm.daily:${year.toString()}:${monthIdentifier}:${dayIdentifier}:mentor:${mentorId.toString()}`;
 }

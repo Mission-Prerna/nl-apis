@@ -36,6 +36,8 @@ import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
+import { GetMentorBotsForActionDto } from './dto/GetMentorBotsWithAction.dto';
+
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -345,6 +347,17 @@ export class AppController {
       msg: 'Success!',
       data: "Telemetry inserted",
     };
+  }
+
+  @Get('/api/mentor/bot/telemetry')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMentorBotsWithAction(
+    @Body() body: GetMentorBotsWithActionDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return this.appService.getMentorBotsWithAction(mentor.id, body.action).then(r => true);
   }
 
   @Get('/api/school/:udise/students')

@@ -415,6 +415,64 @@ export class AppController {
     ];
   }
 
+  @Get('/api/school/:udise/students/result')
+  //@Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudentsResults(
+    @Headers('authorization') authToken: string,
+    @Param() params: any,
+    @Query() query: any
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    const schoolUdise = params.udise;
+    const grade = query.grade;
+    if (!grade) throw new BadRequestException('Grade is missing!');
+    const month = query.month;
+    if (!month) throw new BadRequestException('Month is missing!');
+    const year = query.year;
+    if (!year) throw new BadRequestException('Year is missing!');
+    return [
+      {
+        "grade": grade,
+        "period": month + " " + year,
+        "summary": [
+          {
+            "label": "Total",
+            "colour": "#FF0000",
+            "count": 4
+          },
+          {
+            "label": "Nipun",
+            "colour": "#FFFFFF",
+            "count": 2
+          },
+          {
+            "label": "Not accessed",
+            "colour": "#000000",
+            "count": 2
+          }
+        ],
+        "students": [
+          {
+            "id": "1",
+            "status": "pass",
+            "last_assessment_date": 170123456876
+          },
+          {
+            "id": "2",
+            "status": "fail",
+            "last_assessment_date": 170123456876
+          },
+          {
+            "id": "3",
+            "status": "pending",
+            "last_assessment_date": 170123456876
+          }
+        ]
+      }
+    ];
+  }
+
 
 
 }

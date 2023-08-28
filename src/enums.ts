@@ -64,12 +64,6 @@ export enum Role {
   Admin = 'Admin',
 }
 
-export enum CacheMentorMetricsEnum {
-  TYPE_MONTHLY = 1,
-  TYPE_WEEKLY = 2,
-  TYPE_DAILY = 3,
-}
-
 export type TypeAssessmentQuarterTables = {
   assessment_visit_results_v2: string;
   assessment_visit_results_students: string;

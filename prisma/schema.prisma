@@ -702,7 +702,9 @@ model mentor {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  cache_mentor_metrics                     cache_mentor_metrics[]
+  cache_mentor_metrics_daily               cache_mentor_metrics_daily[]
+  cache_mentor_metrics_monthly             cache_mentor_metrics_monthly[]
+  cache_mentor_metrics_weekly              cache_mentor_metrics_weekly[]
   actors                                   actors                                     @relation(fields: [actor_id], references: [id])
   blocks                                   blocks?                                    @relation(fields: [block_id], references: [id], onDelete: Restrict)
   designations                             designations                               @relation(fields: [designation_id], references: [id])
@@ -1869,25 +1871,6 @@ model mentor_update_logs {
   @@index([mentor_id])
 }
 
-model cache_mentor_metrics {
-  id                  BigInt   @id @default(autoincrement())
-  mentor_id           BigInt
-  type                Int      @db.SmallInt
-  type_value          String   @db.VarChar
-  schools_visited     Int      @default(0) @db.SmallInt
-  assessments_taken   Int      @default(0) @db.SmallInt
-  avg_time            Int      @default(0) @db.SmallInt
-  grade_1_assessments Int      @default(0) @db.SmallInt
-  grade_2_assessments Int      @default(0) @db.SmallInt
-  grade_3_assessments Int      @default(0) @db.SmallInt
-  nipun_count         Int      @default(0) @db.SmallInt
-  created_at          DateTime @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime @default(now()) @db.Timestamptz(6)
-  mentor              mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
-
-  @@unique([mentor_id, type, type_value])
-}
-
 model mentor_bot_telemetry {
   id         BigInt   @id @default(autoincrement())
   mentor_id  BigInt
@@ -1947,4 +1930,51 @@ model query_result_2023_07_20 {
   long                     Decimal? @db.Decimal
 
   @@ignore
+}
+
+model cache_mentor_metrics_daily {
+  id                BigInt   @id @default(autoincrement())
+  mentor_id         BigInt
+  day               Int
+  assessments_taken Int      @default(0) @db.SmallInt
+  nipun_count       Int      @default(0) @db.SmallInt
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  mentor            mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, day])
+  @@index([day])
+}
+
+model cache_mentor_metrics_monthly {
+  id                  BigInt   @id(map: "cache_mentor_metrics_pkey") @default(autoincrement())
+  mentor_id           BigInt
+  month               Int
+  schools_visited     Int      @default(0) @db.SmallInt
+  assessments_taken   Int      @default(0) @db.SmallInt
+  avg_time            Int      @default(0) @db.SmallInt
+  grade_1_assessments Int      @default(0) @db.SmallInt
+  grade_2_assessments Int      @default(0) @db.SmallInt
+  grade_3_assessments Int      @default(0) @db.SmallInt
+  nipun_count         Int      @default(0) @db.SmallInt
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+  mentor              mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict, map: "cache_mentor_metrics_mentor_id_fkey")
+
+  @@unique([mentor_id, month])
+  @@index([month])
+}
+
+model cache_mentor_metrics_weekly {
+  id                BigInt   @id @default(autoincrement())
+  mentor_id         BigInt
+  week              Int
+  assessments_taken Int      @default(0) @db.SmallInt
+  nipun_count       Int      @default(0) @db.SmallInt
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  mentor            mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, week])
+  @@index([week])
 }

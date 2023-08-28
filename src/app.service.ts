@@ -25,7 +25,7 @@ import {
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
   MentorMonthlyMetrics,
-  MentorWeeklyMetrics, MentorDailyMetrics, CacheMentorMetricsEnum,
+  MentorWeeklyMetrics, MentorDailyMetrics,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -1350,18 +1350,17 @@ export class AppService {
 
   private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: Record<any, any>) {
     // creating DB table entry
-    return this.prismaService.cache_mentor_metrics.upsert({
+    const monthIdentifier = parseInt(year.toString() + (month < 10 ? `0${month.toString()}` : `${month.toString()}`));
+    return this.prismaService.cache_mentor_metrics_monthly.upsert({
       where: {
-        mentor_id_type_type_value: {
+        mentor_id_month: {
           mentor_id: mentor.id,
-          type: CacheMentorMetricsEnum.TYPE_MONTHLY,
-          type_value: `${year.toString()}.${month.toString()}`
+          month: monthIdentifier
         }
       },
       create: {
         mentor_id: mentor.id,
-        type: CacheMentorMetricsEnum.TYPE_MONTHLY,
-        type_value: `${year.toString()}.${month.toString()}`,
+        month: monthIdentifier,
         schools_visited: parseInt(result['visited_schools']),
         assessments_taken: parseInt(result['total_assessments']),
         avg_time: parseInt(result['average_assessment_time']),

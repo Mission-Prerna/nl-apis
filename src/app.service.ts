@@ -290,53 +290,25 @@ export class AppService {
       });
 
       // update metrics in cache
-      const cache = new MonthlyCacheManager(
+      const cacheHomeScreen = new MonthlyCacheManager(
         BigInt(createAssessmentVisitResultData.mentor_id),
         submissionDate.getFullYear(),
         submissionDate.getMonth() +1,
         this.redisHelper
       );
-      const existingCache: MentorMonthlyMetrics | Record<string, any> = (await cache.get());
-      if (Object.keys(existingCache.metrics).length) {
-        // if there already is existing cache, then only we'll update the metric;
-        // otherwise we'll wait for user to go on home screen, where all the
-        // cache will be populated from the very beginning
+
+      const hydrated: boolean = await cacheHomeScreen.hydrate(createAssessmentVisitResultData.udise, createAssessmentVisitResultData.grade, totalTimeTaken, uniqueStudents)
+      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER) {
+        // Let's now update teacher's metrics cache
         const assessmentsCount = Object.keys(uniqueStudents).length;
         const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);
-        await Promise.all([
-          cache.updateSchools([createAssessmentVisitResultData.udise.toString()]),  // set the current udise
-          cache.incrementBy('assessments_taken', assessmentsCount), // increment the total assessments count
-          cache.incrementBy( `grade_${createAssessmentVisitResultData.grade.toString()}_assessments`,
-            assessmentsCount),  // increment this particular class's count
-          cache.update({
-            'schools_visited': await cache.getSchoolsCount(),
-            'avg_time': (
-              (parseInt(existingCache.metrics.avg_time) * parseInt(existingCache.metrics.assessments_taken))
-              +
-              totalTimeTaken
-            ) / (parseInt(existingCache.metrics.assessments_taken) + createAssessmentVisitResultData.results.length)
-          }), // update the below counts
-        ]);
-
-        // Let's now update teacher's metrics cache
-        if (createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER) {
+        const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
+          submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
+        if (await cacheDaily.hydrate(assessmentsCount, nipunCount)) {
+          // sync weekly metrics too because we synced daily as well
           const cacheWeekly = new WeeklyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
             submissionDate.getFullYear(), moment().isoWeek(), this.redisHelper);
-          const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
-            submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
-          const dailyData: MentorDailyMetrics | Record<string, any> = await cacheDaily.get();
-          console.log(dailyData, 11111111);
-          if (Object.keys(dailyData).length) {
-            // if there already is existing cache, then only we'll update the metric;
-            // otherwise we'll wait for user to go on home screen, where all the
-            // cache will be populated from the very beginning
-            await Promise.all([
-              cacheDaily.incrementBy('assessments_taken', assessmentsCount),
-              cacheDaily.incrementBy('nipun_count', nipunCount),
-              cacheWeekly.incrementBy('assessments_taken', assessmentsCount),
-              cacheWeekly.incrementBy('nipun_count', nipunCount),
-            ]);
-          }
+          await cacheWeekly.hydrate(assessmentsCount, nipunCount)
         }
       }
       return response;
@@ -510,16 +482,16 @@ export class AppService {
       const result: Record<string, any> = await this.prismaService
         .$queryRawUnsafe(`
           select
-              a.visited_schools,
-              b.average_assessment_time :: int8,
-              c.total_assessments,
-              d.grade1_assessments,
-              e.grade2_assessments,
-              f.grade3_assessments
+              a.schools_visited,
+              b.avg_time::int8,
+              c.assessments_taken,
+              d.grade_1_assessments,
+              e.grade_2_assessments,
+              f.grade_3_assessments
           from
               (
                   select
-                      count(DISTINCT udise) as visited_schools
+                      count(DISTINCT udise) as schools_visited
                   from
                       ${tables.assessment_visit_results_v2} as avr2
                   where
@@ -530,7 +502,7 @@ export class AppService {
               ) as a,
               (
                   select
-                      COALESCE(AVG(avrs.total_time_taken), 0) as average_assessment_time
+                      COALESCE(AVG(avrs.total_time_taken), 0) as avg_time
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -547,7 +519,7 @@ export class AppService {
               ) as b,
               (
                   select
-                      count(distinct student_session) as total_assessments
+                      count(distinct student_session) as assessments_taken
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -564,7 +536,7 @@ export class AppService {
               ) as c,
               (
                   select
-                      count(distinct student_session) as grade1_assessments
+                      count(distinct student_session) as grade_1_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -582,7 +554,7 @@ export class AppService {
               ) as d,
               (
                   select
-                      count(distinct student_session) as grade2_assessments
+                      count(distinct student_session) as grade_2_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -600,7 +572,7 @@ export class AppService {
               ) as e,
               (
                   select
-                      count(distinct student_session) as grade3_assessments
+                      count(distinct student_session) as grade_3_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
@@ -618,21 +590,21 @@ export class AppService {
               ) as f`);
 
       const response: Record<string, any> = {
-        visited_schools: result[0]['visited_schools'],
-        total_assessments: result[0]['total_assessments'],
-        average_assessment_time: result[0]['average_assessment_time'],
+        visited_schools: result[0]['schools_visited'],
+        total_assessments: result[0]['assessments_taken'],
+        average_assessment_time: result[0]['avg_time'],
         grades: [
           {
             grade: 1,
-            total_assessments: result[0]['grade1_assessments'],
+            total_assessments: result[0]['grade_1_assessments'],
           },
           {
             grade: 2,
-            total_assessments: result[0]['grade2_assessments'],
+            total_assessments: result[0]['grade_2_assessments'],
           },
           {
             grade: 3,
-            total_assessments: result[0]['grade3_assessments'],
+            total_assessments: result[0]['grade_3_assessments'],
           },
         ],
       };
@@ -650,22 +622,12 @@ export class AppService {
           and avr2.submission_timestamp < ${lastDayTimestamp}      
       `);
 
-      const visitedSchools = visitedSchoolsResult.map((item) => {
+      const visitedSchools: Array<string> = visitedSchoolsResult.map((item) => {
         return item.udise.toString();
       });
 
       const cache = new MonthlyCacheManager(BigInt(mentor.id), year, month, this.redisHelper);
-      await Promise.all([
-        cache.updateSchools(visitedSchools),  // add udise to current month's set
-        cache.update({
-          'schools_visited': parseInt(result[0]['visited_schools']),
-          'assessments_taken': parseInt(result[0]['total_assessments']),
-          'avg_time': parseInt(result[0]['average_assessment_time']),
-          'grade_1_assessments': parseInt(result[0]['grade1_assessments']),
-          'grade_2_assessments': parseInt(result[0]['grade2_assessments']),
-          'grade_3_assessments': parseInt(result[0]['grade3_assessments']),
-        }), // create the hashmap in redis
-      ]);
+      await cache.create(visitedSchools, result[0]);  // create the hashmap in redis
 
       // creating DB table entry for the very first time
       await this.upsertCacheMentorMetrics(mentor, year, month, result[0]);
@@ -993,6 +955,8 @@ export class AppService {
         nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
       }
     }
+
+    console.log(response);
 
     const cacheWeekly = new WeeklyCacheManager(mentor.id, lastDate.getFullYear(), moment().isoWeek(), this.redisHelper);
     const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,
@@ -1348,7 +1312,7 @@ export class AppService {
     });
   }
 
-  private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: Record<any, any>) {
+  private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: MentorMonthlyMetrics) {
     // creating DB table entry
     const monthIdentifier = parseInt(year.toString() + (month < 10 ? `0${month.toString()}` : `${month.toString()}`));
     return this.prismaService.cache_mentor_metrics_monthly.upsert({
@@ -1361,20 +1325,20 @@ export class AppService {
       create: {
         mentor_id: mentor.id,
         month: monthIdentifier,
-        schools_visited: parseInt(result['visited_schools']),
-        assessments_taken: parseInt(result['total_assessments']),
-        avg_time: parseInt(result['average_assessment_time']),
-        grade_1_assessments: parseInt(result['grade1_assessments']),
-        grade_2_assessments: parseInt(result['grade2_assessments']),
-        grade_3_assessments: parseInt(result['grade3_assessments']),
+        schools_visited: parseInt(result.schools_visited.toString()),
+        assessments_taken: parseInt(result.assessments_taken.toString()),
+        avg_time: parseInt(result.avg_time.toString()),
+        grade_1_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_2_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_3_assessments: parseInt(result.grade_3_assessments.toString()),
       },
       update: {
-        schools_visited: parseInt(result['visited_schools']),
-        assessments_taken: parseInt(result['total_assessments']),
-        avg_time: parseInt(result['average_assessment_time']),
-        grade_1_assessments: parseInt(result['grade1_assessments']),
-        grade_2_assessments: parseInt(result['grade2_assessments']),
-        grade_3_assessments: parseInt(result['grade3_assessments']),
+        schools_visited: parseInt(result.schools_visited.toString()),
+        assessments_taken: parseInt(result.assessments_taken.toString()),
+        avg_time: parseInt(result.avg_time.toString()),
+        grade_1_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_2_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_3_assessments: parseInt(result.grade_3_assessments.toString()),
       }
     });
   }

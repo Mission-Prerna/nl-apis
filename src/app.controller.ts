@@ -474,7 +474,7 @@ export class AppController {
   }
 
   @Get('/api/school/:udise/students/result/summary')
-  @Roles(Role.OpenRole, Role.Diet)
+  //@Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResultsSummary(
     @Headers('authorization') authToken: string,
@@ -504,6 +504,45 @@ export class AppController {
         ]
       }
     ];
+  }
+
+  @Get('/api/school/:udise/teacher/performance/insights')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolTeacherPerformance(
+    @Headers('authorization') authToken: string,
+    @Param() params: any
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    const schoolUdise = params.udise;
+    return [
+      {
+        "period": "Saptahik",
+        "insights": [
+          {
+            "label": "Total students",
+            "count": "15"
+          },
+          {
+            "label": "Assessed students",
+            "count": "10"
+          }
+        ]
+      },
+      {
+        "period": "August",
+        "insights": [
+          {
+             "label": "Total students",
+            "count": "15"
+          },
+          {
+            "label": "Assessed students",
+            "count": "5"
+          }
+        ]
+      }
+    ]
   }
 
 }

@@ -327,4 +327,94 @@ export class AppController {
     return mentor;
   }
 
+  @Get('/api/school/:udise/students')
+  //@Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudents(
+    @Headers('authorization') authToken: string,
+    @Param() params: any
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    const schoolUdise = params.udise;
+    return [
+      {
+        "id": "1",
+        "name": "Abhishek 1",
+        "grade": 1
+      },
+      {
+        "id": "2",
+        "name": "Charanpreet 1",
+        "grade": 1
+      },
+      {
+        "id": "3",
+        "name": "Chakshu 1",
+        "grade": 1
+      },
+      {
+        "id": "4",
+        "name": "Suresh 1",
+        "grade": 1
+      },
+      {
+        "id": "5",
+        "name": "Karan 1",
+        "grade": 1
+      },
+      {
+        "id": "6",
+        "name": "Abhishek 2",
+        "grade": 2
+      },
+      {
+        "id": "7",
+        "name": "Charanpreet 2",
+        "grade": 2
+      },
+      {
+        "id": "8",
+        "name": "Chakshu 2",
+        "grade": 2
+      },
+      {
+        "id": "9",
+        "name": "Suresh 2",
+        "grade": 2
+      },
+      {
+        "id": "10",
+        "name": "Ujjwal 2",
+        "grade": 2
+      },
+      {
+        "id": "11",
+        "name": "Abhishek 3",
+        "grade": 3
+      },
+      {
+        "id": "12",
+        "name": "Charanpreet 3",
+        "grade": 3
+      },
+      {
+        "id": "13",
+        "name": "Chakshu 3",
+        "grade": 3
+      },
+      {
+        "id": "14",
+        "name": "Suresh 3",
+        "grade": 3
+      },
+      {
+        "id": "15",
+        "name": "Ujjwal 3",
+        "grade": 3
+      }
+    ];
+  }
+
+
+
 }

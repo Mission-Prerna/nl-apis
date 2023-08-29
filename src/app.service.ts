@@ -227,8 +227,11 @@ export class AppService {
               assessment_visit_results_v2_id: assessmentVisitResult.id,
             },
           });
-          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;
-          totalTimeTaken += student?.total_time_taken ?? 0;
+          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
+          if (!uniqueStudents.hasOwnProperty(student.student_session)) {
+            // since the total time taken is same for a single student for all competencies, we'll consider one entry
+            totalTimeTaken += student?.total_time_taken ?? 0;
+          }
 
           const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
 
@@ -255,8 +258,11 @@ export class AppService {
               result.module !== AssessmentVisitResultsStudentModule.ODK,
           )
           .map((result) => {
-            totalTimeTaken += result?.total_time_taken ?? 0;
-            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;
+            if (!uniqueStudents.hasOwnProperty(result.student_session)) {
+              // since the total time taken is same for a single student for all competencies, we'll consider one entry
+              totalTimeTaken += result?.total_time_taken ?? 0;
+            }
+            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;    // @TODO fix NIPUN logic
             return {
               student_name: result.student_name,
               competency_id: result.competency_id,
@@ -298,7 +304,7 @@ export class AppService {
       );
 
       const hydrated: boolean = await cacheHomeScreen.hydrate(createAssessmentVisitResultData.udise, createAssessmentVisitResultData.grade, totalTimeTaken, uniqueStudents)
-      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER) {
+      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER && createAssessmentVisitResultData.assessment_type_id == AssessmentTypeEnum.NIPUN_ABHYAS) {
         // Let's now update teacher's metrics cache
         const assessmentsCount = Object.keys(uniqueStudents).length;
         const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);

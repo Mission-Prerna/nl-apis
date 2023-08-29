@@ -36,8 +36,7 @@ import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
-import { GetMentorBotsForActionDto } from './dto/GetMentorBotsWithAction.dto';
-
+import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -357,7 +356,7 @@ export class AppController {
     @Query() query: GetMentorBotsWithActionDto
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return this.appService.getMentorBotsWithAction(mentor.id, parseInt(query.action.toString()))
+    return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
   }
 

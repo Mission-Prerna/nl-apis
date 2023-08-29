@@ -180,7 +180,7 @@ export class AppService {
             },
             extra: {
               submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
+                createAssessmentVisitResultData.submission_timestamp,
               mentor_id: createAssessmentVisitResultData.mentor_id,
               grade: createAssessmentVisitResultData.grade,
               subject_id: createAssessmentVisitResultData.subject_id,
@@ -1214,8 +1214,6 @@ export class AppService {
   }
 
   async getMentorBotsWithAction(mentorId: bigint, action: number) {
-    console.log('mentor: '+mentorId)
-    console.log('action: '+action)
     return await this.prismaService.mentor_bot_telemetry.findMany({
       select: {
         bot_id: true,

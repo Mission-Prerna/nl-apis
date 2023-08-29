@@ -16,11 +16,16 @@ import {
   AssessmentVisitResultsStudentModule,
   CacheConstants,
   CacheKeyMentorDetail,
-  CacheKeyMentorHomeOverview,
   CacheKeyMentorSchoolList,
+  CacheKeyMetadata,
+  CacheKeyMentorMonthlyMetrics,
   Mentor,
   TypeActorHomeOverview,
   TypeAssessmentQuarterTables,
+  CacheKeyMentorWeeklyMetrics,
+  CacheKeyMentorDailyMetrics,
+  MentorMonthlyMetrics,
+  MentorWeeklyMetrics, MentorDailyMetrics,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -37,6 +42,9 @@ import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import * as Sentry from '@sentry/minimal';
+import { RedisHelperService } from './RedisHelper.service';
+import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
+const moment = require('moment');
 
 @Injectable()
 export class AppService {
@@ -47,6 +55,7 @@ export class AppService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly faService: FusionauthService,
+    private readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
     this.prismaService.$queryRawUnsafe(`
@@ -122,7 +131,9 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
+    let totalTimeTaken: number = 0;
     const submissionDate = new Date();  // we'll dump all records in the current quarter's table
+    let uniqueStudents: Record<string, number> = {};
     const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
     try {
       // Checking if Assessment visit result already exist; if not we'll create it
@@ -141,6 +152,25 @@ export class AppService {
         },
       });
 
+      if (assessmentVisitResult) {
+        // this is a duplicate submission; let's trigger Sentry event
+        Sentry.captureMessage('Duplicate submission detected', {
+          user: {
+            id: createAssessmentVisitResultData.mentor_id + '',
+          },
+          extra: {
+            submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            udise: createAssessmentVisitResultData.udise,
+          }
+        });
+        this.logger.log('Duplicate found. Ignoring..');
+        return assessmentVisitResult; // we'll not process any further because it's a duplicate
+      }
+
       // filtering student whose module is 'odk'
       const assessmentVisitResultStudents =
         createAssessmentVisitResultData.results.filter(
@@ -148,94 +178,59 @@ export class AppService {
             result.module === AssessmentVisitResultsStudentModule.ODK,
         );
 
-      return await this.prismaService.$transaction(async (tx) => {
-        if (!assessmentVisitResult) {
-          // @ts-ignore
-          assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
-            select: {
-              id: true,
-            },
-            data: {
-              submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              subject_id: createAssessmentVisitResultData.subject_id,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              actor_id: createAssessmentVisitResultData.actor_id,
-              block_id: createAssessmentVisitResultData.block_id,
-              assessment_type_id:
-              createAssessmentVisitResultData.assessment_type_id,
-              udise: createAssessmentVisitResultData.udise,
-              no_of_student: createAssessmentVisitResultData.no_of_student,
-              app_version_code:
-              createAssessmentVisitResultData.app_version_code,
-              module_result: {}, // populating it default
-            },
-          });
-        } else {
-          // this is a duplicate submission; let's trigger Sentry event
-          Sentry.captureMessage('Duplicate submission detected', {
-            user: {
-              id: createAssessmentVisitResultData.mentor_id + '',
-            },
-            extra: {
-              submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              grade: createAssessmentVisitResultData.grade,
-              subject_id: createAssessmentVisitResultData.subject_id,
-              udise: createAssessmentVisitResultData.udise,
-            }
-          });
-        }
+      const response = await this.prismaService.$transaction(async (tx) => {
+        // @ts-ignore
+        assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
+          select: {
+            id: true,
+          },
+          data: {
+            submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            actor_id: createAssessmentVisitResultData.actor_id,
+            block_id: createAssessmentVisitResultData.block_id,
+            assessment_type_id:
+            createAssessmentVisitResultData.assessment_type_id,
+            udise: createAssessmentVisitResultData.udise,
+            no_of_student: createAssessmentVisitResultData.no_of_student,
+            app_version_code:
+            createAssessmentVisitResultData.app_version_code,
+            module_result: {}, // populating it default
+          },
+        });
 
         const assessmentVisitResultId = assessmentVisitResult.id;
 
         for (const student of assessmentVisitResultStudents) {
-          // Checking if Assessment visit result student already exist; if not then creating it
+          // Create student submission
           // @ts-ignore
-          let assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].findFirst({
-            select: {
-              id: true,
-            },
-            where: {
+          const assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
+            data: {
+              student_name: student.student_name,
               competency_id: student.competency_id,
+              module: student.module,
+              end_time: student.end_time,
+              is_passed: student.is_passed,
+              start_time: student.start_time,
+              statement: student.statement,
+              achievement: student.achievement,
+              total_questions: student.total_questions,
+              success_criteria: student.success_criteria,
+              session_completed: student.session_completed,
+              is_network_active: student.is_network_active,
+              workflow_ref_id: student.workflow_ref_id,
+              total_time_taken: student.total_time_taken,
               student_session: student.student_session,
               assessment_visit_results_v2_id: assessmentVisitResult.id,
             },
           });
-
-          if (assessmentVisitResultStudent) {
-            // Assessment visit result student exist; delete its odk submissions
-            // @ts-ignore
-            await tx[tables.assessment_visit_results_student_odk_results].deleteMany({
-              where: {
-                assessment_visit_results_students_id:
-                assessmentVisitResultStudent.id,
-              },
-            });
-          } else {
-            // @ts-ignore
-            assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
-              data: {
-                student_name: student.student_name,
-                competency_id: student.competency_id,
-                module: student.module,
-                end_time: student.end_time,
-                is_passed: student.is_passed,
-                start_time: student.start_time,
-                statement: student.statement,
-                achievement: student.achievement,
-                total_questions: student.total_questions,
-                success_criteria: student.success_criteria,
-                session_completed: student.session_completed,
-                is_network_active: student.is_network_active,
-                workflow_ref_id: student.workflow_ref_id,
-                total_time_taken: student.total_time_taken,
-                student_session: student.student_session,
-                assessment_visit_results_v2_id: assessmentVisitResult.id,
-              },
-            });
+          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
+          if (!uniqueStudents.hasOwnProperty(student.student_session)) {
+            // since the total time taken is same for a single student for all competencies, we'll consider one entry
+            totalTimeTaken += student?.total_time_taken ?? 0;
           }
 
           const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
@@ -263,6 +258,11 @@ export class AppService {
               result.module !== AssessmentVisitResultsStudentModule.ODK,
           )
           .map((result) => {
+            if (!uniqueStudents.hasOwnProperty(result.student_session)) {
+              // since the total time taken is same for a single student for all competencies, we'll consider one entry
+              totalTimeTaken += result?.total_time_taken ?? 0;
+            }
+            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;    // @TODO fix NIPUN logic
             return {
               student_name: result.student_name,
               competency_id: result.competency_id,
@@ -283,16 +283,41 @@ export class AppService {
             };
           });
 
-        // noinspection TypeScriptValidateJSTypes
-        // @ts-ignore
-        await tx[tables.assessment_visit_results_students].createMany({
-          data: nonOdkModuleStudents,
-          skipDuplicates: true,
-        });
+        if (nonOdkModuleStudents.length) {
+          // @ts-ignore
+          await tx[tables.assessment_visit_results_students].createMany({
+            data: nonOdkModuleStudents,
+            skipDuplicates: true,
+          });
+        }
         return assessmentVisitResult;
       }, {
         timeout: 15000,
       });
+
+      // update metrics in cache
+      const cacheHomeScreen = new MonthlyCacheManager(
+        BigInt(createAssessmentVisitResultData.mentor_id),
+        submissionDate.getFullYear(),
+        submissionDate.getMonth() +1,
+        this.redisHelper
+      );
+
+      const hydrated: boolean = await cacheHomeScreen.hydrate(createAssessmentVisitResultData.udise, createAssessmentVisitResultData.grade, totalTimeTaken, uniqueStudents)
+      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER && createAssessmentVisitResultData.assessment_type_id == AssessmentTypeEnum.NIPUN_ABHYAS) {
+        // Let's now update teacher's metrics cache
+        const assessmentsCount = Object.keys(uniqueStudents).length;
+        const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);
+        const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
+          submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
+        if (await cacheDaily.hydrate(assessmentsCount, nipunCount)) {
+          // sync weekly metrics too because we synced daily as well
+          const cacheWeekly = new WeeklyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
+            submissionDate.getFullYear(), moment().isoWeek(), this.redisHelper);
+          await cacheWeekly.hydrate(assessmentsCount, nipunCount)
+        }
+      }
+      return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
@@ -344,7 +369,8 @@ export class AppService {
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
-      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_SCHOOL_LIST); // Adding the data to cache
+      // @ts-ignore
+      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, { ttl: CacheConstants.TTL_MENTOR_SCHOOL_LIST }); // Adding the data to cache
       return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -402,13 +428,56 @@ export class AppService {
     }
   }
 
+  /**
+   * Transforms the cached redis hashmap response into the actual API response.
+   * @param cachedData
+   * @param mentor
+   * @param month
+   * @param year
+   * @private
+   */
+  private async transformHomeScreenMetricCache(cachedData: MentorMonthlyMetrics | Record<string, any>, mentor: Mentor, month: number, year: number) {
+    const response: Record<string, any> = {
+      visited_schools: parseInt(cachedData.schools_visited),
+      total_assessments: parseInt(cachedData.assessments_taken),
+      average_assessment_time: parseInt(cachedData.avg_time),
+      grades: [
+        {
+          grade: 1,
+          total_assessments: parseInt(cachedData.grade_1_assessments)
+        },
+        {
+          grade: 2,
+          total_assessments: parseInt(cachedData.grade_2_assessments)
+        },
+        {
+          grade: 3,
+          total_assessments: parseInt(cachedData.grade_3_assessments)
+        }
+      ],
+    };
+    if (mentor.actor_id == ActorEnum.TEACHER) {
+      const dailyData: MentorDailyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorDailyMetrics(mentor.id, month, moment().date(), year));
+      if (Object.keys(dailyData).length === 0) {
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
+      } else {
+        const weeklyData: MentorWeeklyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), year));
+        response.teacher_overview = {
+          assessments_total: parseInt(weeklyData.assessments_taken),
+          nipun_total: parseInt(weeklyData.nipun_count),
+          assessments_today: parseInt(dailyData.assessments_taken),
+          nipun_today: parseInt(dailyData.nipun_count)
+        }
+      }
+    }
+    return response;
+  }
+
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
     // We'll check if there is data in the cache
-    const cachedData = await this.cacheService.get<any>(
-      CacheKeyMentorHomeOverview(mentor.phone_no, month, year),
-    );
-    if (cachedData) {
-      return cachedData;
+    const cachedData: MentorMonthlyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorMonthlyMetrics(mentor.id, month, year));
+    if (Object.keys(cachedData).length !== 0) {
+      return this.transformHomeScreenMetricCache(cachedData, mentor, month, year);
     }
 
     const tables = this.getAssessmentVisitResultsTables(year, month);
@@ -416,19 +485,18 @@ export class AppService {
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     try {
-      const result: Record<string, any> = await this.prismaService
-        .$queryRawUnsafe(`
+      const query = `
           select
-              a.visited_schools,
-              b.average_assessment_time :: int8,
-              c.total_assessments,
-              d.grade1_assessments,
-              e.grade2_assessments,
-              f.grade3_assessments
+              a.schools_visited,
+              b.avg_time::int8,
+              c.assessments_taken,
+              d.grade_1_assessments,
+              e.grade_2_assessments,
+              f.grade_3_assessments
           from
               (
                   select
-                      count(DISTINCT udise) as visited_schools
+                      count(DISTINCT udise) as schools_visited
                   from
                       ${tables.assessment_visit_results_v2} as avr2
                   where
@@ -439,116 +507,106 @@ export class AppService {
               ) as a,
               (
                   select
-                      COALESCE(AVG(avrs.total_time_taken), 0) as average_assessment_time
+                      COALESCE(AVG(avrs.total_time_taken), 0) as avg_time
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as b,
               (
                   select
-                      count(distinct student_session) as total_assessments
+                      count(distinct student_session) as assessments_taken
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as c,
               (
                   select
-                      count(distinct student_session) as grade1_assessments
+                      count(distinct student_session) as grade_1_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 1
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.grade = 1
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as d,
               (
                   select
-                      count(distinct student_session) as grade2_assessments
+                      count(distinct student_session) as grade_2_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 2
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.grade = 2
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as e,
               (
                   select
-                      count(distinct student_session) as grade3_assessments
+                      count(distinct student_session) as grade_3_assessments
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 3
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
-              ) as f`);
+                      avrs.grade = 3
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
+              ) as f`;
+      const result: Record<string, any> = await this.prismaService
+        .$queryRawUnsafe(query);
 
       const response: Record<string, any> = {
-        visited_schools: result[0]['visited_schools'],
-        total_assessments: result[0]['total_assessments'],
-        average_assessment_time: result[0]['average_assessment_time'],
+        visited_schools: result[0]['schools_visited'],
+        total_assessments: result[0]['assessments_taken'],
+        average_assessment_time: result[0]['avg_time'],
         grades: [
           {
             grade: 1,
-            total_assessments: result[0]['grade1_assessments'],
+            total_assessments: result[0]['grade_1_assessments'],
           },
           {
             grade: 2,
-            total_assessments: result[0]['grade2_assessments'],
+            total_assessments: result[0]['grade_2_assessments'],
           },
           {
             grade: 3,
-            total_assessments: result[0]['grade3_assessments'],
+            total_assessments: result[0]['grade_3_assessments'],
           },
         ],
       };
+
+      // find list of visited schools
+      const visitedSchoolsResult: Array<{udise: bigint}> = await this.prismaService.$queryRawUnsafe(`
+        select
+          DISTINCT udise as udise
+        from
+          ${tables.assessment_visit_results_v2} as avr2
+        where
+          avr2.mentor_id = ${mentor.id}
+          and avr2.udise > 0
+          and avr2.submission_timestamp > ${firstDayTimestamp} 
+          and avr2.submission_timestamp < ${lastDayTimestamp}      
+      `);
+
+      const visitedSchools: Array<string> = visitedSchoolsResult.map((item) => {
+        return item.udise.toString();
+      });
+
+      const cache = new MonthlyCacheManager(BigInt(mentor.id), year, month, this.redisHelper);
+      await cache.create(visitedSchools, result[0]);  // create the hashmap in redis
+
+      // creating DB table entry for the very first time
+      await this.upsertCacheMentorMetrics(mentor, year, month, result[0]);
+
       if (mentor.actor_id == ActorEnum.TEACHER) {
-        response.teacher_overview = await this.getActorHomeScreenMetric(mentor);
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
       }
-      await this.cacheService.set(CacheKeyMentorHomeOverview(mentor.phone_no, month, year), response, CacheConstants.TTL_MENTOR_HOME_OVERVIEW); // Adding the data to cache
       return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -625,7 +683,8 @@ export class AppService {
       delete temp.districts;
       delete temp.blocks;
     }
-    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, CacheConstants.TTL_MENTOR_FROM_TOKEN); // Adding the mentor to cache
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
     return temp;
   }
 
@@ -645,7 +704,10 @@ export class AppService {
   }
 
   async getMetadata() {
-    return {
+    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+    if (cacheData) return cacheData;
+
+    const resp = {
       actors: await this.prismaService.actors.findMany(),
       designations: await this.prismaService.designations.findMany({
         select: {
@@ -687,6 +749,9 @@ export class AppService {
         },
       }),
     };
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    return resp;
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
@@ -730,7 +795,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${firstDayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                   )
+                   ) and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as a,
               (
                 select
@@ -749,7 +816,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                  )
+                  ) and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${todayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as b,
               (
                 select
@@ -768,7 +837,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${firstDayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                    ) and avrs.is_passed = true
+                    ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as c,
               (
                 select
@@ -787,7 +858,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                  ) and avrs.is_passed = true
+                  ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${todayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as d
           `);
 
@@ -804,7 +877,7 @@ export class AppService {
     return null;
   }
 
-  async getActorHomeScreenMetric(mentor: Mentor) {
+  async getTeacherHomeScreenMetric(mentor: Mentor) {
     const lastDate = new Date();  // it's now() basically
     const temp = new Date();
     const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
@@ -862,6 +935,20 @@ export class AppService {
         nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
       }
     }
+
+    const cacheWeekly = new WeeklyCacheManager(mentor.id, lastDate.getFullYear(), moment().isoWeek(), this.redisHelper);
+    const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,
+      lastDate.getDate(), this.redisHelper);
+    await Promise.all([
+      cacheWeekly.update({
+        'assessments_taken': response?.assessments_total ?? 0,
+        'nipun_count': response?.nipun_total ?? 0,
+      }),   // set weekly stats in redis
+      cacheDaily.update({
+        'assessments_taken': response?.assessments_today ?? 0,
+        'nipun_count': response?.nipun_today ?? 0,
+      }),   // set daily stats in redis
+    ])
     return response;
   }
 
@@ -1203,4 +1290,34 @@ export class AppService {
     });
   }
 
+  private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: MentorMonthlyMetrics) {
+    // creating DB table entry
+    const monthIdentifier = parseInt(year.toString() + (month < 10 ? `0${month.toString()}` : `${month.toString()}`));
+    return this.prismaService.cache_mentor_metrics_monthly.upsert({
+      where: {
+        mentor_id_month: {
+          mentor_id: mentor.id,
+          month: monthIdentifier
+        }
+      },
+      create: {
+        mentor_id: mentor.id,
+        month: monthIdentifier,
+        schools_visited: parseInt(result.schools_visited.toString()),
+        assessments_taken: parseInt(result.assessments_taken.toString()),
+        avg_time: parseInt(result.avg_time.toString()),
+        grade_1_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_2_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_3_assessments: parseInt(result.grade_3_assessments.toString()),
+      },
+      update: {
+        schools_visited: parseInt(result.schools_visited.toString()),
+        assessments_taken: parseInt(result.assessments_taken.toString()),
+        avg_time: parseInt(result.avg_time.toString()),
+        grade_1_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_2_assessments: parseInt(result.grade_2_assessments.toString()),
+        grade_3_assessments: parseInt(result.grade_3_assessments.toString()),
+      }
+    });
+  }
 }

@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber } from 'class-validator';
 
 export class GetMentorBotsForActionDto {
-  @IsNumber()
+  //@IsNumber()
   @IsNotEmpty()
   action!: number;
 }

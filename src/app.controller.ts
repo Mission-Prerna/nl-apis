@@ -353,11 +353,12 @@ export class AppController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async getMentorBotsWithAction(
-    @Body() body: GetMentorBotsWithActionDto,
     @Headers('authorization') authToken: string,
+    @Query() query: GetMentorBotsWithActionDto
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return this.appService.getMentorBotsWithAction(mentor.id, body.action).then(r => true);
+    return this.appService.getMentorBotsWithAction(mentor.id, parseInt(query.action.toString()))
+      .then((response: Array<any>) => response.map(element => element.bot_id));
   }
 
   @Get('/api/school/:udise/students')

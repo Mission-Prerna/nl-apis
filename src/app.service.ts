@@ -1214,13 +1214,15 @@ export class AppService {
   }
 
   async getMentorBotsWithAction(mentorId: bigint, action: number) {
+    console.log('mentor: '+mentorId)
+    console.log('action: '+action)
     return await this.prismaService.mentor_bot_telemetry.findMany({
+      select: {
+        bot_id: true,
+      },
       where: {
         mentor_id: mentorId,
         action: action
-      },
-      select: {
-        bot_id: true,
       },
     });
   }

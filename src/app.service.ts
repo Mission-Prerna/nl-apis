@@ -225,6 +225,9 @@ export class AppService {
               total_time_taken: student.total_time_taken,
               student_session: student.student_session,
               assessment_visit_results_v2_id: assessmentVisitResult.id,
+              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
+              grade: createAssessmentVisitResultData.grade,
+              mentor_id: createAssessmentVisitResultData.mentor_id
             },
           });
           uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
@@ -280,6 +283,9 @@ export class AppService {
               total_time_taken: result.total_time_taken,
               student_session: result.student_session,
               assessment_visit_results_v2_id: assessmentVisitResultId,
+              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
+              grade: createAssessmentVisitResultData.grade,
+              mentor_id: createAssessmentVisitResultData.mentor_id
             };
           });
 

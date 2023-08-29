@@ -485,8 +485,7 @@ export class AppService {
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     try {
-      const result: Record<string, any> = await this.prismaService
-        .$queryRawUnsafe(`
+      const query = `
           select
               a.schools_visited,
               b.avg_time::int8,
@@ -512,16 +511,9 @@ export class AppService {
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as b,
               (
                   select
@@ -529,16 +521,9 @@ export class AppService {
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as c,
               (
                   select
@@ -546,17 +531,10 @@ export class AppService {
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 1
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.grade = 1
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as d,
               (
                   select
@@ -564,17 +542,10 @@ export class AppService {
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 2
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
+                      avrs.grade = 2
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as e,
               (
                   select
@@ -582,18 +553,13 @@ export class AppService {
                   from
                       ${tables.assessment_visit_results_students} as avrs
                   where
-                      avrs.assessment_visit_results_v2_id in (
-                          select
-                              avr2.id
-                          from
-                              ${tables.assessment_visit_results_v2} as avr2
-                          where
-                              avr2.grade = 3
-                              and avr2.mentor_id = ${mentor.id}
-                              and avr2.submission_timestamp > ${firstDayTimestamp} 
-                              and avr2.submission_timestamp < ${lastDayTimestamp}
-                      )
-              ) as f`);
+                      avrs.grade = 3
+                      and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp} 
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
+              ) as f`;
+      const result: Record<string, any> = await this.prismaService
+        .$queryRawUnsafe(query);
 
       const response: Record<string, any> = {
         visited_schools: result[0]['schools_visited'],
@@ -829,7 +795,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${firstDayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                   )
+                   ) and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as a,
               (
                 select
@@ -848,7 +816,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                  )
+                  ) and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${todayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as b,
               (
                 select
@@ -867,7 +837,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${firstDayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                    ) and avrs.is_passed = true
+                    ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${firstDayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as c,
               (
                 select
@@ -886,7 +858,9 @@ export class AppService {
                       and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                       and avr2.submission_timestamp > ${todayTimestamp}
                       and avr2.submission_timestamp < ${lastDayTimestamp}
-                  ) and avrs.is_passed = true
+                  ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
+                      and avrs.submission_timestamp > ${todayTimestamp}
+                      and avrs.submission_timestamp < ${lastDayTimestamp}
               ) as d
           `);
 
@@ -961,8 +935,6 @@ export class AppService {
         nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
       }
     }
-
-    console.log(response);
 
     const cacheWeekly = new WeeklyCacheManager(mentor.id, lastDate.getFullYear(), moment().isoWeek(), this.redisHelper);
     const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,

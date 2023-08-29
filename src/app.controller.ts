@@ -8,7 +8,8 @@ import {
   Query,
   SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
-  Put
+  Put,
+  ParseIntPipe
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -332,10 +333,9 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudents(
     @Headers('authorization') authToken: string,
-    @Param() params: any
+    @Param('udise') udise: string
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    const schoolUdise = params.udise;
     return [
       {
         "id": "1",
@@ -420,20 +420,15 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResults(
     @Headers('authorization') authToken: string,
-    @Param() params: any,
-    @Query() query: any
+    @Param('udise') udise: string,
+    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
+    @Query('month', ParseIntPipe) month: number,
+    @Query('year', ParseIntPipe) year: number,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    const schoolUdise = params.udise;
-    const grade = query.grade;
-    if (!grade) throw new BadRequestException('Grade is missing!');
-    const month = query.month;
-    if (!month) throw new BadRequestException('Month is missing!');
-    const year = query.year;
-    if (!year) throw new BadRequestException('Year is missing!');
     return [
       {
-        "grade": grade,
+        "grade": grades[0],
         "period": month + " " + year,
         "summary": [
           {
@@ -478,16 +473,13 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResultsSummary(
     @Headers('authorization') authToken: string,
-    @Param() params: any,
-    @Query() query: any
+    @Param('udise') udise: string,
+    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[]
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    const schoolUdise = params.udise;
-    const grade = query.grade;
-    if (!grade) throw new BadRequestException('Grade is missing!');
     return [
       {
-        "grade": grade,
+        "grade": grades[0],
         "summary": [
           {
             "period": "August",
@@ -511,10 +503,9 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolTeacherPerformance(
     @Headers('authorization') authToken: string,
-    @Param() params: any
+    @Param('udise') udise: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    const schoolUdise = params.udise;
     return [
       {
         "period": "Saptahik",
@@ -533,7 +524,7 @@ export class AppController {
         "period": "August",
         "insights": [
           {
-             "label": "Total students",
+            "label": "Total students",
             "count": "15"
           },
           {

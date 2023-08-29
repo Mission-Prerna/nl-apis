@@ -8,7 +8,8 @@ import {
   Query,
   SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
-  Put
+  Put,
+  ParseIntPipe
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -325,6 +326,214 @@ export class AppController {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
     this.appService.upsertMentorToken(mentor, body.token).then(r => true);
     return mentor;
+  }
+
+  @Get('/api/school/:udise/students')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudents(
+    @Headers('authorization') authToken: string,
+    @Param('udise') udise: string
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return [
+      {
+        "id": "1",
+        "name": "Abhishek 1",
+        "grade": 1
+      },
+      {
+        "id": "2",
+        "name": "Charanpreet 1",
+        "grade": 1
+      },
+      {
+        "id": "3",
+        "name": "Chakshu 1",
+        "grade": 1
+      },
+      {
+        "id": "4",
+        "name": "Suresh 1",
+        "grade": 1
+      },
+      {
+        "id": "5",
+        "name": "Karan 1",
+        "grade": 1
+      },
+      {
+        "id": "6",
+        "name": "Abhishek 2",
+        "grade": 2
+      },
+      {
+        "id": "7",
+        "name": "Charanpreet 2",
+        "grade": 2
+      },
+      {
+        "id": "8",
+        "name": "Chakshu 2",
+        "grade": 2
+      },
+      {
+        "id": "9",
+        "name": "Suresh 2",
+        "grade": 2
+      },
+      {
+        "id": "10",
+        "name": "Ujjwal 2",
+        "grade": 2
+      },
+      {
+        "id": "11",
+        "name": "Abhishek 3",
+        "grade": 3
+      },
+      {
+        "id": "12",
+        "name": "Charanpreet 3",
+        "grade": 3
+      },
+      {
+        "id": "13",
+        "name": "Chakshu 3",
+        "grade": 3
+      },
+      {
+        "id": "14",
+        "name": "Suresh 3",
+        "grade": 3
+      },
+      {
+        "id": "15",
+        "name": "Ujjwal 3",
+        "grade": 3
+      }
+    ];
+  }
+
+  @Get('/api/school/:udise/students/result')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudentsResults(
+    @Headers('authorization') authToken: string,
+    @Param('udise') udise: string,
+    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
+    @Query('month', ParseIntPipe) month: number,
+    @Query('year', ParseIntPipe) year: number,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return [
+      {
+        "grade": grades[0],
+        "period": month + " " + year,
+        "summary": [
+          {
+            "label": "Total",
+            "colour": "#FF0000",
+            "count": 4
+          },
+          {
+            "label": "Nipun",
+            "colour": "#FFFFFF",
+            "count": 2
+          },
+          {
+            "label": "Not accessed",
+            "colour": "#000000",
+            "count": 2
+          }
+        ],
+        "students": [
+          {
+            "id": "1",
+            "status": "pass",
+            "last_assessment_date": 170123456876
+          },
+          {
+            "id": "2",
+            "status": "fail",
+            "last_assessment_date": 170123456876
+          },
+          {
+            "id": "3",
+            "status": "pending",
+            "last_assessment_date": 170123456876
+          }
+        ]
+      }
+    ];
+  }
+
+  @Get('/api/school/:udise/students/result/summary')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolStudentsResultsSummary(
+    @Headers('authorization') authToken: string,
+    @Param('udise') udise: string,
+    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[]
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return [
+      {
+        "grade": grades[0],
+        "summary": [
+          {
+            "period": "August",
+            "total": 15,
+            "assessed": 10,
+            "successful": 5
+          },
+          {
+            "period": "July",
+            "total": 15,
+            "assessed": 8,
+            "successful": 4
+          }
+        ]
+      }
+    ];
+  }
+
+  @Get('/api/school/:udise/teacher/performance/insights')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getSchoolTeacherPerformance(
+    @Headers('authorization') authToken: string,
+    @Param('udise') udise: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return [
+      {
+        "period": "Saptahik",
+        "insights": [
+          {
+            "label": "Total students",
+            "count": "15"
+          },
+          {
+            "label": "Assessed students",
+            "count": "10"
+          }
+        ]
+      },
+      {
+        "period": "August",
+        "insights": [
+          {
+            "label": "Total students",
+            "count": "15"
+          },
+          {
+            "label": "Assessed students",
+            "count": "5"
+          }
+        ]
+      }
+    ]
   }
 
 }

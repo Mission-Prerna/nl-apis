@@ -829,11 +829,11 @@ export class AppService {
     const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,
       lastDate.getDate(), this.redisHelper);
     await Promise.all([
-      cacheWeekly.update({
+      cacheWeekly.create({
         'assessments_taken': response?.assessments_total ?? 0,
         'nipun_count': response?.nipun_total ?? 0,
       }),   // set weekly stats in redis
-      cacheDaily.update({
+      cacheDaily.create({
         'assessments_taken': response?.assessments_today ?? 0,
         'nipun_count': response?.nipun_today ?? 0,
       }),   // set daily stats in redis

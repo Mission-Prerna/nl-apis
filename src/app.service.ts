@@ -492,80 +492,24 @@ export class AppService {
 
     try {
       const query = `
-          select
-              a.schools_visited,
-              b.avg_time::int8,
-              c.assessments_taken,
-              d.grade_1_assessments,
-              e.grade_2_assessments,
-              f.grade_3_assessments
-          from
-              (
-                  select
-                      count(DISTINCT udise) as schools_visited
-                  from
-                      ${tables.assessment_visit_results_v2} as avr2
-                  where
-                      avr2.mentor_id = ${mentor.id}
-                      and avr2.udise > 0
-                      and avr2.submission_timestamp > ${firstDayTimestamp} 
-                      and avr2.submission_timestamp < ${lastDayTimestamp}
-              ) as a,
-              (
-                  select
-                      COALESCE(AVG(avrs.total_time_taken), 0) as avg_time
-                  from
-                      ${tables.assessment_visit_results_students} as avrs
-                  where
-                      avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp} 
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as b,
-              (
-                  select
-                      count(distinct student_session) as assessments_taken
-                  from
-                      ${tables.assessment_visit_results_students} as avrs
-                  where
-                      avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp} 
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as c,
-              (
-                  select
-                      count(distinct student_session) as grade_1_assessments
-                  from
-                      ${tables.assessment_visit_results_students} as avrs
-                  where
-                      avrs.grade = 1
-                      and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp} 
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as d,
-              (
-                  select
-                      count(distinct student_session) as grade_2_assessments
-                  from
-                      ${tables.assessment_visit_results_students} as avrs
-                  where
-                      avrs.grade = 2
-                      and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp} 
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as e,
-              (
-                  select
-                      count(distinct student_session) as grade_3_assessments
-                  from
-                      ${tables.assessment_visit_results_students} as avrs
-                  where
-                      avrs.grade = 3
-                      and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp} 
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as f`;
-      const result: Record<string, any> = await this.prismaService
-        .$queryRawUnsafe(query);
+          SELECT
+              (select count(DISTINCT udise)
+               from ${tables.assessment_visit_results_v2} as avr2
+               where avr2.mentor_id = ${mentor.id}
+                 and avr2.udise > 0
+                 and avr2.submission_timestamp > ${firstDayTimestamp}
+                 and avr2.submission_timestamp < ${lastDayTimestamp}) AS schools_visited,
+              COALESCE(AVG(avrs.total_time_taken), 0) :: int8 AS avg_time ,
+              COUNT(DISTINCT avrs.student_session) AS assessments_taken,
+              COUNT(DISTINCT CASE WHEN avrs.grade = 1 THEN avrs.student_session END) AS grade_1_assessments,
+              COUNT(DISTINCT CASE WHEN avrs.grade = 2 THEN avrs.student_session END) AS grade_2_assessments,
+              COUNT(DISTINCT CASE WHEN avrs.grade = 3 THEN avrs.student_session END) AS grade_3_assessments
+          FROM ${tables.assessment_visit_results_students} AS avrs
+          WHERE avrs.mentor_id = ${mentor.id}
+            AND avrs.submission_timestamp > ${firstDayTimestamp}
+            AND avrs.submission_timestamp < ${lastDayTimestamp}`;
+
+      const result: Record<string, any> = await this.prismaService.$queryRawUnsafe(query);
 
       const response: Record<string, any> = {
         visited_schools: result[0]['schools_visited'],
@@ -781,100 +725,39 @@ export class AppService {
     todayTimestamp: number,
     lastDayTimestamp: number): Promise<TypeActorHomeOverview|null> {
     try {
-      const result: Record<string, any> = await this.prismaService
-        .$queryRawUnsafe(`
-            select a.assessments_total, c.nipun_total, b.assessments_today, d.nipun_today from
-              (
-                select
-                  count(distinct student_session) as assessments_total
-                from
-                  ${tables.assessment_visit_results_students} as avrs
-                where
-                  avrs.assessment_visit_results_v2_id in (
-                    select
-                      avr2.id
-                    from
-                      ${tables.assessment_visit_results_v2} as avr2
-                    where
-                      avr2.mentor_id = ${mentor.id}
-                      and avr2.actor_id = ${ActorEnum.TEACHER}
-                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${firstDayTimestamp}
-                      and avr2.submission_timestamp < ${lastDayTimestamp}
-                   ) and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp}
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as a,
-              (
-                select
-                  count(distinct student_session) as assessments_today
-                from
-                  ${tables.assessment_visit_results_students} as avrs
-                where
-                  avrs.assessment_visit_results_v2_id in (
-                    select
-                      avr2.id
-                    from
-                      ${tables.assessment_visit_results_v2} as avr2
-                    where
-                      avr2.mentor_id = ${mentor.id}
-                      and avr2.actor_id = ${ActorEnum.TEACHER}
-                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${todayTimestamp}
-                      and avr2.submission_timestamp < ${lastDayTimestamp}
-                  ) and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${todayTimestamp}
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as b,
-              (
-                select
-                  count(distinct student_session) as nipun_total
-                from
-                  ${tables.assessment_visit_results_students} as avrs
-                where
-                  avrs.assessment_visit_results_v2_id in (
-                    select
-                      avr2.id
-                    from
-                      ${tables.assessment_visit_results_v2} as avr2
-                    where
-                      avr2.mentor_id = ${mentor.id}
-                      and avr2.actor_id = ${ActorEnum.TEACHER}
-                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${firstDayTimestamp}
-                      and avr2.submission_timestamp < ${lastDayTimestamp}
-                    ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${firstDayTimestamp}
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as c,
-              (
-                select
-                  count(distinct student_session) as nipun_today
-                from
-                  ${tables.assessment_visit_results_students} as avrs
-                where
-                  avrs.assessment_visit_results_v2_id in (
-                    select
-                      avr2.id
-                    from
-                      ${tables.assessment_visit_results_v2} as avr2
-                    where
-                      avr2.mentor_id = ${mentor.id}
-                      and avr2.actor_id = ${ActorEnum.TEACHER}
-                      and avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                      and avr2.submission_timestamp > ${todayTimestamp}
-                      and avr2.submission_timestamp < ${lastDayTimestamp}
-                  ) and avrs.is_passed = true and avrs.mentor_id = ${mentor.id}
-                      and avrs.submission_timestamp > ${todayTimestamp}
-                      and avrs.submission_timestamp < ${lastDayTimestamp}
-              ) as d
-          `);
+      const query = `
+          select weekly.assessments_total, weekly.nipun_total, daily.assessments_today, daily.nipun_today
+          from (
+                   select count(distinct avrs.student_session)                                     as assessments_total,
+                          count(distinct case when is_passed = true then avrs.student_session end) as nipun_total
+                   from ${tables.assessment_visit_results_students} avrs
+                            join ${tables.assessment_visit_results_v2} as avr2
+                                 on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
+                                     avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS})
+                   where avrs.mentor_id = ${mentor.id}
+                     and avrs.submission_timestamp > ${firstDayTimestamp}
+                     and avrs.submission_timestamp < ${lastDayTimestamp}
+               ) as weekly,
+               (
+                   select count(distinct avrs.student_session)                                     as assessments_today,
+                          count(distinct case when is_passed = true then avrs.student_session end) as nipun_today
+                   from ${tables.assessment_visit_results_students} avrs
+                            join ${tables.assessment_visit_results_v2} as avr2
+                                 on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
+                                     avr2.assessment_type_id =
+                                     ${AssessmentTypeEnum.NIPUN_ABHYAS})
+                   where avrs.mentor_id = ${mentor.id}
+                     and avrs.submission_timestamp > ${todayTimestamp}
+                     and avrs.submission_timestamp < ${lastDayTimestamp}
+               ) as daily;
+      `;
+      const result: Array<TypeActorHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
 
       return {
-        assessments_total: result[0]['assessments_total'],
-        nipun_total: result[0]['nipun_total'],
-        assessments_today: result[0]['assessments_today'],
-        nipun_today: result[0]['nipun_today'],
+        assessments_total: result[0].assessments_total,
+        nipun_total: result[0].nipun_total,
+        assessments_today: result[0].assessments_today,
+        nipun_today: result[0].nipun_today,
       };
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);

@@ -11,6 +11,10 @@ export class RedisHelperService {
     this.client = redis.getClient();
   }
 
+  public async expireAt(key: string, at: number) {
+    return this.client.expireat(key, at);
+  }
+
   public async delKey(keys: Array<string>) {
     return this.client.del(keys);
   }

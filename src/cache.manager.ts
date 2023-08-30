@@ -5,6 +5,8 @@ import {
   CacheKeyMentorWeeklyMetrics, MentorMonthlyMetrics,
 } from './enums';
 import { RedisHelperService } from './RedisHelper.service';
+import { randomInt } from 'crypto';
+const moment = require('moment');
 
 abstract class CacheManager {
   protected cacheKeyMetrics: string = '';
@@ -26,6 +28,10 @@ abstract class CacheManager {
 
   public async invalidate(keys: Array<string>) {
     return this.redisHelper.delKey(keys);
+  }
+
+  public async expireAt(at: number) {
+    return this.redisHelper.expireAt(this.cacheKeyMetrics, at);
   }
 }
 
@@ -61,6 +67,11 @@ export class MonthlyCacheManager extends CacheManager {
   }
 
   public async create(visitedSchools: Array<string>, data: MentorMonthlyMetrics) {
+    const date = new Date(), y = date.getFullYear(), m = date.getMonth();
+    const firstDay = new Date(y, m, 1);
+    let expireAt = moment(firstDay).add(1, 'month');  // we'll expire the key in next month
+    expireAt = moment(expireAt).add(randomInt(1, 10), 'days');  // add random days to distribute load not exactly at month change
+
     return Promise.all([
       this.updateSchools(visitedSchools),  // add udise to current month's set
       this.update({
@@ -71,6 +82,8 @@ export class MonthlyCacheManager extends CacheManager {
         'grade_2_assessments': data.grade_2_assessments,
         'grade_3_assessments': data.grade_3_assessments,
       }), // create the hashmap in redis
+      this.expireAt(expireAt.unix()), // make the key automatic expire next month
+      this.redisHelper.expireAt(this.cacheKeyVisitedSchools, expireAt.unix()),  // make the key automatic expire next month
     ]);
   }
 
@@ -122,6 +135,14 @@ export class WeeklyCacheManager extends CacheManager {
     ]);
     return true;
   }
+
+  public async create(data: object) {
+    const expireAt = moment().add(1, 'week');  // we'll expire the key in next week
+    return Promise.all([
+      this.update(data),
+      this.expireAt(expireAt.unix()), // make the key automatic expire after 1 week
+    ]);
+  }
 }
 
 export class DailyCacheManager extends CacheManager {
@@ -152,5 +173,13 @@ export class DailyCacheManager extends CacheManager {
       return true;
     }
     return false;
+  }
+
+  public async create(data: object) {
+    const expireAt = moment().add(1, 'day');  // we'll expire the key in next day
+    return Promise.all([
+      this.update(data),
+      this.expireAt(expireAt.unix()), // make the key automatic expire after 1 week
+    ]);
   }
 }

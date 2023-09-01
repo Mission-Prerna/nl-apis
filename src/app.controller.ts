@@ -1,14 +1,14 @@
 import {
   BadRequestException,
-  Body, CacheInterceptor, CacheTTL,
+  Body,
   Controller,
   Get,
-  Headers, NotImplementedException, Param, ParseArrayPipe, Patch,
+  Headers, ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata, UnauthorizedException,
   UseGuards, UseInterceptors,
-  Put,
+  Put, NotImplementedException, Param,
   ParseIntPipe
 } from '@nestjs/common';
 import { AppService } from './app.service';
@@ -18,7 +18,7 @@ import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
-import { ActorEnum, CacheConstants, JobEnum, Mentor, QueueEnum, Role } from './enums';
+import { ActorEnum, JobEnum, Mentor, QueueEnum, Role } from './enums';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
@@ -225,8 +225,6 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  @UseInterceptors(CacheInterceptor) // Automatically cache the response for this endpoint
-  @CacheTTL(CacheConstants.TTL_METADATA) // override TTL
   async getMetadata() {
     return this.appService.getMetadata();
   }
@@ -239,7 +237,7 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    this.appService.updateMentorPin(mentor, body.pin).then(r => true);
+    this.appService.updateMentorPin(mentor, body.pin).then(() => true);
     return mentor;
   }
 
@@ -257,7 +255,7 @@ export class AppController {
       default:
         throw new NotImplementedException('Only Teachers are allowed to access this endpoint.')
     }
-    return this.appService.getActorHomeScreenMetric(mentor);
+    return this.appService.getTeacherHomeScreenMetric(mentor);
   }
 
   private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
@@ -568,4 +566,57 @@ export class AppController {
     ]
   }
 
+  @Post('/admin/queues/pause')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async pauseQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    await Promise.all([
+      this.assessmentVisitResultQueue.pause(false),
+      this.assessmentSurveyResultQueue.pause(false),
+    ]);
+    return 'ok';
+  }
+
+  @Post('/admin/queues/resume')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async resumeQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    await Promise.all([
+      this.assessmentVisitResultQueue.resume(false),
+      this.assessmentSurveyResultQueue.resume(false),
+    ]);
+    return 'ok';
+  }
+
+  @Get('/admin/queues/count')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async countQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    return {
+      assessment_visit_results: await this.assessmentVisitResultQueue.count(),
+      assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
+    };
+  }
+
+  @Get('/admin/queues/failed-count')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
+  async countFailedQueues(
+    @Headers('authorization') authToken: string,
+  ) {
+    this.checkTokenIfInvalid(authToken, true);
+    return {
+      assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
+      assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
+    };
+  }
 }

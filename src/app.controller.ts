@@ -35,6 +35,8 @@ import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
+import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
+import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -325,7 +327,37 @@ export class AppController {
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
     this.appService.upsertMentorToken(mentor, body.token).then(r => true);
-    return mentor;
+    return {
+      msg: 'Success!',
+      data: "Token upserted successfully",
+    };
+  }
+
+  @Post('/api/mentor/bot/telemetry')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async setMentorBotTelemetry(
+    @Body() body: CreateBotTelemetryDto,
+    @Headers('authorization') authToken: string,
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    await this.appService.setMentorBotTelemetry(mentor.id, body.botId, body.action);
+    return {
+      msg: 'Success!',
+      data: "Telemetry inserted",
+    };
+  }
+
+  @Get('/api/mentor/bot/telemetry')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMentorBotsWithAction(
+    @Headers('authorization') authToken: string,
+    @Query() query: GetMentorBotsWithActionDto
+  ) {
+    const mentor: Mentor = await this.getLoggedInMentor(authToken);
+    return this.appService.getMentorBotsWithAction(mentor.id, query.action)
+      .then((response: Array<any>) => response.map(element => element.bot_id));
   }
 
   @Get('/api/school/:udise/students')

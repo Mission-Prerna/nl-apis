@@ -232,6 +232,94 @@ model assessment_visit_results_student_odk_results {
   assessment_visit_results_students    assessment_visit_results_students @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_stud_assessment_visit_results_stu_fkey")
 }
 
+model assessment_visit_results_student_odk_results_2023_apr_jun {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_apr_jun_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2023_jul_sep {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_jul_sep_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2023_oct_dec {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_oct_dec_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2024_apr_jun {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_apr_jun_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2024_jan_mar {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_jan_mar_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2024_jul_sep {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_jul_sep_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2024_oct_dec {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_oct_dec_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2025_apr_jun {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_apr_jun_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2025_jan_mar {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_jan_mar_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2025_jul_sep {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_jul_sep_fkey")
+}
+
+model assessment_visit_results_student_odk_results_2025_oct_dec {
+  id                                             BigInt                                         @id @default(autoincrement())
+  question                                       String
+  answer                                         String                                         @db.VarChar
+  assessment_visit_results_students_id           BigInt
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_oct_dec_fkey")
+}
+
 model assessment_visit_results_students {
   id                                           BigInt                                         @id @default(autoincrement())
   student_name                                 String                                         @db.VarChar
@@ -254,6 +342,270 @@ model assessment_visit_results_students {
   assessment_visit_results_v2                  assessment_visit_results_v2                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_assessment_visit_results_v")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_student_session_competency_id")
+}
+
+model assessment_visit_results_students_2023_apr_jun {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2023_apr_jun assessment_visit_results_student_odk_results_2023_apr_jun[]
+  assessment_visit_results_v2_2023_apr_jun                  assessment_visit_results_v2_2023_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_apr_jun_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2023_jul_sep {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2023_jul_sep assessment_visit_results_student_odk_results_2023_jul_sep[]
+  assessment_visit_results_v2_2023_jul_sep                  assessment_visit_results_v2_2023_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_jul_sep_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2023_oct_dec {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2023_oct_dec assessment_visit_results_student_odk_results_2023_oct_dec[]
+  assessment_visit_results_v2_2023_oct_dec                  assessment_visit_results_v2_2023_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_oct_dec_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2024_apr_jun {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2024_apr_jun assessment_visit_results_student_odk_results_2024_apr_jun[]
+  assessment_visit_results_v2_2024_apr_jun                  assessment_visit_results_v2_2024_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_apr_jun_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2024_jan_mar {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2024_jan_mar assessment_visit_results_student_odk_results_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jan_mar                  assessment_visit_results_v2_2024_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jan_mar_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2024_jul_sep {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2024_jul_sep assessment_visit_results_student_odk_results_2024_jul_sep[]
+  assessment_visit_results_v2_2024_jul_sep                  assessment_visit_results_v2_2024_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jul_sep_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2024_oct_dec {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2024_oct_dec assessment_visit_results_student_odk_results_2024_oct_dec[]
+  assessment_visit_results_v2_2024_oct_dec                  assessment_visit_results_v2_2024_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_oct_dec_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2025_apr_jun {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2025_apr_jun assessment_visit_results_student_odk_results_2025_apr_jun[]
+  assessment_visit_results_v2_2025_apr_jun                  assessment_visit_results_v2_2025_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_apr_jun_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2025_jan_mar {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2025_jan_mar assessment_visit_results_student_odk_results_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jan_mar                  assessment_visit_results_v2_2025_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jan_mar_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2025_jul_sep {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2025_jul_sep assessment_visit_results_student_odk_results_2025_jul_sep[]
+  assessment_visit_results_v2_2025_jul_sep                  assessment_visit_results_v2_2025_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jul_sep_ss_com_avr_v2_id")
+}
+
+model assessment_visit_results_students_2025_oct_dec {
+  id                                                        BigInt                                                      @id @default(autoincrement())
+  student_name                                              String                                                      @db.VarChar
+  competency_id                                             Int
+  module                                                    String                                                      @db.VarChar
+  end_time                                                  BigInt
+  is_passed                                                 Boolean
+  start_time                                                BigInt
+  statement                                                 String?
+  achievement                                               Int
+  total_questions                                           Int
+  success_criteria                                          Int
+  session_completed                                         Boolean
+  is_network_active                                         Boolean
+  workflow_ref_id                                           String                                                      @db.VarChar
+  assessment_visit_results_v2_id                            BigInt
+  student_session                                           String?                                                     @db.Uuid
+  total_time_taken                                          Int?
+  assessment_visit_results_student_odk_results_2025_oct_dec assessment_visit_results_student_odk_results_2025_oct_dec[]
+  assessment_visit_results_v2_2025_oct_dec                  assessment_visit_results_v2_2025_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_assessment_vi")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_oct_dec_ss_com_avr_v2_id")
 }
 
 model assessment_visit_results_v2 {
@@ -288,8 +640,404 @@ model assessment_visit_results_v2 {
   @@index([created_at, mentor_id])
   @@index([mentor_id])
   @@index([subject_id])
-  @@index([udise])
   @@index([submission_timestamp])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2023_apr_jun {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_apr_jun_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_apr_jun_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_apr_jun_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_apr_jun_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_apr_jun_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2023_jul_sep {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_jul_sep_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_jul_sep_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_jul_sep_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2023_oct_dec {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_oct_dec_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_oct_dec_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_oct_dec_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_oct_dec_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_oct_dec_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2024_apr_jun {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_apr_jun_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_apr_jun_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_apr_jun_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_apr_jun_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_apr_jun_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2024_jan_mar {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_jan_mar_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_jan_mar_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_jan_mar_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_jan_mar_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_jan_mar_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2024_jul_sep {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_jul_sep_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_jul_sep_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_jul_sep_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_jul_sep_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_jul_sep_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2024_oct_dec {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_oct_dec_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_oct_dec_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_oct_dec_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_oct_dec_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_oct_dec_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2025_apr_jun {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_apr_jun_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_apr_jun_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_apr_jun_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_apr_jun_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_apr_jun_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2025_jan_mar {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_jan_mar_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_jan_mar_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_jan_mar_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_jan_mar_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_jan_mar_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2025_jul_sep {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_jul_sep_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_jul_sep_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_jul_sep_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_jul_sep_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_jul_sep_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
+}
+
+model assessment_visit_results_v2_2025_oct_dec {
+  id                                             BigInt                                           @id @default(autoincrement())
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  grade                                          Int                                              @db.SmallInt
+  subject_id                                     Int
+  module_result                                  Json
+  is_visited                                     Boolean                                          @default(false)
+  mentor_id                                      BigInt?
+  no_of_student                                  Int                                              @default(0)
+  actor_id                                       Int
+  block_id                                       Int?
+  assessment_type_id                             Int?
+  udise                                          BigInt?
+  submission_timestamp                           BigInt                                           @default(0)
+  app_version_code                               Int                                              @default(0)
+  v                                              Int                                              @default(2) @db.SmallInt
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
+  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_oct_dec_unique")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_oct_dec_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_oct_dec_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_oct_dec_cr_mntid_idx")
+  @@index([created_at])
+  @@index([mentor_id])
+  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_oct_dec_sbsn_tz_idx")
+  @@index([subject_id])
+  @@index([udise])
 }
 
 model auth_group {
@@ -706,6 +1454,7 @@ model mentor {
   blocks                                   blocks?                                    @relation(fields: [block_id], references: [id], onDelete: Restrict)
   designations                             designations                               @relation(fields: [designation_id], references: [id])
   districts                                districts                                  @relation(fields: [district_id], references: [id])
+  mentor_bot_telemetry                     mentor_bot_telemetry[]
   mentor_segmentation                      mentor_segmentation[]
   mentor_tokens                            mentor_tokens?
   mentor_update_logs                       mentor_update_logs[]
@@ -713,6 +1462,21 @@ model mentor {
 
   @@index([actor_id], map: "mentor_actor_id_key")
   @@index([designation_id], map: "mentor_designation_id_key")
+}
+
+model mentor_bot_telemetry {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  bot_id     String   @db.Uuid
+  action     Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, bot_id, action])
+  @@index([action])
+  @@index([bot_id])
+  @@index([mentor_id])
 }
 
 model mentor_segmentation {
@@ -737,6 +1501,17 @@ model mentor_tokens {
   mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
 }
 
+model mentor_update_logs {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  old_record Json
+  new_record Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+
+  @@index([mentor_id])
+}
+
 model mentors {
   id                Int            @id @unique @default(autoincrement())
   officer_name      String?        @db.VarChar
@@ -749,6 +1524,29 @@ model mentors {
   target_visits     String?        @db.VarChar
   pin               Bytes?
   school_visit      school_visit[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model new_schools_25_07_2023 {
+  id                       Int?
+  district                 String?
+  area_type                String?
+  block                    String?
+  nypanchayat              String?
+  type                     String?
+  category                 String?
+  name                     String?
+  udise_code               Decimal? @db.Decimal
+  total_student_registered String?
+  is_sankul                String?
+  district_id              Int?
+  block_id                 Int?
+  udise                    Decimal? @db.Decimal
+  nyay_panchayat_id        String?
+  lat                      String?
+  long                     String?
+
+  @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -777,6 +1575,29 @@ model nyay_panchayats {
   school_list school_list[]
 
   @@unique([name, district_id, block_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model query_result_2023_07_20 {
+  id                       Int?
+  district                 String?
+  area_type                String?
+  block                    String?
+  nypanchayat              String?
+  type                     String?
+  category                 String?
+  name                     String?
+  udise_code               Decimal? @db.Decimal
+  total_student_registered Int?
+  is_sankul                String?
+  district_id              Int?
+  block_id                 Int?
+  udise                    Decimal? @db.Decimal
+  nyay_panchayat_id        Int?
+  lat                      Decimal? @db.Decimal
+  long                     Decimal? @db.Decimal
+
+  @@ignore
 }
 
 model school {
@@ -1106,763 +1927,4 @@ model wrm {
   ref_ids       Json?
 
   @@ignore
-}
-
-model assessment_visit_results_student_odk_results_2023_apr_jun {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_apr_jun_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2023_jul_sep {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_jul_sep_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2023_oct_dec {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_oct_dec_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2024_apr_jun {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_apr_jun_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2024_jan_mar {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_jan_mar_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2024_jul_sep {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_jul_sep_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2024_oct_dec {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2024_oct_dec_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2025_apr_jun {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_apr_jun_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2025_jan_mar {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_jan_mar_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2025_jul_sep {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_jul_sep_fkey")
-}
-
-model assessment_visit_results_student_odk_results_2025_oct_dec {
-  id                                             BigInt                                         @id @default(autoincrement())
-  question                                       String
-  answer                                         String                                         @db.VarChar
-  assessment_visit_results_students_id           BigInt
-  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_oct_dec_fkey")
-}
-
-model assessment_visit_results_students_2023_apr_jun {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2023_apr_jun assessment_visit_results_student_odk_results_2023_apr_jun[]
-  assessment_visit_results_v2_2023_apr_jun                  assessment_visit_results_v2_2023_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_apr_jun_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2023_jul_sep {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2023_jul_sep assessment_visit_results_student_odk_results_2023_jul_sep[]
-  assessment_visit_results_v2_2023_jul_sep                  assessment_visit_results_v2_2023_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_jul_sep_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2023_oct_dec {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2023_oct_dec assessment_visit_results_student_odk_results_2023_oct_dec[]
-  assessment_visit_results_v2_2023_oct_dec                  assessment_visit_results_v2_2023_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_oct_dec_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2024_apr_jun {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2024_apr_jun assessment_visit_results_student_odk_results_2024_apr_jun[]
-  assessment_visit_results_v2_2024_apr_jun                  assessment_visit_results_v2_2024_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_apr_jun_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2024_jan_mar {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2024_jan_mar assessment_visit_results_student_odk_results_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jan_mar                  assessment_visit_results_v2_2024_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jan_mar_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2024_jul_sep {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2024_jul_sep assessment_visit_results_student_odk_results_2024_jul_sep[]
-  assessment_visit_results_v2_2024_jul_sep                  assessment_visit_results_v2_2024_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jul_sep_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2024_oct_dec {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2024_oct_dec assessment_visit_results_student_odk_results_2024_oct_dec[]
-  assessment_visit_results_v2_2024_oct_dec                  assessment_visit_results_v2_2024_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_oct_dec_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2025_apr_jun {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2025_apr_jun assessment_visit_results_student_odk_results_2025_apr_jun[]
-  assessment_visit_results_v2_2025_apr_jun                  assessment_visit_results_v2_2025_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_apr_jun_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2025_jan_mar {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2025_jan_mar assessment_visit_results_student_odk_results_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jan_mar                  assessment_visit_results_v2_2025_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jan_mar_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2025_jul_sep {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2025_jul_sep assessment_visit_results_student_odk_results_2025_jul_sep[]
-  assessment_visit_results_v2_2025_jul_sep                  assessment_visit_results_v2_2025_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jul_sep_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_students_2025_oct_dec {
-  id                                                        BigInt                                                      @id @default(autoincrement())
-  student_name                                              String                                                      @db.VarChar
-  competency_id                                             Int
-  module                                                    String                                                      @db.VarChar
-  end_time                                                  BigInt
-  is_passed                                                 Boolean
-  start_time                                                BigInt
-  statement                                                 String?
-  achievement                                               Int
-  total_questions                                           Int
-  success_criteria                                          Int
-  session_completed                                         Boolean
-  is_network_active                                         Boolean
-  workflow_ref_id                                           String                                                      @db.VarChar
-  assessment_visit_results_v2_id                            BigInt
-  student_session                                           String?                                                     @db.Uuid
-  total_time_taken                                          Int?
-  assessment_visit_results_student_odk_results_2025_oct_dec assessment_visit_results_student_odk_results_2025_oct_dec[]
-  assessment_visit_results_v2_2025_oct_dec                  assessment_visit_results_v2_2025_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_assessment_vi")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_oct_dec_ss_com_avr_v2_id")
-}
-
-model assessment_visit_results_v2_2023_apr_jun {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_apr_jun_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_apr_jun_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_apr_jun_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_apr_jun_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_apr_jun_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2023_jul_sep {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_jul_sep_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_jul_sep_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_jul_sep_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2023_oct_dec {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2023_oct_dec_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2023_oct_dec_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2023_oct_dec_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2023_oct_dec_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_oct_dec_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2024_apr_jun {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_apr_jun_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_apr_jun_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_apr_jun_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_apr_jun_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_apr_jun_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2024_jan_mar {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_jan_mar_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_jan_mar_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_jan_mar_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_jan_mar_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_jan_mar_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2024_jul_sep {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_jul_sep_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_jul_sep_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_jul_sep_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_jul_sep_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_jul_sep_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2024_oct_dec {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2024_oct_dec_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2024_oct_dec_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2024_oct_dec_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2024_oct_dec_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2024_oct_dec_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2025_apr_jun {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_apr_jun_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_apr_jun_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_apr_jun_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_apr_jun_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_apr_jun_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2025_jan_mar {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_jan_mar_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_jan_mar_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_jan_mar_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_jan_mar_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_jan_mar_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2025_jul_sep {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_jul_sep_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_jul_sep_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_jul_sep_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_jul_sep_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_jul_sep_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model assessment_visit_results_v2_2025_oct_dec {
-  id                                             BigInt                                           @id @default(autoincrement())
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  grade                                          Int                                              @db.SmallInt
-  subject_id                                     Int
-  module_result                                  Json
-  is_visited                                     Boolean                                          @default(false)
-  mentor_id                                      BigInt?
-  no_of_student                                  Int                                              @default(0)
-  actor_id                                       Int
-  block_id                                       Int?
-  assessment_type_id                             Int?
-  udise                                          BigInt?
-  submission_timestamp                           BigInt                                           @default(0)
-  app_version_code                               Int                                              @default(0)
-  v                                              Int                                              @default(2) @db.SmallInt
-  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                                         mentor?                                          @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                                       subjects                                         @relation(fields: [subject_id], references: [id])
-  school_list                                    school_list?                                     @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([udise, mentor_id, grade, subject_id, submission_timestamp], map: "assessment_visit_results_v2_2025_oct_dec_unique")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_2025_oct_dec_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_2025_oct_dec_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at, mentor_id], map: "assessment_visit_results_v2_2025_oct_dec_cr_mntid_idx")
-  @@index([created_at])
-  @@index([mentor_id])
-  @@index([submission_timestamp], map: "assessment_visit_results_v2_2025_oct_dec_sbsn_tz_idx")
-  @@index([subject_id])
-  @@index([udise])
-}
-
-model mentor_update_logs {
-  id         BigInt   @id @default(autoincrement())
-  mentor_id  BigInt
-  old_record Json
-  new_record Json
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-
-  @@index([mentor_id])
 }

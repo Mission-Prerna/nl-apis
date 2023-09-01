@@ -341,7 +341,7 @@ export class AppController {
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    this.appService.setMentorBotTelemetry(mentor.id, body.botId, body.action).then(r => true);
+    await this.appService.setMentorBotTelemetry(mentor.id, body.botId, body.action);
     return {
       msg: 'Success!',
       data: "Telemetry inserted",

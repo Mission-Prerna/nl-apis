@@ -1204,7 +1204,7 @@ export class AppService {
   }
 
   async setMentorBotTelemetry(mentorId: bigint, botId: string, action: number) {
-    return await this.prismaService.mentor_bot_telemetry.create({
+    return this.prismaService.mentor_bot_telemetry.create({
       data: {
         "mentor_id": mentorId,
         "bot_id": botId,
@@ -1214,7 +1214,7 @@ export class AppService {
   }
 
   async getMentorBotsWithAction(mentorId: bigint, action: number) {
-    return await this.prismaService.mentor_bot_telemetry.findMany({
+    return this.prismaService.mentor_bot_telemetry.findMany({
       select: {
         bot_id: true,
       },

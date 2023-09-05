@@ -37,6 +37,7 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
+import { GetSchoolStudentsDto } from './dto/GetSchoolStudents.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -363,86 +364,10 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudents(
     @Headers('authorization') authToken: string,
-    @Param('udise') udise: string
+    @Param() params: GetSchoolStudentsDto
   ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return [
-      {
-        "id": "1",
-        "name": "Abhishek 1",
-        "grade": 1
-      },
-      {
-        "id": "2",
-        "name": "Charanpreet 1",
-        "grade": 1
-      },
-      {
-        "id": "3",
-        "name": "Chakshu 1",
-        "grade": 1
-      },
-      {
-        "id": "4",
-        "name": "Suresh 1",
-        "grade": 1
-      },
-      {
-        "id": "5",
-        "name": "Karan 1",
-        "grade": 1
-      },
-      {
-        "id": "6",
-        "name": "Abhishek 2",
-        "grade": 2
-      },
-      {
-        "id": "7",
-        "name": "Charanpreet 2",
-        "grade": 2
-      },
-      {
-        "id": "8",
-        "name": "Chakshu 2",
-        "grade": 2
-      },
-      {
-        "id": "9",
-        "name": "Suresh 2",
-        "grade": 2
-      },
-      {
-        "id": "10",
-        "name": "Ujjwal 2",
-        "grade": 2
-      },
-      {
-        "id": "11",
-        "name": "Abhishek 3",
-        "grade": 3
-      },
-      {
-        "id": "12",
-        "name": "Charanpreet 3",
-        "grade": 3
-      },
-      {
-        "id": "13",
-        "name": "Chakshu 3",
-        "grade": 3
-      },
-      {
-        "id": "14",
-        "name": "Suresh 3",
-        "grade": 3
-      },
-      {
-        "id": "15",
-        "name": "Ujjwal 3",
-        "grade": 3
-      }
-    ];
+    await this.getLoggedInMentor(authToken);
+    return this.appService.getSchoolStudents(params.udise);
   }
 
   @Get('/api/school/:udise/students/result')

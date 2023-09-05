@@ -56,6 +56,7 @@ export enum CacheConstants {
   TTL_MENTOR_FROM_TOKEN = 90000, // in seconds
   TTL_MENTOR_SCHOOL_LIST = 600, // in seconds
   TTL_METADATA = 86400, // in seconds
+  TTL_SCHOOL_STUDENTS = 86400, // in seconds
 }
 
 export enum Role {
@@ -128,4 +129,8 @@ export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day:
   const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   const dayIdentifier = day < 10 ? `0${day.toString()}` : `${day.toString()}`;
   return `hm.daily:${year.toString()}${monthIdentifier}${dayIdentifier}:mentor:${mentorId.toString()}`;
+}
+
+export function CacheKeySchoolStudents(udise: number) {
+  return `school:${udise.toString()}:students`;
 }

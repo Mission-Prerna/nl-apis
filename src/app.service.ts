@@ -25,7 +25,7 @@ import {
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
   MentorMonthlyMetrics,
-  MentorWeeklyMetrics, MentorDailyMetrics,
+  MentorWeeklyMetrics, MentorDailyMetrics, CacheKeySchoolStudents,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -1232,4 +1232,36 @@ export class AppService {
     });
   }
 
+  async getSchoolStudents(udise: number) {
+    // We'll check if there is data in the cache
+    const cachedData = await this.cacheService.get<Array<Record<string, any>>>(
+      CacheKeySchoolStudents(udise),
+    );
+    if (cachedData) {
+      return cachedData;
+    }
+    const response = await this.prismaService.students.findMany({
+      where: {
+        udise: BigInt(parseInt(udise.toString()))
+      },
+      select: {
+        unique_id: true,
+        name: true,
+        grade: true,
+      }
+    });
+    const students = response.map((item) => {
+      return {
+        id: item.unique_id,
+        name: item.name,
+        grade: item.grade
+      }
+    });
+    if (students.length) {
+      // cache results
+      // @ts-ignore
+      await this.cacheService.set(CacheKeySchoolStudents(udise), students, { ttl: CacheConstants.TTL_SCHOOL_STUDENTS })
+    }
+    return students;
+  }
 }

@@ -16,6 +16,7 @@ import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { FusionauthService } from './fusionauth.service';
 import { redisStore } from 'cache-manager-redis-store';
 import { RedisHelperService } from './RedisHelper.service';
+import { ApiV2Module } from './api-v2/api-v2.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { RedisHelperService } from './RedisHelper.service';
       inject: [ConfigService],
     }),
     TerminusModule,
+    ApiV2Module,
   ],
   controllers: [AppController],
   providers: [

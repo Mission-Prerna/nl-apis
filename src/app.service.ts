@@ -4,7 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
-  Logger,
+  Logger, UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
@@ -44,6 +44,7 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
+import { JwtService } from '@nestjs/jwt';
 const moment = require('moment');
 
 @Injectable()
@@ -57,6 +58,7 @@ export class AppService {
     private readonly faService: FusionauthService,
     private readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
+    private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -1263,5 +1265,42 @@ export class AppService {
       await this.cacheService.set(CacheKeySchoolStudents(udise), students, { ttl: CacheConstants.TTL_SCHOOL_STUDENTS })
     }
     return students;
+  }
+
+  public async getLoggedInMentor(
+    authorizationHeader: string,
+  ): Promise<Mentor> {
+    const decodedAuthTokenData = this.checkTokenIfInvalid(authorizationHeader, false);
+
+    // We'll check if the token is from the very same application as needed in the app
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_APPLICATION_ID')) {
+      throw new BadRequestException('Token is invalid!');
+    }
+
+    const mentor = await this.findMentorByPhoneNumber(
+      decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
+        'X-Hasura-User-Id'
+        ],
+    );
+
+    if (!mentor) {
+      throw new BadRequestException('User is invalid!');
+    }
+
+    return mentor;
+  }
+
+  public checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
+    const decodedAuthTokenData = <Record<string, any>>(
+      this.jwtService.decode(authToken.split(' ')[1])
+    );
+
+    // We'll check if the token is from the very same application as needed in the app
+    const applicationId = admin ? this.configService.get<string>('FA_ADMIN_APPLICATION_ID') : this.configService.get<string>('FA_APPLICATION_ID');
+    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== applicationId) {
+      throw new UnauthorizedException('Token is invalid!');
+    }
+
+    return decodedAuthTokenData;
   }
 }

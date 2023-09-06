@@ -1,12 +1,11 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   Headers, ParseArrayPipe, Patch,
   Post,
   Query,
-  SetMetadata, UnauthorizedException,
+  SetMetadata,
   UseGuards, UseInterceptors,
   Put, NotImplementedException, Param,
   ParseIntPipe
@@ -79,24 +78,7 @@ export class AppController {
   private async getLoggedInMentor(
     authorizationHeader: string,
   ): Promise<Mentor> {
-    const decodedAuthTokenData = this.checkTokenIfInvalid(authorizationHeader, false);
-
-    // We'll check if the token is from the very same application as needed in the app
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== this.configService.get<string>('FA_APPLICATION_ID')) {
-      throw new BadRequestException('Token is invalid!');
-    }
-
-    const mentor = await this.appService.findMentorByPhoneNumber(
-      decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
-      'X-Hasura-User-Id'
-      ],
-    );
-
-    if (!mentor) {
-      throw new BadRequestException('User is invalid!');
-    }
-
-    return mentor;
+    return this.appService.getLoggedInMentor(authorizationHeader);
   }
 
   @Post('/api/assessment-visit-results')
@@ -260,17 +242,7 @@ export class AppController {
   }
 
   private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
-    const decodedAuthTokenData = <Record<string, any>>(
-      this.jwtService.decode(authToken.split(' ')[1])
-    );
-
-    // We'll check if the token is from the very same application as needed in the app
-    const applicationId = admin ? this.configService.get<string>('FA_ADMIN_APPLICATION_ID') : this.configService.get<string>('FA_APPLICATION_ID');
-    if (decodedAuthTokenData && decodedAuthTokenData?.applicationId !== applicationId) {
-      throw new UnauthorizedException('Token is invalid!');
-    }
-
-    return decodedAuthTokenData;
+    return this.appService.checkTokenIfInvalid(authToken, admin);
   }
 
   @Post('/api/mentor')

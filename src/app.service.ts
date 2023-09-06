@@ -1242,7 +1242,10 @@ export class AppService {
     }
     const response = await this.prismaService.students.findMany({
       where: {
-        udise: BigInt(parseInt(udise.toString()))
+        udise: BigInt(parseInt(udise.toString())),
+        grade: {
+          in: [1, 2, 3]
+        }
       },
       select: {
         unique_id: true,

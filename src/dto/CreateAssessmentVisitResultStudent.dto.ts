@@ -4,11 +4,12 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
+  IsUUID, Validate,
   ValidateNested,
 } from 'class-validator';
 import { CreateAssessmentVisitResultStudentOdkResult } from './CreateAssessmentVisitResultsStudentOdkResult.dto';
 import { Type } from 'class-transformer';
+import { IsExist } from '../auth/auth.validator';
 
 export class CreateAssessmentVisitResultStudent {
   @IsString()
@@ -57,6 +58,13 @@ export class CreateAssessmentVisitResultStudent {
 
   @IsUUID()
   student_session!: string;
+
+  @IsString()
+  @IsOptional()
+  @Validate(IsExist, ['students', 'unique_id'], {
+    message: '',
+  })
+  student_id!: string;
 
   @IsArray()
   @ValidateNested({ each: true })

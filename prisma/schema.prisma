@@ -366,15 +366,18 @@ model assessment_visit_results_students_2023_apr_jun {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_apr_jun assessment_visit_results_student_odk_results_2023_apr_jun[]
   assessment_visit_results_v2_2023_apr_jun                  assessment_visit_results_v2_2023_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_apr_jun_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_apr_jun_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_apr_jun_stu_id_idx")
 }
 
 model assessment_visit_results_students_2023_jul_sep {
@@ -399,15 +402,18 @@ model assessment_visit_results_students_2023_jul_sep {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_jul_sep assessment_visit_results_student_odk_results_2023_jul_sep[]
   assessment_visit_results_v2_2023_jul_sep                  assessment_visit_results_v2_2023_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_jul_sep_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id], map: "assessment_visit_results_students_2023_jul_sep_mentor_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_jul_sep_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_jul_sep_stu_id_idx")
 }
 
 model assessment_visit_results_students_2023_oct_dec {
@@ -432,15 +438,18 @@ model assessment_visit_results_students_2023_oct_dec {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_oct_dec assessment_visit_results_student_odk_results_2023_oct_dec[]
   assessment_visit_results_v2_2023_oct_dec                  assessment_visit_results_v2_2023_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_oct_dec_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_oct_dec_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_oct_dec_stu_id_idx")
 }
 
 model assessment_visit_results_students_2024_apr_jun {
@@ -461,10 +470,22 @@ model assessment_visit_results_students_2024_apr_jun {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_apr_jun assessment_visit_results_student_odk_results_2024_apr_jun[]
   assessment_visit_results_v2_2024_apr_jun                  assessment_visit_results_v2_2024_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_apr_jun_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_apr_jun_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2024_apr_jun_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2024_jan_mar {
@@ -485,10 +506,22 @@ model assessment_visit_results_students_2024_jan_mar {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_jan_mar assessment_visit_results_student_odk_results_2024_jan_mar[]
   assessment_visit_results_v2_2024_jan_mar                  assessment_visit_results_v2_2024_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_jan_mar_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jan_mar_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_jan_mar_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2024_jan_mar_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2024_jul_sep {
@@ -509,10 +542,22 @@ model assessment_visit_results_students_2024_jul_sep {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_jul_sep assessment_visit_results_student_odk_results_2024_jul_sep[]
   assessment_visit_results_v2_2024_jul_sep                  assessment_visit_results_v2_2024_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jul_sep_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_jul_sep_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2024_jul_sep_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2024_oct_dec {
@@ -533,10 +578,22 @@ model assessment_visit_results_students_2024_oct_dec {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_oct_dec assessment_visit_results_student_odk_results_2024_oct_dec[]
   assessment_visit_results_v2_2024_oct_dec                  assessment_visit_results_v2_2024_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_oct_dec_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_oct_dec_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2024_oct_dec_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2025_apr_jun {
@@ -557,10 +614,22 @@ model assessment_visit_results_students_2025_apr_jun {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_apr_jun assessment_visit_results_student_odk_results_2025_apr_jun[]
   assessment_visit_results_v2_2025_apr_jun                  assessment_visit_results_v2_2025_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_apr_jun_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_apr_jun_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2025_apr_jun_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2025_jan_mar {
@@ -581,10 +650,22 @@ model assessment_visit_results_students_2025_jan_mar {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_jan_mar assessment_visit_results_student_odk_results_2025_jan_mar[]
   assessment_visit_results_v2_2025_jan_mar                  assessment_visit_results_v2_2025_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_jan_mar_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jan_mar_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_jan_mar_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2025_jan_mar_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2025_jul_sep {
@@ -605,10 +686,22 @@ model assessment_visit_results_students_2025_jul_sep {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_jul_sep assessment_visit_results_student_odk_results_2025_jul_sep[]
   assessment_visit_results_v2_2025_jul_sep                  assessment_visit_results_v2_2025_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jul_sep_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_jul_sep_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2025_jul_sep_sub_ts_idx")
 }
 
 model assessment_visit_results_students_2025_oct_dec {
@@ -629,10 +722,22 @@ model assessment_visit_results_students_2025_oct_dec {
   assessment_visit_results_v2_id                            BigInt
   student_session                                           String?                                                     @db.Uuid
   total_time_taken                                          Int?
+  submission_timestamp                                      BigInt                                                      @default(0)
+  created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
+  grade                                                     Int                                                         @default(0) @db.SmallInt
+  mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_oct_dec assessment_visit_results_student_odk_results_2025_oct_dec[]
   assessment_visit_results_v2_2025_oct_dec                  assessment_visit_results_v2_2025_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_assessment_vi")
+  mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_oct_dec_ss_com_avr_v2_id")
+  @@index([created_at])
+  @@index([grade])
+  @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_oct_dec_stu_id_idx")
+  @@index([submission_timestamp], map: "assessment_visit_results_students_2025_oct_dec_sub_ts_idx")
 }
 
 model assessment_visit_results_v2 {
@@ -1468,6 +1573,14 @@ model mentor {
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
   assessment_visit_results_v2                    assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun       assessment_visit_results_v2_2023_apr_jun[]
   assessment_visit_results_v2_2023_jul_sep       assessment_visit_results_v2_2023_jul_sep[]
@@ -2010,20 +2123,31 @@ model cache_mentor_metrics_weekly {
 }
 
 model students {
-  id             Int          @id @default(autoincrement())
-  name           String       @db.VarChar(255)
-  gender         genders_enum
-  dob            DateTime?    @db.Date
-  admission_date DateTime?    @db.Date
-  roll_no        BigInt
-  unique_id      String       @unique(map: "unique_id_unique") @db.VarChar(15)
-  father_name    String       @default("") @db.VarChar(255)
-  mother_name    String       @default("") @db.VarChar(255)
-  grade          Int          @db.SmallInt
-  section        String       @default("") @db.Char(1)
-  udise          BigInt
-  created_at     DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  id                                             Int                                              @id @default(autoincrement())
+  name                                           String                                           @db.VarChar(255)
+  gender                                         genders_enum
+  dob                                            DateTime?                                        @db.Date
+  admission_date                                 DateTime?                                        @db.Date
+  roll_no                                        BigInt
+  unique_id                                      String                                           @unique(map: "unique_id_unique") @db.VarChar(15)
+  father_name                                    String                                           @default("") @db.VarChar(255)
+  mother_name                                    String                                           @default("") @db.VarChar(255)
+  grade                                          Int                                              @db.SmallInt
+  section                                        String                                           @default("") @db.Char(1)
+  udise                                          BigInt
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
+  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
+  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
 
   @@index([udise, grade])
   @@index([udise])

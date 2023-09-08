@@ -25,7 +25,7 @@ import {
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
   MentorMonthlyMetrics,
-  MentorWeeklyMetrics, MentorDailyMetrics, CacheKeySchoolStudents,
+  MentorWeeklyMetrics, MentorDailyMetrics, CacheKeySchoolStudents, Student, StudentMonthlyAssessmentStatus,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -1236,9 +1236,9 @@ export class AppService {
     });
   }
 
-  async getSchoolStudents(udise: number) {
+  async getSchoolStudents(udise: number): Promise<Array<Student>> {
     // We'll check if there is data in the cache
-    const cachedData = await this.cacheService.get<Array<Record<string, any>>>(
+    const cachedData: Array<Student> | undefined = await this.cacheService.get<Array<Student>>(
       CacheKeySchoolStudents(udise),
     );
     if (cachedData) {
@@ -1307,5 +1307,88 @@ export class AppService {
     }
 
     return decodedAuthTokenData;
+  }
+
+  async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
+    const tables = this.getAssessmentVisitResultsTables(year, month);
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
+    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
+
+    const query = `
+      select distinct on (student_id) student_id as id,
+                                           submission_timestamp last_assessment_date,
+                                           is_passed
+      from ${tables.assessment_visit_results_students}
+      where mentor_id = ${mentor.id}
+        and student_id is not null
+        and submission_timestamp > ${firstDayTimestamp}
+        and submission_timestamp < ${lastDayTimestamp}
+      order by student_id, submission_timestamp DESC
+    `;
+    const studentWiseResults: Record<string, Student> = {};
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
+    result.forEach((res) => {
+      // iterate and create a map student id wise for later faster fetching
+      studentWiseResults[res.id.toString()] = res;
+    });
+
+    // Grade summary
+    const gradeStudents: Record<string, {students: Array<Student>, nipun: number, not_nipun: number}> = {};
+    (await this.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
+      grade = grade ?? 0; // just a ts check
+      const assessedStudent = studentWiseResults[id.toString()] ?? null;
+      if (!gradeStudents.hasOwnProperty(grade)) {
+        gradeStudents[grade] = {
+          students: [],
+          nipun: 0,
+          not_nipun: 0,
+        }
+      }
+      if (assessedStudent) {
+        assessedStudent.is_passed ? gradeStudents[grade].nipun++ : gradeStudents[grade].not_nipun++;
+        gradeStudents[grade].students.push({
+          id: id,
+          status: assessedStudent.is_passed ? StudentMonthlyAssessmentStatus.PASS : StudentMonthlyAssessmentStatus.FAIL,
+          last_assessment_date: assessedStudent.last_assessment_date,
+        });
+      } else {
+        gradeStudents[grade].students.push({
+          id: id,
+          status: StudentMonthlyAssessmentStatus.PENDING,
+          last_assessment_date: null,
+        });
+      }
+    });
+    let response: Array<Record<string, any>> = [];
+    for (const grade of grades) {
+      response.push({
+        grade: grade,
+        period: moment(month, 'M').format('MMMM') + ' माह',
+        summary: [
+          {
+            label: 'Total',
+            colour: '#FF0000',
+            count: gradeStudents[grade.toString()].students.length
+          },
+          {
+            label: 'Nipun',
+            colour: '#FFFFFF',
+            count: gradeStudents[grade.toString()].nipun
+          },
+          {
+            label: 'Not Nipun',
+            colour: '#000000',
+            count: gradeStudents[grade.toString()].not_nipun
+          },
+          {
+            label: 'Not assessed',
+            colour: '#000000',
+            count: (gradeStudents[grade.toString()].students.length - gradeStudents[grade.toString()].nipun - gradeStudents[grade.toString()].not_nipun)
+          }
+        ],
+        students: gradeStudents[grade.toString()].students
+      });
+    }
+    return response;
   }
 }

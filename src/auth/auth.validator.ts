@@ -45,3 +45,25 @@ export class AreDifferentValue implements ValidatorConstraintInterface {
     // return messageService.CNF_PASSWORD;
   }
 }
+
+@Injectable()
+@ValidatorConstraint({ name: 'ValidateGrades', async: true })
+export class ValidateGrades implements ValidatorConstraintInterface {
+  async validate(value: string, validationArguments: ValidationArguments) {
+    if (!value) {
+      return false;
+    }
+    let success = true;
+    value.split(',').forEach((grade) => {
+      if (!validationArguments.constraints.includes(grade.trim())) {
+        success = false;
+      }
+    });
+
+    return success;
+  }
+
+  defaultMessage(validationArguments: ValidationArguments): string {
+    return `Allowed grades are ${validationArguments.constraints.join(', ')}.`;
+  }
+}

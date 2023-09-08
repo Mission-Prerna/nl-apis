@@ -347,52 +347,13 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResults(
     @Headers('authorization') authToken: string,
-    @Param('udise') udise: string,
+    @Param('udise', ParseIntPipe) udise: number,
     @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
     @Query('month', ParseIntPipe) month: number,
     @Query('year', ParseIntPipe) year: number,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return [
-      {
-        "grade": grades[0],
-        "period": month + " " + year,
-        "summary": [
-          {
-            "label": "Total",
-            "colour": "#FF0000",
-            "count": 4
-          },
-          {
-            "label": "Nipun",
-            "colour": "#FFFFFF",
-            "count": 2
-          },
-          {
-            "label": "Not accessed",
-            "colour": "#000000",
-            "count": 2
-          }
-        ],
-        "students": [
-          {
-            "id": "1",
-            "status": "pass",
-            "last_assessment_date": 170123456876
-          },
-          {
-            "id": "2",
-            "status": "fail",
-            "last_assessment_date": 170123456876
-          },
-          {
-            "id": "3",
-            "status": "pending",
-            "last_assessment_date": 170123456876
-          }
-        ]
-      }
-    ];
+    return this.appService.getSchoolStudentsResults(mentor, udise, grades, year, month);
   }
 
   @Get('/api/school/:udise/students/result/summary')

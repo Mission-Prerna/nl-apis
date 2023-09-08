@@ -18,6 +18,23 @@ export type Mentor = {
   }
 };
 
+export type Student = {
+  id: bigint | string;
+  grade?: number;
+  name?: string;
+  is_passed?: boolean;
+
+  // for GET /api/school/:udise/students/result?grade=1,2,3&month=8&year=2023
+  status?: string;  // pass/fail/pending
+  last_assessment_date?: number | null;  // unix timestamp in milliseconds
+};
+
+export enum StudentMonthlyAssessmentStatus {
+  PENDING = 'pending',
+  PASS = 'pass',
+  FAIL = 'fail',
+}
+
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
   AssessmentSurveyResult = 'AssessmentSurveyResult',

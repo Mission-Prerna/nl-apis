@@ -88,11 +88,11 @@ export type TypeAssessmentQuarterTables = {
   assessment_visit_results_student_odk_results: string;
 }
 
-export type TypeActorHomeOverview = {
+export type TypeTeacherHomeOverview = {
   assessments_total: number,
   nipun_total: number,
-  assessments_today: number,
-  nipun_today: number
+  assessments_today?: number,
+  nipun_today?: number
 }
 
 export type MentorMonthlyMetrics = {

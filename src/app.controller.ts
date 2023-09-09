@@ -373,37 +373,10 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolTeacherPerformance(
     @Headers('authorization') authToken: string,
-    @Param('udise') udise: string,
+    @Param('udise', ParseIntPipe) udise: number,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return [
-      {
-        "period": "Saptahik",
-        "insights": [
-          {
-            "label": "Total students",
-            "count": "15"
-          },
-          {
-            "label": "Assessed students",
-            "count": "10"
-          }
-        ]
-      },
-      {
-        "period": "August",
-        "insights": [
-          {
-            "label": "Total students",
-            "count": "15"
-          },
-          {
-            "label": "Assessed students",
-            "count": "5"
-          }
-        ]
-      }
-    ]
+    return this.appService.getSchoolTeacherPerformance(mentor, udise);
   }
 
   @Post('/admin/queues/pause')

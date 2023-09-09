@@ -20,7 +20,7 @@ import {
   CacheKeyMetadata,
   CacheKeyMentorMonthlyMetrics,
   Mentor,
-  TypeActorHomeOverview,
+  TypeTeacherHomeOverview,
   TypeAssessmentQuarterTables,
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
@@ -727,7 +727,7 @@ export class AppService {
     mentor: Mentor,
     firstDayTimestamp: number,
     todayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeActorHomeOverview | null> {
+    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
     try {
       const query = `
           select weekly.assessments_total, weekly.nipun_total, daily.assessments_today, daily.nipun_today
@@ -755,7 +755,7 @@ export class AppService {
                      and avrs.submission_timestamp < ${lastDayTimestamp}
                ) as daily;
       `;
-      const result: Array<TypeActorHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
 
       return {
         assessments_total: result[0].assessments_total,
@@ -779,7 +779,7 @@ export class AppService {
     const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
     const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
 
-    let responseFirstTable: TypeActorHomeOverview | null;
+    let responseFirstTable: TypeTeacherHomeOverview | null;
     let responseSecondTable = null;
     if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
       // both tables are same
@@ -1414,17 +1414,19 @@ export class AppService {
         count(t.student_id)                                        as assessed,
         count(case when t.is_passed is true then t.student_id end) as nipun
       from (
-        select distinct on (student_id) student_id,
-          grade,
-          created_at,
-          is_passed
-        from %table%
-        where mentor_id = %mentor_id%
-          and student_id is not null
-          and submission_timestamp > %start_time%
-          and submission_timestamp < %end_time%
-          and grade in (%grades%)
-         order by student_id, created_at DESC
+        select distinct on (avrs.student_id) student_id,
+          avrs.grade,
+          avrs.created_at,
+          avrs.is_passed
+        from %table_student% avrs 
+        join %table_v2% avr2 on (
+          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise}
+        )
+        where avrs.student_id is not null
+          and avrs.submission_timestamp > %start_time%
+          and avrs.submission_timestamp < %end_time%
+          and avrs.grade in (%grades%)
+         order by avrs.student_id, avrs.created_at DESC
            ) t
       group by grade;
     `;
@@ -1462,7 +1464,8 @@ export class AppService {
       const tables = this.getAssessmentVisitResultsTables(item.year, item.month+1);
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
         query
-          .replace('%table%', tables.assessment_visit_results_students)
+          .replace('%table_student%', tables.assessment_visit_results_students)
+          .replace('%table_v2%', tables.assessment_visit_results_v2)
           .replace('%mentor_id%', mentor.id.toString())
           .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
           .replace('%end_time%', (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
@@ -1479,5 +1482,169 @@ export class AppService {
       item.summary = Object.values(item.summary); // remove month name keys from summary objects
     }
     return response;
+  }
+
+  async getTeacherStudentsSummaryResultForPeriod(
+    tables: TypeAssessmentQuarterTables,
+    mentor: Mentor,
+    udise: number,
+    firstDayTimestamp: number,
+    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
+    try {
+      const query = `
+        select count(distinct student_id)                                     as assessments_total,
+               count(distinct case when is_passed = true then student_id end) as nipun_total
+        from (
+          select distinct on (student_id) student_id,
+                                         assessment_visit_results_v2_id
+                                             submission_timestamp,
+                                         is_passed
+          from ${tables.assessment_visit_results_students} avrs
+                  join ${tables.assessment_visit_results_v2} as avr2
+                       on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
+                           avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS} and avr2.udise = ${udise})
+          where avrs.mentor_id = ${mentor.id}
+           and avrs.student_id is not null
+           and avrs.submission_timestamp > ${firstDayTimestamp}
+           and avrs.submission_timestamp < ${lastDayTimestamp}
+          order by student_id, submission_timestamp DESC
+          ) t
+      `;
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      return {
+        assessments_total: result[0].assessments_total,
+        nipun_total: result[0].nipun_total
+      };
+    } catch (e) {
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
+    }
+    return null;
+  }
+
+  async getSchoolTeacherPerformance(mentor: Mentor, udise: number) {
+    const lastDate = new Date();  // it's now() basically
+    const temp = new Date();
+    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+    const firstDate = new Date(temp.setDate(diff));
+
+    const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
+    const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
+
+    let responseFirstTable: TypeTeacherHomeOverview | null;
+    let responseSecondTable = null;
+    if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
+      // both tables are same
+      const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      const lastDayTimestamp = lastDate.getTime();
+
+      responseFirstTable = await this.getTeacherStudentsSummaryResultForPeriod(
+        tablesForFirstDate,
+        mentor,
+        udise,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+    } else {
+      // if the data needs to queried from two tables, we'll query for both separately
+      let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+      let lastDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth() + 1, 1, 0, 0, 0); // next month's first date
+      responseFirstTable = await this.getTeacherStudentsSummaryResultForPeriod(
+        tablesForFirstDate,
+        mentor,
+        udise,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+
+      firstDayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), 1, 0, 0, 0);  // first day of current month
+      lastDayTimestamp = lastDate.getTime();
+
+      responseSecondTable = await this.getTeacherStudentsSummaryResultForPeriod(
+        tablesForLastDate,
+        mentor,
+        udise,
+        firstDayTimestamp,
+        lastDayTimestamp
+      );
+    }
+    let weekly = responseFirstTable;
+    if (responseSecondTable) {
+      // we need to merge both table's response
+      weekly = {
+        assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
+        nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
+      }
+    }
+
+    const currentMonthName = moment().utc().format('MMMM');
+    const currentMonth = moment().utc().month() + 1;
+    const currentYear = moment().utc().year();
+    const currentMonthStartTimestamp = moment().utc().startOf('month').unix()*1000; // in milliseconds
+    const currentMonthEndTimestamp = moment().utc().unix()*1000;  // in milliseconds
+    const currentMonthTables = this.getAssessmentVisitResultsTables(currentYear, currentMonth);
+    const currentMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
+      currentMonthTables,
+      mentor,
+      udise,
+      currentMonthStartTimestamp,
+      currentMonthEndTimestamp
+    );
+
+    const lastMonthName = moment().utc().subtract(1, 'month').format('MMMM');
+    const lastMonth = (currentMonth == 1) ? 12 : (currentMonth - 1);
+    const lastYear = (currentMonth == 1) ? (currentYear - 1) : currentYear;
+    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix()*1000; // in milliseconds
+    const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix()*1000; // in milliseconds
+    const lastMonthTables = this.getAssessmentVisitResultsTables(lastYear, lastMonth);
+    const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
+      lastMonthTables,
+      mentor,
+      udise,
+      lastMonthStartTimestamp,
+      lastMonthEndTimestamp
+    );
+
+    return [
+      {
+        period: "Weekly",
+        insights: [
+          {
+            label: "Assessed students",
+            count: weekly?.assessments_total ?? 0
+          },
+          {
+            label: "Nipun students",
+            count: weekly?.nipun_total ?? 0
+          }
+        ]
+      },
+      {
+        period: currentMonthName,
+        insights: [
+          {
+            label: "Assessed students",
+            count: currentMonthStats?.assessments_total ?? 0
+          },
+          {
+            label: "Nipun students",
+            count: currentMonthStats?.nipun_total ?? 0
+          }
+        ]
+      },
+      {
+        period: lastMonthName,
+        insights: [
+          {
+            label: "Assessed students",
+            count: lastMonthStats?.assessments_total ?? 0
+          },
+          {
+            label: "Nipun students",
+            count: lastMonthStats?.nipun_total ?? 0
+          }
+        ]
+      }
+    ];
   }
 }

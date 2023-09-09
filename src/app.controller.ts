@@ -361,29 +361,11 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async getSchoolStudentsResultsSummary(
     @Headers('authorization') authToken: string,
-    @Param('udise') udise: string,
+    @Param('udise', ParseIntPipe) udise: number,
     @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[]
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return [
-      {
-        "grade": grades[0],
-        "summary": [
-          {
-            "period": "August",
-            "total": 15,
-            "assessed": 10,
-            "successful": 5
-          },
-          {
-            "period": "July",
-            "total": 15,
-            "assessed": 8,
-            "successful": 4
-          }
-        ]
-      }
-    ];
+    return this.appService.getSchoolStudentsResultsSummary(mentor, udise, grades);
   }
 
   @Get('/api/school/:udise/teacher/performance/insights')

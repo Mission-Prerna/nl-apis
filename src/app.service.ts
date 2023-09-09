@@ -1391,4 +1391,93 @@ export class AppService {
     }
     return response;
   }
+
+  async getSchoolStudentsResultsSummary(mentor: Mentor, udise: number, grades: Array<Number>, xMonths: number = 12) {
+    // find out all the months for which we wanted to fetch summary data for
+    const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live
+    let startDate = moment(globalStartDate).subtract(xMonths, 'months').startOf('month');
+    const now = moment();
+    const monthsForQuery: Array<{year: number, month: number}> = [];
+    while (startDate < now) {
+      if (startDate >= globalStartDate) {
+        // this is the month we shall consider
+        monthsForQuery.push({ year: startDate.year(), month: startDate.month() });
+      }
+      if (startDate > now) {
+        break;
+      }
+      startDate = startDate.add('1', 'month');
+    }
+
+    const query = `
+      select t.grade,
+        count(t.student_id)                                        as assessed,
+        count(case when t.is_passed is true then t.student_id end) as nipun
+      from (
+        select distinct on (student_id) student_id,
+          grade,
+          created_at,
+          is_passed
+        from %table%
+        where mentor_id = %mentor_id%
+          and student_id is not null
+          and submission_timestamp > %start_time%
+          and submission_timestamp < %end_time%
+          and grade in (%grades%)
+         order by student_id, created_at DESC
+           ) t
+      group by grade;
+    `;
+
+    const gradeWiseSummary: Record<string, any> = {};
+    let summaries: Record<string, object> = {};
+    monthsForQuery.forEach(item => {
+      const monthName = moment().month(item.month).year(item.year).date(1).format('MMMM');
+      summaries[monthName] = {
+        period: monthName,
+        total: 0,
+        assessed: 0,
+        successful: 0
+      }
+    })
+    for (let grade of grades) {
+      let summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
+      const gradeTotal = await this.prismaService.students.count({
+        where: {
+          udise: udise,
+          grade: parseInt(grade.toString())
+        }
+      });
+
+      // set total for each summary object
+      Object.entries(summary).forEach(key => {
+        summary[key[0]].total = gradeTotal;
+      })
+      gradeWiseSummary[grade.toString()] = {
+        grade: grade,
+        summary: summary,
+      }
+    }
+    for (const item of monthsForQuery) {
+      const tables = this.getAssessmentVisitResultsTables(item.year, item.month+1);
+      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
+        query
+          .replace('%table%', tables.assessment_visit_results_students)
+          .replace('%mentor_id%', mentor.id.toString())
+          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
+          .replace('%end_time%', (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
+          .replace('%grades%', grades.join(','))
+      );
+      for (const row of result) {
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;
+      }
+    }
+
+    let response = Object.values(gradeWiseSummary); // remove grade keys from `gradeWiseSummary` object
+    for (let item of response) {
+      item.summary = Object.values(item.summary); // remove month name keys from summary objects
+    }
+    return response;
+  }
 }

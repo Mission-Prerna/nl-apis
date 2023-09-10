@@ -1323,6 +1323,7 @@ export class AppService {
         and student_id is not null
         and submission_timestamp > ${firstDayTimestamp}
         and submission_timestamp < ${lastDayTimestamp}
+        and grades in (${grades.join(',')})
       order by student_id, submission_timestamp DESC
     `;
     const studentWiseResults: Record<string, Student> = {};

@@ -1,22 +1,17 @@
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
-  CacheConstants,
-
   Mentor,
-  TypeTeacherHomeOverview,
+  Student,
+  StudentMonthlyAssessmentStatus,
   TypeAssessmentQuarterTables,
-  CacheKeySchoolStudents, Student, StudentMonthlyAssessmentStatus,
+  TypeTeacherHomeOverview,
 } from '../enums';
 import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
 import { Cache } from 'cache-manager';
+
 const moment = require('moment');
 
 @Injectable()
@@ -30,13 +25,6 @@ export class SchoolService {
   ) {}
 
   async getSchoolStudents(udise: number): Promise<Array<Student>> {
-    // We'll check if there is data in the cache
-    const cachedData: Array<Student> | undefined = await this.cacheService.get<Array<Student>>(
-      CacheKeySchoolStudents(udise),
-    );
-    if (cachedData) {
-      return cachedData;
-    }
     const response = await this.prismaService.students.findMany({
       where: {
         udise: BigInt(parseInt(udise.toString())),
@@ -50,19 +38,13 @@ export class SchoolService {
         grade: true,
       }
     });
-    const students = response.map((item) => {
+    return response.map((item) => {
       return {
         id: item.unique_id,
         name: item.name,
         grade: item.grade
       }
     });
-    if (students.length) {
-      // cache results
-      // @ts-ignore
-      await this.cacheService.set(CacheKeySchoolStudents(udise), students, { ttl: CacheConstants.TTL_SCHOOL_STUDENTS })
-    }
-    return students;
   }
 
   async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {

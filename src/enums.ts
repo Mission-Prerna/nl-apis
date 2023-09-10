@@ -149,5 +149,5 @@ export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day:
 }
 
 export function CacheKeySchoolStudents(udise: number) {
-  return `school:${udise.toString()}:students`;
+  return `school:${udise.toString()}:students:etag`;
 }

@@ -18,6 +18,7 @@ import { redisStore } from 'cache-manager-redis-store';
 import { RedisHelperService } from './RedisHelper.service';
 import { SchoolController } from './school/school.controller';
 import { SchoolService } from './school/school.service';
+import { EtagModule } from './modules/etag/etag.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { SchoolService } from './school/school.service';
       inject: [ConfigService],
     }),
     TerminusModule,
+    EtagModule,
   ],
   controllers: [AppController, SchoolController],
   providers: [

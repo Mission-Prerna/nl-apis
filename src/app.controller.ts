@@ -7,8 +7,7 @@ import {
   Query,
   SetMetadata,
   UseGuards, UseInterceptors,
-  Put, NotImplementedException, Param,
-  ParseIntPipe
+  Put, NotImplementedException, Param
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -36,7 +35,6 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
-import { GetSchoolStudentsDto } from './dto/GetSchoolStudents.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -329,54 +327,6 @@ export class AppController {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
-  }
-
-  @Get('/api/school/:udise/students')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  async getSchoolStudents(
-    @Headers('authorization') authToken: string,
-    @Param() params: GetSchoolStudentsDto
-  ) {
-    await this.getLoggedInMentor(authToken);
-    return this.appService.getSchoolStudents(params.udise);
-  }
-
-  @Get('/api/school/:udise/students/result')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  async getSchoolStudentsResults(
-    @Headers('authorization') authToken: string,
-    @Param('udise', ParseIntPipe) udise: number,
-    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
-    @Query('month', ParseIntPipe) month: number,
-    @Query('year', ParseIntPipe) year: number,
-  ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return this.appService.getSchoolStudentsResults(mentor, udise, grades, year, month);
-  }
-
-  @Get('/api/school/:udise/students/result/summary')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  async getSchoolStudentsResultsSummary(
-    @Headers('authorization') authToken: string,
-    @Param('udise', ParseIntPipe) udise: number,
-    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[]
-  ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return this.appService.getSchoolStudentsResultsSummary(mentor, udise, grades);
-  }
-
-  @Get('/api/school/:udise/teacher/performance/insights')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  async getSchoolTeacherPerformance(
-    @Headers('authorization') authToken: string,
-    @Param('udise', ParseIntPipe) udise: number,
-  ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    return this.appService.getSchoolTeacherPerformance(mentor, udise);
   }
 
   @Post('/admin/queues/pause')

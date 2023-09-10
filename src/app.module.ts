@@ -16,7 +16,8 @@ import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { FusionauthService } from './fusionauth.service';
 import { redisStore } from 'cache-manager-redis-store';
 import { RedisHelperService } from './RedisHelper.service';
-import { ApiV2Module } from './api-v2/api-v2.module';
+import { SchoolController } from './school/school.controller';
+import { SchoolService } from './school/school.service';
 
 @Module({
   imports: [
@@ -72,9 +73,8 @@ import { ApiV2Module } from './api-v2/api-v2.module';
       inject: [ConfigService],
     }),
     TerminusModule,
-    ApiV2Module,
   ],
-  controllers: [AppController],
+  controllers: [AppController, SchoolController],
   providers: [
     AppService,
     PrismaService,
@@ -84,6 +84,7 @@ import { ApiV2Module } from './api-v2/api-v2.module';
     RedisHealthIndicator,
     FusionauthService,
     RedisHelperService,
+    SchoolService,
   ],
 })
 export class AppModule {}

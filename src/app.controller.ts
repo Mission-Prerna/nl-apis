@@ -272,7 +272,7 @@ export class AppController {
     return decodedAuthTokenData;
   }
 
-  @Post('/api/mentor')
+  @Post(['/api/mentor', '/admin/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAuthGuard)
   async createMentor(
@@ -283,7 +283,7 @@ export class AppController {
     return this.appService.createMentor(body);
   }
 
-  @Post('/api/mentor/old')
+  @Post(['/api/mentor/old', '/admin/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAuthGuard)
   async createMentorOld(

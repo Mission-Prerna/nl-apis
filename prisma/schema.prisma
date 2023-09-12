@@ -232,6 +232,899 @@ model assessment_visit_results_student_odk_results {
   assessment_visit_results_students    assessment_visit_results_students @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_stud_assessment_visit_results_stu_fkey")
 }
 
+model assessment_visit_results_students {
+  id                                           BigInt                                         @id @default(autoincrement())
+  student_name                                 String                                         @db.VarChar
+  competency_id                                Int
+  module                                       String                                         @db.VarChar
+  end_time                                     BigInt
+  is_passed                                    Boolean
+  start_time                                   BigInt
+  statement                                    String?
+  achievement                                  Int
+  total_questions                              Int
+  success_criteria                             Int
+  session_completed                            Boolean
+  is_network_active                            Boolean
+  workflow_ref_id                              String                                         @db.VarChar
+  assessment_visit_results_v2_id               BigInt
+  student_session                              String?                                        @db.Uuid
+  total_time_taken                             Int?
+  assessment_visit_results_student_odk_results assessment_visit_results_student_odk_results[]
+  assessment_visit_results_v2                  assessment_visit_results_v2                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_assessment_visit_results_v")
+
+  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_student_session_competency_id")
+}
+
+model assessment_visit_results_v2 {
+  id                                BigInt                              @id @default(autoincrement())
+  created_at                        DateTime                            @default(now()) @db.Timestamptz(6)
+  grade                             Int                                 @db.SmallInt
+  subject_id                        Int
+  module_result                     Json
+  is_visited                        Boolean                             @default(false)
+  mentor_id                         BigInt?
+  no_of_student                     Int                                 @default(0)
+  actor_id                          Int
+  block_id                          Int?
+  assessment_type_id                Int?
+  udise                             BigInt?
+  submission_timestamp              BigInt                              @default(0)
+  app_version_code                  Int                                 @default(0)
+  v                                 Int                                 @default(2) @db.SmallInt
+  assessment_visit_results_students assessment_visit_results_students[]
+  actors                            actors                              @relation(fields: [actor_id], references: [id])
+  blocks                            blocks?                             @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor                            mentor?                             @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects                          subjects                            @relation(fields: [subject_id], references: [id])
+  school_list                       school_list?                        @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_visit_results_v2_subject_id_submission_timestamp_men")
+  @@index([actor_id, block_id], map: "assessment_visit_results_v2_actor_block_id_idx")
+  @@index([actor_id])
+  @@index([assessment_type_id], map: "assessment_visit_results_v2_ass_type_id_idx")
+  @@index([block_id])
+  @@index([created_at])
+  @@index([created_at, mentor_id])
+  @@index([mentor_id])
+  @@index([subject_id])
+  @@index([udise])
+  @@index([submission_timestamp])
+}
+
+model auth_group {
+  id                     Int                      @id @default(autoincrement())
+  name                   String                   @unique @db.VarChar(150)
+  auth_group_permissions auth_group_permissions[]
+  auth_user_groups       auth_user_groups[]
+
+  @@index([name], map: "auth_group_name_a6ea08ec_like")
+}
+
+model auth_group_permissions {
+  id              BigInt          @id @default(autoincrement())
+  group_id        Int
+  permission_id   Int
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm")
+  auth_group      auth_group      @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id")
+
+  @@unique([group_id, permission_id], map: "auth_group_permissions_group_id_permission_id_0cd325b0_uniq")
+  @@index([group_id], map: "auth_group_permissions_group_id_b120cbf9")
+  @@index([permission_id], map: "auth_group_permissions_permission_id_84c5c92e")
+}
+
+model auth_permission {
+  id                         Int                          @id @default(autoincrement())
+  name                       String                       @db.VarChar(255)
+  content_type_id            Int
+  codename                   String                       @db.VarChar(100)
+  auth_group_permissions     auth_group_permissions[]
+  django_content_type        django_content_type          @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_permission_content_type_id_2f476e4b_fk_django_co")
+  auth_user_user_permissions auth_user_user_permissions[]
+
+  @@unique([content_type_id, codename], map: "auth_permission_content_type_id_codename_01ab375a_uniq")
+  @@index([content_type_id], map: "auth_permission_content_type_id_2f476e4b")
+}
+
+model auth_user {
+  id                         Int                          @id @default(autoincrement())
+  password                   String                       @db.VarChar(128)
+  last_login                 DateTime?                    @db.Timestamptz(6)
+  is_superuser               Boolean
+  username                   String                       @unique @db.VarChar(150)
+  first_name                 String                       @db.VarChar(150)
+  last_name                  String                       @db.VarChar(150)
+  email                      String                       @db.VarChar(254)
+  is_staff                   Boolean
+  is_active                  Boolean
+  date_joined                DateTime                     @db.Timestamptz(6)
+  auth_user_groups           auth_user_groups[]
+  auth_user_user_permissions auth_user_user_permissions[]
+  django_admin_log           django_admin_log[]
+
+  @@index([username], map: "auth_user_username_6821ab7c_like")
+}
+
+model auth_user_groups {
+  id         BigInt     @id @default(autoincrement())
+  user_id    Int
+  group_id   Int
+  auth_group auth_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_groups_group_id_97559544_fk_auth_group_id")
+  auth_user  auth_user  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_groups_user_id_6a12ed8b_fk_auth_user_id")
+
+  @@unique([user_id, group_id], map: "auth_user_groups_user_id_group_id_94350c0c_uniq")
+  @@index([group_id], map: "auth_user_groups_group_id_97559544")
+  @@index([user_id], map: "auth_user_groups_user_id_6a12ed8b")
+}
+
+model auth_user_user_permissions {
+  id              BigInt          @id @default(autoincrement())
+  user_id         Int
+  permission_id   Int
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm")
+  auth_user       auth_user       @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id")
+
+  @@unique([user_id, permission_id], map: "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq")
+  @@index([permission_id], map: "auth_user_user_permissions_permission_id_1fbb5f2c")
+  @@index([user_id], map: "auth_user_user_permissions_user_id_a95ead1b")
+}
+
+model blocks {
+  id                                       Int                                        @id @default(autoincrement())
+  district_id                              Int
+  name                                     String                                     @db.Char
+  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  assessment_visit_results_v2              assessment_visit_results_v2[]
+  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
+  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
+  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
+  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
+  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
+  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
+  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
+  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
+  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  districts                                districts                                  @relation(fields: [district_id], references: [id])
+  mentor                                   mentor[]
+  nyay_panchayats                          nyay_panchayats[]
+  school_list                              school_list[]
+
+  @@unique([district_id, name])
+  @@index([name], map: "blocks_name_key")
+}
+
+model competency_mapping {
+  id               Int      @id @default(autoincrement())
+  grade            String   @db.VarChar
+  subject          String?  @db.VarChar
+  learning_outcome String?
+  competency_id    Int?
+  flow_state       Int      @default(1)
+  subject_id       Int
+  subjects         subjects @relation(fields: [subject_id], references: [id])
+
+  @@index([learning_outcome], map: "competency_mapping_lo_index")
+}
+
+model designations {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.Char
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor[]
+}
+
+model districts {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique @db.Char
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  blocks          blocks[]
+  mentor          mentor[]
+  nyay_panchayats nyay_panchayats[]
+  school_list     school_list[]
+}
+
+model django_admin_log {
+  id                  Int                  @id @default(autoincrement())
+  action_time         DateTime             @db.Timestamptz(6)
+  object_id           String?
+  object_repr         String               @db.VarChar(200)
+  action_flag         Int                  @db.SmallInt
+  change_message      String
+  content_type_id     Int?
+  user_id             Int
+  django_content_type django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_content_type_id_c4bce8eb_fk_django_co")
+  auth_user           auth_user            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_user_id_c564eba6_fk_auth_user_id")
+
+  @@index([content_type_id], map: "django_admin_log_content_type_id_c4bce8eb")
+  @@index([user_id], map: "django_admin_log_user_id_c564eba6")
+}
+
+model django_celery_beat_clockedschedule {
+  id                              Int                               @id @default(autoincrement())
+  clocked_time                    DateTime                          @db.Timestamptz(6)
+  django_celery_beat_periodictask django_celery_beat_periodictask[]
+}
+
+model django_celery_beat_crontabschedule {
+  id                              Int                               @id @default(autoincrement())
+  minute                          String                            @db.VarChar(240)
+  hour                            String                            @db.VarChar(96)
+  day_of_week                     String                            @db.VarChar(64)
+  day_of_month                    String                            @db.VarChar(124)
+  month_of_year                   String                            @db.VarChar(64)
+  timezone                        String                            @db.VarChar(63)
+  django_celery_beat_periodictask django_celery_beat_periodictask[]
+}
+
+model django_celery_beat_intervalschedule {
+  id                              Int                               @id @default(autoincrement())
+  every                           Int
+  period                          String                            @db.VarChar(24)
+  django_celery_beat_periodictask django_celery_beat_periodictask[]
+}
+
+model django_celery_beat_periodictask {
+  id                                  Int                                  @id @default(autoincrement())
+  name                                String                               @unique @db.VarChar(200)
+  task                                String                               @db.VarChar(200)
+  args                                String
+  kwargs                              String
+  queue                               String?                              @db.VarChar(200)
+  exchange                            String?                              @db.VarChar(200)
+  routing_key                         String?                              @db.VarChar(200)
+  expires                             DateTime?                            @db.Timestamptz(6)
+  enabled                             Boolean
+  last_run_at                         DateTime?                            @db.Timestamptz(6)
+  total_run_count                     Int
+  date_changed                        DateTime                             @db.Timestamptz(6)
+  description                         String
+  crontab_id                          Int?
+  interval_id                         Int?
+  solar_id                            Int?
+  one_off                             Boolean
+  start_time                          DateTime?                            @db.Timestamptz(6)
+  priority                            Int?
+  headers                             String
+  clocked_id                          Int?
+  expire_seconds                      Int?
+  django_celery_beat_clockedschedule  django_celery_beat_clockedschedule?  @relation(fields: [clocked_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_clocked_id_47a69f82_fk_django_ce")
+  django_celery_beat_crontabschedule  django_celery_beat_crontabschedule?  @relation(fields: [crontab_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_crontab_id_d3cba168_fk_django_ce")
+  django_celery_beat_intervalschedule django_celery_beat_intervalschedule? @relation(fields: [interval_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_interval_id_a8ca27da_fk_django_ce")
+  django_celery_beat_solarschedule    django_celery_beat_solarschedule?    @relation(fields: [solar_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_solar_id_a87ce72c_fk_django_ce")
+
+  @@index([clocked_id], map: "django_celery_beat_periodictask_clocked_id_47a69f82")
+  @@index([crontab_id], map: "django_celery_beat_periodictask_crontab_id_d3cba168")
+  @@index([interval_id], map: "django_celery_beat_periodictask_interval_id_a8ca27da")
+  @@index([name], map: "django_celery_beat_periodictask_name_265a36b7_like")
+  @@index([solar_id], map: "django_celery_beat_periodictask_solar_id_a87ce72c")
+}
+
+model django_celery_beat_periodictasks {
+  ident       Int      @id @db.SmallInt
+  last_update DateTime @db.Timestamptz(6)
+}
+
+model django_celery_beat_solarschedule {
+  id                              Int                               @id @default(autoincrement())
+  event                           String                            @db.VarChar(24)
+  latitude                        Decimal                           @db.Decimal(9, 6)
+  longitude                       Decimal                           @db.Decimal(9, 6)
+  django_celery_beat_periodictask django_celery_beat_periodictask[]
+
+  @@unique([event, latitude, longitude], map: "django_celery_beat_solar_event_latitude_longitude_ba64999a_uniq")
+}
+
+model django_celery_results_chordcounter {
+  id        BigInt @id @default(autoincrement())
+  group_id  String @unique @db.VarChar(255)
+  sub_tasks String
+  count     Int
+
+  @@index([group_id], map: "django_celery_results_chordcounter_group_id_1f70858c_like")
+}
+
+model django_celery_results_taskresult {
+  id               BigInt   @id @default(autoincrement())
+  task_id          String   @unique @db.VarChar(255)
+  status           String   @db.VarChar(50)
+  content_type     String   @db.VarChar(128)
+  content_encoding String   @db.VarChar(64)
+  result           String?
+  date_done        DateTime @db.Timestamptz(6)
+  traceback        String?
+  meta             String?
+  task_args        String?
+  task_kwargs      String?
+  task_name        String?  @db.VarChar(255)
+  worker           String?  @db.VarChar(100)
+  date_created     DateTime @db.Timestamptz(6)
+
+  @@index([date_created], map: "django_celery_results_taskresult_date_created_099f3424")
+  @@index([date_done], map: "django_celery_results_taskresult_date_done_49edada6")
+  @@index([status], map: "django_celery_results_taskresult_status_cbbed23a")
+  @@index([status], map: "django_celery_results_taskresult_status_cbbed23a_like")
+  @@index([task_id], map: "django_celery_results_taskresult_task_id_de0d95bf_like")
+  @@index([task_name], map: "django_celery_results_taskresult_task_name_90987df3")
+  @@index([task_name], map: "django_celery_results_taskresult_task_name_90987df3_like")
+  @@index([worker], map: "django_celery_results_taskresult_worker_f8711389")
+  @@index([worker], map: "django_celery_results_taskresult_worker_f8711389_like")
+}
+
+model django_content_type {
+  id               Int                @id @default(autoincrement())
+  app_label        String             @db.VarChar(100)
+  model            String             @db.VarChar(100)
+  auth_permission  auth_permission[]
+  django_admin_log django_admin_log[]
+
+  @@unique([app_label, model], map: "django_content_type_app_label_model_76bd3d3b_uniq")
+}
+
+model django_migrations {
+  id      BigInt   @id @default(autoincrement())
+  app     String   @db.VarChar(255)
+  name    String   @db.VarChar(255)
+  applied DateTime @db.Timestamptz(6)
+}
+
+model django_session {
+  session_key  String   @id @db.VarChar(40)
+  session_data String
+  expire_date  DateTime @db.Timestamptz(6)
+
+  @@index([expire_date], map: "django_session_expire_date_a5c62663")
+  @@index([session_key], map: "django_session_session_key_c0390e0f_like")
+}
+
+model employees {
+  id                     Int       @default(autoincrement())
+  employee_name          String
+  erhms_code             String
+  designation            String
+  posting_school         String
+  reporting_block_office String
+  district               String
+  default_role           String?   @default("Employee")
+  is_registered          Boolean?
+  date_of_registration   DateTime? @db.Date
+  created_at             DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
+  device_id              String?
+
+  @@id([id, erhms_code])
+}
+
+model form_config {
+  id                Int @id @default(autoincrement())
+  grade             Int
+  hindi_start_index Int
+  hindi_end_index   Int
+  maths_start_index Int
+  maths_end_index   Int
+}
+
+model health_check_db_testmodel {
+  id    Int    @id @default(autoincrement())
+  title String @db.VarChar(128)
+}
+
+model homelearning_event {
+  deviceId                    String
+  id                          Int       @id @default(autoincrement())
+  created_at                  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime  @default(now()) @db.Timestamptz(6)
+  subject                     String
+  actualGrade                 Int
+  currentGrade                Int
+  grade1_trial1_correct_words Int       @default(-1)
+  grade1_trial2_correct_words Int       @default(-1)
+  grade1_trial3_correct_words Int       @default(-1)
+  grade1_trial4_correct_words Int       @default(-1)
+  grade1_trial5_correct_words Int       @default(-1)
+  grade2_trial1_correct_words Int       @default(-1)
+  grade2_trial2_correct_words Int       @default(-1)
+  grade2_trial3_correct_words Int       @default(-1)
+  grade2_trial4_correct_words Int       @default(-1)
+  grade3_trial1_correct_words Int       @default(-1)
+  grade3_trial2_correct_words Int       @default(-1)
+  grade3_trial3_correct_words Int       @default(-1)
+  grade3_trial4_correct_words Int       @default(-1)
+  grade2_trial1_score         Int       @default(-1)
+  grade2_trial2_score         Int       @default(-1)
+  grade2_trial3_score         Int       @default(-1)
+  grade2_trial4_score         Int       @default(-1)
+  grade3_trial1_score         Int       @default(-1)
+  grade3_trial2_score         Int       @default(-1)
+  grade3_trial3_score         Int       @default(-1)
+  grade3_trial4_score         Int       @default(-1)
+  grade4_trial1_score         Int       @default(-1)
+  grade4_trial2_score         Int       @default(-1)
+  grade4_trial3_score         Int       @default(-1)
+  grade4_trial4_score         Int       @default(-1)
+  grade5_trial1_score         Int       @default(-1)
+  grade5_trial2_score         Int       @default(-1)
+  grade5_trial3_score         Int       @default(-1)
+  grade5_trial4_score         Int       @default(-1)
+  grade1_trial1_time          Int       @default(-1)
+  grade1_trial2_time          Int       @default(-1)
+  grade1_trial3_time          Int       @default(-1)
+  grade1_trial4_time          Int       @default(-1)
+  grade1_trial5_time          Int       @default(-1)
+  grade2_trial1_time          Int       @default(-1)
+  grade2_trial2_time          Int       @default(-1)
+  grade2_trial3_time          Int       @default(-1)
+  grade2_trial4_time          Int       @default(-1)
+  grade3_trial1_time          Int       @default(-1)
+  grade3_trial2_time          Int       @default(-1)
+  grade3_trial3_time          Int       @default(-1)
+  grade3_trial4_time          Int       @default(-1)
+  isAssessmentComplete        Boolean   @default(false)
+  default_role                String?   @default("Employee")
+  erhms_code                  String?   @default("-")
+  isUserTeacher               Boolean?  @default(false)
+  push_time                   DateTime? @db.Timestamp(6)
+  district                    String?   @default("-")
+  block                       String?   @default("-")
+  score                       Int?      @default(-1)
+  start_time                  DateTime? @default(now()) @db.Timestamptz(6)
+  appVersion                  String?   @default("1.0")
+}
+
+model mentor {
+  id                                             BigInt                                           @id @default(autoincrement())
+  phone_no                                       String                                           @unique @db.VarChar(100)
+  district_name                                  String?                                          @db.VarChar(100)
+  block_town_name                                String?                                          @default("-") @db.VarChar(100)
+  area_type                                      String?                                          @db.VarChar(100)
+  officer_name                                   String?                                          @db.VarChar(100)
+  designation                                    String?                                          @db.VarChar(100)
+  subject_of_matter                              String?                                          @db.VarChar(200)
+  target_visits                                  String?                                          @db.VarChar(100)
+  pin                                            String?
+  district_id                                    Int
+  block_id                                       Int?
+  designation_id                                 Int
+  actor_id                                       Int                                              @default(1)
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  assessment_survey_result_v2                    assessment_survey_result_v2[]
+  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
+  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
+  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
+  assessment_visit_results_v2                    assessment_visit_results_v2[]
+  assessment_visit_results_v2_2023_apr_jun       assessment_visit_results_v2_2023_apr_jun[]
+  assessment_visit_results_v2_2023_jul_sep       assessment_visit_results_v2_2023_jul_sep[]
+  assessment_visit_results_v2_2023_oct_dec       assessment_visit_results_v2_2023_oct_dec[]
+  assessment_visit_results_v2_2024_apr_jun       assessment_visit_results_v2_2024_apr_jun[]
+  assessment_visit_results_v2_2024_jan_mar       assessment_visit_results_v2_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jul_sep       assessment_visit_results_v2_2024_jul_sep[]
+  assessment_visit_results_v2_2024_oct_dec       assessment_visit_results_v2_2024_oct_dec[]
+  assessment_visit_results_v2_2025_apr_jun       assessment_visit_results_v2_2025_apr_jun[]
+  assessment_visit_results_v2_2025_jan_mar       assessment_visit_results_v2_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jul_sep       assessment_visit_results_v2_2025_jul_sep[]
+  assessment_visit_results_v2_2025_oct_dec       assessment_visit_results_v2_2025_oct_dec[]
+  cache_mentor_metrics_daily                     cache_mentor_metrics_daily[]
+  cache_mentor_metrics_monthly                   cache_mentor_metrics_monthly[]
+  cache_mentor_metrics_weekly                    cache_mentor_metrics_weekly[]
+  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
+  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  designations                                   designations                                     @relation(fields: [designation_id], references: [id])
+  districts                                      districts                                        @relation(fields: [district_id], references: [id])
+  mentor_bot_telemetry                           mentor_bot_telemetry[]
+  mentor_segmentation                            mentor_segmentation[]
+  mentor_tokens                                  mentor_tokens?
+  mentor_update_logs                             mentor_update_logs[]
+  teacher_school_list_mapping                    teacher_school_list_mapping[]
+
+  @@index([actor_id], map: "mentor_actor_id_key")
+  @@index([designation_id], map: "mentor_designation_id_key")
+}
+
+model mentor_segmentation {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  segment_id BigInt
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  segments   segments @relation(fields: [segment_id], references: [id], onUpdate: Restrict)
+
+  @@unique([mentor_id, segment_id])
+  @@index([mentor_id])
+  @@index([segment_id])
+}
+
+model mentor_tokens {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt   @unique
+  token      String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+}
+
+model mentors {
+  id                Int            @id @unique @default(autoincrement())
+  officer_name      String?        @db.VarChar
+  phone_no          String         @db.VarChar
+  district_name     String?        @db.VarChar
+  block_town_name   String?        @db.VarChar
+  area_type         String?        @db.VarChar
+  designation       String?        @db.VarChar
+  subject_of_matter String?        @db.VarChar
+  target_visits     String?        @db.VarChar
+  pin               Bytes?
+  school_visit      school_visit[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model new_table {
+  achievement     Json?
+  grade           Json?
+  subject         Json?
+  total_questions Json?
+  competency      Json?
+  udise           Json?
+  district        Json?
+  block           Json?
+  view_type       Json?
+
+  @@ignore
+}
+
+model nyay_panchayats {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.Char
+  district_id Int
+  block_id    Int
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  blocks      blocks        @relation(fields: [block_id], references: [id])
+  districts   districts     @relation(fields: [district_id], references: [id])
+  school_list school_list[]
+
+  @@unique([name, district_id, block_id])
+}
+
+model school {
+  id           Int    @id @default(autoincrement())
+  districtCode String
+  districtName String
+  blockCode    String
+  blockName    String
+  schoolName   String
+  udise        String @unique
+  location     String
+  type         String
+}
+
+model school_list {
+  id                                       Int                                        @id @default(autoincrement())
+  district                                 String                                     @default("") @db.VarChar
+  area_type                                String                                     @db.VarChar
+  block                                    String                                     @default("") @db.VarChar
+  nypanchayat                              String                                     @db.VarChar
+  type                                     String?                                    @db.VarChar
+  category                                 String?                                    @db.VarChar
+  name                                     String?                                    @db.VarChar
+  udise_code                               String?                                    @unique @db.VarChar
+  total_student_registered                 Int?
+  is_sankul                                Boolean                                    @default(false)
+  district_id                              Int
+  block_id                                 Int
+  udise                                    BigInt                                     @unique @default(0)
+  nyay_panchayat_id                        Int?
+  lat                                      Decimal?                                   @db.Decimal
+  long                                     Decimal?                                   @db.Decimal
+  geo_fence_enabled                        Boolean                                    @default(true)
+  assessment_survey_result_v2              assessment_survey_result_v2[]
+  assessment_visit_results_v2              assessment_visit_results_v2[]
+  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
+  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
+  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
+  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
+  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
+  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
+  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
+  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
+  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  blocks                                   blocks                                     @relation(fields: [block_id], references: [id])
+  districts                                districts                                  @relation(fields: [district_id], references: [id])
+  nyay_panchayats                          nyay_panchayats?                           @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
+  school_visit                             school_visit[]
+  teacher_school_list_mapping              teacher_school_list_mapping[]
+
+  @@index([block, district], map: "sch_list_block_dist_index")
+  @@index([district_id, block_id], map: "sch_list_block_id_dist_id_index")
+  @@index([block_id], map: "schl_list_block_id_index")
+  @@index([block], map: "schl_list_block_index")
+  @@index([district_id], map: "schl_list_district_id_index")
+  @@index([district], map: "schl_list_district_index")
+  @@index([nyay_panchayat_id], map: "schl_list_ny_panchayat_id_index")
+  @@index([type], map: "schl_list_type_index")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model school_updated_udise {
+  id           Int
+  districtCode String @db.VarChar
+  districtName String @db.VarChar
+  blockCode    String @db.VarChar
+  blockName    String @db.VarChar
+  schoolName   String @db.VarChar
+  udise        String @db.VarChar
+  location     String @db.VarChar
+  type         String @db.VarChar
+  schooludise  String @db.VarChar
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model school_updated_udise1 {
+  id           Int
+  districtCode Int
+  districtName String @db.VarChar
+  blockCode    Int
+  blockName    String @db.VarChar
+  schoolName   String @db.VarChar
+  udise        BigInt
+  location     String @db.VarChar
+  type         String @db.VarChar
+  schooludise  BigInt
+
+  @@ignore
+}
+
+model school_visit {
+  school_visit_status Boolean     @default(false)
+  time_stamp          DateTime    @default(now()) @db.Timestamptz(6)
+  id                  Int         @id @default(autoincrement())
+  school_udise        String
+  mentor_id           Int?
+  mentors             mentors?    @relation(fields: [mentor_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  school_list         school_list @relation(fields: [school_udise], references: [udise_code], onUpdate: Restrict)
+}
+
+model script_config {
+  performance_last_process_id            Int
+  id                                     Int     @id(map: "scipt_config_pk")
+  perf_create_id                         Int?
+  visit_wise_student_result_visit_id     Int?
+  month_wise_performance_last_process_id BigInt?
+}
+
+model script_performance_month_wise_report {
+  id               Int     @id(map: "script_performance_month_wise_report_pk") @default(autoincrement())
+  district         String  @db.VarChar
+  block            String  @db.VarChar
+  school_udise     String? @db.VarChar
+  grade            Int?
+  subject          String? @db.VarChar
+  competency       String? @db.VarChar
+  month            Int?
+  student_accessed Int?
+  nipun_students   Int?
+  year             Int?
+
+  @@index([competency], map: "sprmw_competency_idx")
+  @@index([grade], map: "sprmw_grade_idx")
+  @@index([school_udise], map: "sprmw_school_udise_idx")
+  @@index([subject], map: "sprmw_subject_idx")
+}
+
+model script_performance_report {
+  id               Int     @id(map: "script_performance_report_pk") @default(autoincrement())
+  district         String  @db.VarChar
+  block            String  @db.VarChar
+  school_udise     String? @db.VarChar
+  grade            Int?
+  subject          String? @db.VarChar
+  competency       String? @db.VarChar
+  student_accessed Int?
+  nipun_students   Int?
+
+  @@index([competency], map: "scp_competency_idx")
+  @@index([grade], map: "scp_grade_idx")
+  @@index([school_udise], map: "scp_school_udise_idx")
+  @@index([subject], map: "scp_subject_idx")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model script_performance_report1 {
+  id               Int?
+  district         String? @db.VarChar
+  block            String? @db.VarChar
+  school_udise     String? @db.VarChar
+  grade            Int?
+  subject          String? @db.VarChar
+  competency       String? @db.VarChar
+  student_accessed Int?
+  nipun_students   Int?
+  visit_res_id     Int?
+
+  @@ignore
+}
+
+model script_performance_report_mentor_wise {
+  id               Int       @id(map: "script_performance_report_mentor_wise_pk") @default(autoincrement())
+  district         String    @db.VarChar
+  block            String    @db.VarChar
+  school_udise     String?   @db.VarChar
+  grade            Int?
+  subject          String?   @db.VarChar
+  competency       String?   @db.VarChar
+  student_accessed Int?
+  nipun_students   Int?
+  mentor_id        Int?
+  assessment_type  String?   @db.VarChar
+  actor            String?   @db.VarChar
+  created_at       DateTime? @db.Date
+
+  @@unique([district, block, school_udise, grade, subject, competency, mentor_id, assessment_type, actor, created_at], map: "scpmw_school_udise_grade_subject_competency_mentor_id_assessmen")
+  @@index([actor], map: "scpmw_actor_index")
+  @@index([assessment_type], map: "scpmw_assessment_type_index")
+  @@index([competency], map: "scpmw_competency_idx")
+  @@index([created_at], map: "scpmw_created_at_index")
+  @@index([grade], map: "scpmw_grade_idx")
+  @@index([mentor_id], map: "scpmw_mentor_id_index")
+  @@index([school_udise], map: "scpmw_school_udise_idx")
+  @@index([subject], map: "scpmw_subject_idx")
+}
+
+model segment_bots {
+  id         BigInt   @id @default(autoincrement())
+  segment_id BigInt
+  bot_id     String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  segments   segments @relation(fields: [segment_id], references: [id], onUpdate: Restrict)
+
+  @@unique([segment_id, bot_id])
+  @@index([segment_id])
+}
+
+model segments {
+  id                  BigInt                @id @default(autoincrement())
+  name                String                @unique @db.VarChar
+  description         String
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  mentor_segmentation mentor_segmentation[]
+  segment_bots        segment_bots[]
+}
+
+model start_learning_event {
+  deviceId      String
+  id            Int       @id @default(autoincrement())
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+  subject       String
+  actualGrade   Int
+  default_role  String?   @default("Employee")
+  isUserTeacher Boolean?  @default(false)
+  erhms_code    String?   @default("-")
+  start_time    DateTime? @db.Timestamp(6)
+}
+
+model student_install {
+  default_role String   @default("Employee")
+  district     String
+  block        String
+  count        Int      @default(1)
+  id           Int      @id @default(autoincrement())
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  device_id    String?
+  persona      String?  @default("-")
+  version      String?  @default("-")
+}
+
+model subjects {
+  id                                       Int                                        @id @default(autoincrement())
+  name                                     String                                     @unique @db.Char
+  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  assessment_survey_result_v2              assessment_survey_result_v2[]
+  assessment_visit_results_v2              assessment_visit_results_v2[]
+  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
+  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
+  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
+  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
+  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
+  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
+  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
+  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
+  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  competency_mapping                       competency_mapping[]
+  workflow_refids_mapping                  workflow_refids_mapping[]
+}
+
+model teacher_school_list_mapping {
+  mentor_id      BigInt
+  school_list_id Int
+  id             Int         @id @default(autoincrement())
+  mentor         mentor      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  school_list    school_list @relation(fields: [school_list_id], references: [id], onDelete: Cascade)
+
+  @@unique([mentor_id, school_list_id])
+}
+
+model temp_visit_wise_student_result {
+  id                    BigInt    @id(map: "temp_visit_wise_student_result_pk") @default(autoincrement())
+  visit_id              Int?
+  competency            String?   @db.VarChar
+  current_student_count Int?
+  start_time            DateTime? @db.Timestamp(6)
+  end_time              DateTime? @db.Timestamp(6)
+  achievement           Int?
+  total_questions       Int?
+  success_criteria      Int?
+  view_type             String?   @db.VarChar
+}
+
+model visit_wise_student_result {
+  id                    BigInt    @id(map: "visit_wise_student_result_pk") @default(autoincrement())
+  visit_id              Int?
+  competency            String?   @db.VarChar
+  current_student_count Int?
+  start_time            DateTime? @db.Timestamp(6)
+  end_time              DateTime? @db.Timestamp(6)
+  achievement           Int?
+  total_questions       Int?
+  success_criteria      Int?
+  view_type             String?   @db.VarChar
+
+  @@index([competency], map: "visit_wise_st_res_competency_index")
+  @@index([end_time], map: "visit_wise_st_res_end_time_index")
+  @@index([start_time], map: "visit_wise_st_res_start_time_index")
+  @@index([visit_id], map: "visit_wise_st_res_visit_id_index")
+}
+
+model workflow_refids_mapping {
+  grade              Int
+  subject            String
+  competency_id      Int
+  type               String
+  is_active          Boolean           @default(true)
+  ref_ids            Json              @default("[]")
+  id                 Int               @id @unique @default(autoincrement())
+  assessment_type    String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
+  subject_id         Int
+  assessment_type_id Int?
+  assessment_types   assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
+  subjects           subjects          @relation(fields: [subject_id], references: [id])
+
+  @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
+  @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")
+  @@index([subject_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model wrm {
+  grade         Int?
+  subject       String?
+  competency_id Int?
+  type          String?
+  is_active     Boolean?
+  ref_ids       Json?
+
+  @@ignore
+}
+
 model assessment_visit_results_student_odk_results_2023_apr_jun {
   id                                             BigInt                                         @id @default(autoincrement())
   question                                       String
@@ -320,30 +1213,6 @@ model assessment_visit_results_student_odk_results_2025_oct_dec {
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2025_oct_dec_fkey")
 }
 
-model assessment_visit_results_students {
-  id                                           BigInt                                         @id @default(autoincrement())
-  student_name                                 String                                         @db.VarChar
-  competency_id                                Int
-  module                                       String                                         @db.VarChar
-  end_time                                     BigInt
-  is_passed                                    Boolean
-  start_time                                   BigInt
-  statement                                    String?
-  achievement                                  Int
-  total_questions                              Int
-  success_criteria                             Int
-  session_completed                            Boolean
-  is_network_active                            Boolean
-  workflow_ref_id                              String                                         @db.VarChar
-  assessment_visit_results_v2_id               BigInt
-  student_session                              String?                                        @db.Uuid
-  total_time_taken                             Int?
-  assessment_visit_results_student_odk_results assessment_visit_results_student_odk_results[]
-  assessment_visit_results_v2                  assessment_visit_results_v2                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_assessment_visit_results_v")
-
-  @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_student_session_competency_id")
-}
-
 model assessment_visit_results_students_2023_apr_jun {
   id                                                        BigInt                                                      @id @default(autoincrement())
   student_name                                              String                                                      @db.VarChar
@@ -366,15 +1235,18 @@ model assessment_visit_results_students_2023_apr_jun {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_apr_jun assessment_visit_results_student_odk_results_2023_apr_jun[]
   assessment_visit_results_v2_2023_apr_jun                  assessment_visit_results_v2_2023_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_apr_jun_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_apr_jun_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_apr_jun_stu_id_idx")
 }
 
 model assessment_visit_results_students_2023_jul_sep {
@@ -399,15 +1271,18 @@ model assessment_visit_results_students_2023_jul_sep {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_jul_sep assessment_visit_results_student_odk_results_2023_jul_sep[]
   assessment_visit_results_v2_2023_jul_sep                  assessment_visit_results_v2_2023_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_jul_sep_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id], map: "assessment_visit_results_students_2023_jul_sep_mentor_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_jul_sep_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_jul_sep_stu_id_idx")
 }
 
 model assessment_visit_results_students_2023_oct_dec {
@@ -432,15 +1307,18 @@ model assessment_visit_results_students_2023_oct_dec {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2023_oct_dec assessment_visit_results_student_odk_results_2023_oct_dec[]
   assessment_visit_results_v2_2023_oct_dec                  assessment_visit_results_v2_2023_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_oct_dec_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
   @@index([submission_timestamp], map: "assessment_visit_results_students_2023_oct_dec_sub_ts_idx")
+  @@index([student_id], map: "assessment_visit_results_students_2023_oct_dec_stu_id_idx")
 }
 
 model assessment_visit_results_students_2024_apr_jun {
@@ -465,14 +1343,17 @@ model assessment_visit_results_students_2024_apr_jun {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_apr_jun assessment_visit_results_student_odk_results_2024_apr_jun[]
   assessment_visit_results_v2_2024_apr_jun                  assessment_visit_results_v2_2024_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_apr_jun_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_apr_jun_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2024_apr_jun_sub_ts_idx")
 }
 
@@ -498,14 +1379,17 @@ model assessment_visit_results_students_2024_jan_mar {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_jan_mar assessment_visit_results_student_odk_results_2024_jan_mar[]
   assessment_visit_results_v2_2024_jan_mar                  assessment_visit_results_v2_2024_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jan_mar_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_jan_mar_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jan_mar_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_jan_mar_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2024_jan_mar_sub_ts_idx")
 }
 
@@ -531,14 +1415,17 @@ model assessment_visit_results_students_2024_jul_sep {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_jul_sep assessment_visit_results_student_odk_results_2024_jul_sep[]
   assessment_visit_results_v2_2024_jul_sep                  assessment_visit_results_v2_2024_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_jul_sep_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_jul_sep_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2024_jul_sep_sub_ts_idx")
 }
 
@@ -564,14 +1451,17 @@ model assessment_visit_results_students_2024_oct_dec {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2024_oct_dec assessment_visit_results_student_odk_results_2024_oct_dec[]
   assessment_visit_results_v2_2024_oct_dec                  assessment_visit_results_v2_2024_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2024_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2024_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2024_oct_dec_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2024_oct_dec_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2024_oct_dec_sub_ts_idx")
 }
 
@@ -597,14 +1487,17 @@ model assessment_visit_results_students_2025_apr_jun {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_apr_jun assessment_visit_results_student_odk_results_2025_apr_jun[]
   assessment_visit_results_v2_2025_apr_jun                  assessment_visit_results_v2_2025_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_apr_jun_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_apr_jun_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_apr_jun_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2025_apr_jun_sub_ts_idx")
 }
 
@@ -630,14 +1523,17 @@ model assessment_visit_results_students_2025_jan_mar {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_jan_mar assessment_visit_results_student_odk_results_2025_jan_mar[]
   assessment_visit_results_v2_2025_jan_mar                  assessment_visit_results_v2_2025_jan_mar                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jan_mar_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_jan_mar_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jan_mar_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_jan_mar_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2025_jan_mar_sub_ts_idx")
 }
 
@@ -663,14 +1559,17 @@ model assessment_visit_results_students_2025_jul_sep {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_jul_sep assessment_visit_results_student_odk_results_2025_jul_sep[]
   assessment_visit_results_v2_2025_jul_sep                  assessment_visit_results_v2_2025_jul_sep                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_jul_sep_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_jul_sep_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_jul_sep_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_jul_sep_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2025_jul_sep_sub_ts_idx")
 }
 
@@ -696,51 +1595,18 @@ model assessment_visit_results_students_2025_oct_dec {
   created_at                                                DateTime                                                    @default(now()) @db.Timestamptz(6)
   grade                                                     Int                                                         @default(0) @db.SmallInt
   mentor_id                                                 BigInt?
+  student_id                                                String?                                                     @db.VarChar(15)
   assessment_visit_results_student_odk_results_2025_oct_dec assessment_visit_results_student_odk_results_2025_oct_dec[]
   assessment_visit_results_v2_2025_oct_dec                  assessment_visit_results_v2_2025_oct_dec                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2025_oct_dec_mentor_id_fke")
+  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2025_oct_dec_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2025_oct_dec_ss_com_avr_v2_id")
   @@index([created_at])
   @@index([grade])
   @@index([mentor_id])
+  @@index([student_id], map: "assessment_visit_results_students_2025_oct_dec_stu_id_idx")
   @@index([submission_timestamp], map: "assessment_visit_results_students_2025_oct_dec_sub_ts_idx")
-}
-
-model assessment_visit_results_v2 {
-  id                                BigInt                              @id @default(autoincrement())
-  created_at                        DateTime                            @default(now()) @db.Timestamptz(6)
-  grade                             Int                                 @db.SmallInt
-  subject_id                        Int
-  module_result                     Json
-  is_visited                        Boolean                             @default(false)
-  mentor_id                         BigInt?
-  no_of_student                     Int                                 @default(0)
-  actor_id                          Int
-  block_id                          Int?
-  assessment_type_id                Int?
-  udise                             BigInt?
-  submission_timestamp              BigInt                              @default(0)
-  app_version_code                  Int                                 @default(0)
-  v                                 Int                                 @default(2) @db.SmallInt
-  assessment_visit_results_students assessment_visit_results_students[]
-  actors                            actors                              @relation(fields: [actor_id], references: [id])
-  blocks                            blocks?                             @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  mentor                            mentor?                             @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  subjects                          subjects                            @relation(fields: [subject_id], references: [id])
-  school_list                       school_list?                        @relation(fields: [udise], references: [udise], onDelete: Restrict)
-
-  @@unique([subject_id, submission_timestamp, mentor_id, grade, udise], map: "assessment_visit_results_v2_subject_id_submission_timestamp_men")
-  @@index([actor_id, block_id], map: "assessment_visit_results_v2_actor_block_id_idx")
-  @@index([actor_id])
-  @@index([assessment_type_id], map: "assessment_visit_results_v2_ass_type_id_idx")
-  @@index([block_id])
-  @@index([created_at])
-  @@index([created_at, mentor_id])
-  @@index([mentor_id])
-  @@index([subject_id])
-  @@index([submission_timestamp])
-  @@index([udise])
 }
 
 model assessment_visit_results_v2_2023_apr_jun {
@@ -1139,442 +2005,15 @@ model assessment_visit_results_v2_2025_oct_dec {
   @@index([udise])
 }
 
-model auth_group {
-  id                     Int                      @id @default(autoincrement())
-  name                   String                   @unique @db.VarChar(150)
-  auth_group_permissions auth_group_permissions[]
-  auth_user_groups       auth_user_groups[]
-
-  @@index([name], map: "auth_group_name_a6ea08ec_like")
-}
-
-model auth_group_permissions {
-  id              BigInt          @id @default(autoincrement())
-  group_id        Int
-  permission_id   Int
-  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm")
-  auth_group      auth_group      @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id")
-
-  @@unique([group_id, permission_id], map: "auth_group_permissions_group_id_permission_id_0cd325b0_uniq")
-  @@index([group_id], map: "auth_group_permissions_group_id_b120cbf9")
-  @@index([permission_id], map: "auth_group_permissions_permission_id_84c5c92e")
-}
-
-model auth_permission {
-  id                         Int                          @id @default(autoincrement())
-  name                       String                       @db.VarChar(255)
-  content_type_id            Int
-  codename                   String                       @db.VarChar(100)
-  auth_group_permissions     auth_group_permissions[]
-  django_content_type        django_content_type          @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_permission_content_type_id_2f476e4b_fk_django_co")
-  auth_user_user_permissions auth_user_user_permissions[]
-
-  @@unique([content_type_id, codename], map: "auth_permission_content_type_id_codename_01ab375a_uniq")
-  @@index([content_type_id], map: "auth_permission_content_type_id_2f476e4b")
-}
-
-model auth_user {
-  id                         Int                          @id @default(autoincrement())
-  password                   String                       @db.VarChar(128)
-  last_login                 DateTime?                    @db.Timestamptz(6)
-  is_superuser               Boolean
-  username                   String                       @unique @db.VarChar(150)
-  first_name                 String                       @db.VarChar(150)
-  last_name                  String                       @db.VarChar(150)
-  email                      String                       @db.VarChar(254)
-  is_staff                   Boolean
-  is_active                  Boolean
-  date_joined                DateTime                     @db.Timestamptz(6)
-  auth_user_groups           auth_user_groups[]
-  auth_user_user_permissions auth_user_user_permissions[]
-  django_admin_log           django_admin_log[]
-
-  @@index([username], map: "auth_user_username_6821ab7c_like")
-}
-
-model auth_user_groups {
-  id         BigInt     @id @default(autoincrement())
-  user_id    Int
-  group_id   Int
-  auth_group auth_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_groups_group_id_97559544_fk_auth_group_id")
-  auth_user  auth_user  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_groups_user_id_6a12ed8b_fk_auth_user_id")
-
-  @@unique([user_id, group_id], map: "auth_user_groups_user_id_group_id_94350c0c_uniq")
-  @@index([group_id], map: "auth_user_groups_group_id_97559544")
-  @@index([user_id], map: "auth_user_groups_user_id_6a12ed8b")
-}
-
-model auth_user_user_permissions {
-  id              BigInt          @id @default(autoincrement())
-  user_id         Int
-  permission_id   Int
-  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm")
-  auth_user       auth_user       @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id")
-
-  @@unique([user_id, permission_id], map: "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq")
-  @@index([permission_id], map: "auth_user_user_permissions_permission_id_1fbb5f2c")
-  @@index([user_id], map: "auth_user_user_permissions_user_id_a95ead1b")
-}
-
-model blocks {
-  id                                       Int                                        @id @default(autoincrement())
-  district_id                              Int
-  name                                     String                                     @db.Char
-  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  assessment_visit_results_v2              assessment_visit_results_v2[]
-  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
-  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
-  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
-  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
-  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
-  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
-  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
-  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
-  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  mentor                                   mentor[]
-  nyay_panchayats                          nyay_panchayats[]
-  school_list                              school_list[]
-
-  @@unique([district_id, name])
-  @@index([name], map: "blocks_name_key")
-}
-
-model competency_mapping {
-  id               Int      @id @default(autoincrement())
-  grade            String   @db.VarChar
-  subject          String?  @db.VarChar
-  learning_outcome String?
-  competency_id    Int?
-  flow_state       Int      @default(1)
-  subject_id       Int
-  subjects         subjects @relation(fields: [subject_id], references: [id])
-
-  @@index([learning_outcome], map: "competency_mapping_lo_index")
-}
-
-model designations {
-  id         Int      @id @default(autoincrement())
-  name       String   @unique @db.Char
+model mentor_update_logs {
+  id         BigInt   @id @default(autoincrement())
+  mentor_id  BigInt
+  old_record Json
+  new_record Json
   created_at DateTime @default(now()) @db.Timestamptz(6)
-  mentor     mentor[]
-}
+  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
 
-model districts {
-  id              Int               @id @default(autoincrement())
-  name            String            @unique @db.Char
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-  mentor          mentor[]
-  nyay_panchayats nyay_panchayats[]
-  school_list     school_list[]
-}
-
-model django_admin_log {
-  id                  Int                  @id @default(autoincrement())
-  action_time         DateTime             @db.Timestamptz(6)
-  object_id           String?
-  object_repr         String               @db.VarChar(200)
-  action_flag         Int                  @db.SmallInt
-  change_message      String
-  content_type_id     Int?
-  user_id             Int
-  django_content_type django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_content_type_id_c4bce8eb_fk_django_co")
-  auth_user           auth_user            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_user_id_c564eba6_fk_auth_user_id")
-
-  @@index([content_type_id], map: "django_admin_log_content_type_id_c4bce8eb")
-  @@index([user_id], map: "django_admin_log_user_id_c564eba6")
-}
-
-model django_celery_beat_clockedschedule {
-  id                              Int                               @id @default(autoincrement())
-  clocked_time                    DateTime                          @db.Timestamptz(6)
-  django_celery_beat_periodictask django_celery_beat_periodictask[]
-}
-
-model django_celery_beat_crontabschedule {
-  id                              Int                               @id @default(autoincrement())
-  minute                          String                            @db.VarChar(240)
-  hour                            String                            @db.VarChar(96)
-  day_of_week                     String                            @db.VarChar(64)
-  day_of_month                    String                            @db.VarChar(124)
-  month_of_year                   String                            @db.VarChar(64)
-  timezone                        String                            @db.VarChar(63)
-  django_celery_beat_periodictask django_celery_beat_periodictask[]
-}
-
-model django_celery_beat_intervalschedule {
-  id                              Int                               @id @default(autoincrement())
-  every                           Int
-  period                          String                            @db.VarChar(24)
-  django_celery_beat_periodictask django_celery_beat_periodictask[]
-}
-
-model django_celery_beat_periodictask {
-  id                                  Int                                  @id @default(autoincrement())
-  name                                String                               @unique @db.VarChar(200)
-  task                                String                               @db.VarChar(200)
-  args                                String
-  kwargs                              String
-  queue                               String?                              @db.VarChar(200)
-  exchange                            String?                              @db.VarChar(200)
-  routing_key                         String?                              @db.VarChar(200)
-  expires                             DateTime?                            @db.Timestamptz(6)
-  enabled                             Boolean
-  last_run_at                         DateTime?                            @db.Timestamptz(6)
-  total_run_count                     Int
-  date_changed                        DateTime                             @db.Timestamptz(6)
-  description                         String
-  crontab_id                          Int?
-  interval_id                         Int?
-  solar_id                            Int?
-  one_off                             Boolean
-  start_time                          DateTime?                            @db.Timestamptz(6)
-  priority                            Int?
-  headers                             String
-  clocked_id                          Int?
-  expire_seconds                      Int?
-  django_celery_beat_clockedschedule  django_celery_beat_clockedschedule?  @relation(fields: [clocked_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_clocked_id_47a69f82_fk_django_ce")
-  django_celery_beat_crontabschedule  django_celery_beat_crontabschedule?  @relation(fields: [crontab_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_crontab_id_d3cba168_fk_django_ce")
-  django_celery_beat_intervalschedule django_celery_beat_intervalschedule? @relation(fields: [interval_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_interval_id_a8ca27da_fk_django_ce")
-  django_celery_beat_solarschedule    django_celery_beat_solarschedule?    @relation(fields: [solar_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_celery_beat_p_solar_id_a87ce72c_fk_django_ce")
-
-  @@index([clocked_id], map: "django_celery_beat_periodictask_clocked_id_47a69f82")
-  @@index([crontab_id], map: "django_celery_beat_periodictask_crontab_id_d3cba168")
-  @@index([interval_id], map: "django_celery_beat_periodictask_interval_id_a8ca27da")
-  @@index([name], map: "django_celery_beat_periodictask_name_265a36b7_like")
-  @@index([solar_id], map: "django_celery_beat_periodictask_solar_id_a87ce72c")
-}
-
-model django_celery_beat_periodictasks {
-  ident       Int      @id @db.SmallInt
-  last_update DateTime @db.Timestamptz(6)
-}
-
-model django_celery_beat_solarschedule {
-  id                              Int                               @id @default(autoincrement())
-  event                           String                            @db.VarChar(24)
-  latitude                        Decimal                           @db.Decimal(9, 6)
-  longitude                       Decimal                           @db.Decimal(9, 6)
-  django_celery_beat_periodictask django_celery_beat_periodictask[]
-
-  @@unique([event, latitude, longitude], map: "django_celery_beat_solar_event_latitude_longitude_ba64999a_uniq")
-}
-
-model django_celery_results_chordcounter {
-  id        BigInt @id @default(autoincrement())
-  group_id  String @unique @db.VarChar(255)
-  sub_tasks String
-  count     Int
-
-  @@index([group_id], map: "django_celery_results_chordcounter_group_id_1f70858c_like")
-}
-
-model django_celery_results_taskresult {
-  id               BigInt   @id @default(autoincrement())
-  task_id          String   @unique @db.VarChar(255)
-  status           String   @db.VarChar(50)
-  content_type     String   @db.VarChar(128)
-  content_encoding String   @db.VarChar(64)
-  result           String?
-  date_done        DateTime @db.Timestamptz(6)
-  traceback        String?
-  meta             String?
-  task_args        String?
-  task_kwargs      String?
-  task_name        String?  @db.VarChar(255)
-  worker           String?  @db.VarChar(100)
-  date_created     DateTime @db.Timestamptz(6)
-
-  @@index([date_created], map: "django_celery_results_taskresult_date_created_099f3424")
-  @@index([date_done], map: "django_celery_results_taskresult_date_done_49edada6")
-  @@index([status], map: "django_celery_results_taskresult_status_cbbed23a")
-  @@index([status], map: "django_celery_results_taskresult_status_cbbed23a_like")
-  @@index([task_id], map: "django_celery_results_taskresult_task_id_de0d95bf_like")
-  @@index([task_name], map: "django_celery_results_taskresult_task_name_90987df3")
-  @@index([task_name], map: "django_celery_results_taskresult_task_name_90987df3_like")
-  @@index([worker], map: "django_celery_results_taskresult_worker_f8711389")
-  @@index([worker], map: "django_celery_results_taskresult_worker_f8711389_like")
-}
-
-model django_content_type {
-  id               Int                @id @default(autoincrement())
-  app_label        String             @db.VarChar(100)
-  model            String             @db.VarChar(100)
-  auth_permission  auth_permission[]
-  django_admin_log django_admin_log[]
-
-  @@unique([app_label, model], map: "django_content_type_app_label_model_76bd3d3b_uniq")
-}
-
-model django_migrations {
-  id      BigInt   @id @default(autoincrement())
-  app     String   @db.VarChar(255)
-  name    String   @db.VarChar(255)
-  applied DateTime @db.Timestamptz(6)
-}
-
-model django_session {
-  session_key  String   @id @db.VarChar(40)
-  session_data String
-  expire_date  DateTime @db.Timestamptz(6)
-
-  @@index([expire_date], map: "django_session_expire_date_a5c62663")
-  @@index([session_key], map: "django_session_session_key_c0390e0f_like")
-}
-
-model employees {
-  id                     Int       @default(autoincrement())
-  employee_name          String
-  erhms_code             String
-  designation            String
-  posting_school         String
-  reporting_block_office String
-  district               String
-  default_role           String?   @default("Employee")
-  is_registered          Boolean?
-  date_of_registration   DateTime? @db.Date
-  created_at             DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
-  device_id              String?
-
-  @@id([id, erhms_code])
-}
-
-model form_config {
-  id                Int @id @default(autoincrement())
-  grade             Int
-  hindi_start_index Int
-  hindi_end_index   Int
-  maths_start_index Int
-  maths_end_index   Int
-}
-
-model health_check_db_testmodel {
-  id    Int    @id @default(autoincrement())
-  title String @db.VarChar(128)
-}
-
-model homelearning_event {
-  deviceId                    String
-  id                          Int       @id @default(autoincrement())
-  created_at                  DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime  @default(now()) @db.Timestamptz(6)
-  subject                     String
-  actualGrade                 Int
-  currentGrade                Int
-  grade1_trial1_correct_words Int       @default(-1)
-  grade1_trial2_correct_words Int       @default(-1)
-  grade1_trial3_correct_words Int       @default(-1)
-  grade1_trial4_correct_words Int       @default(-1)
-  grade1_trial5_correct_words Int       @default(-1)
-  grade2_trial1_correct_words Int       @default(-1)
-  grade2_trial2_correct_words Int       @default(-1)
-  grade2_trial3_correct_words Int       @default(-1)
-  grade2_trial4_correct_words Int       @default(-1)
-  grade3_trial1_correct_words Int       @default(-1)
-  grade3_trial2_correct_words Int       @default(-1)
-  grade3_trial3_correct_words Int       @default(-1)
-  grade3_trial4_correct_words Int       @default(-1)
-  grade2_trial1_score         Int       @default(-1)
-  grade2_trial2_score         Int       @default(-1)
-  grade2_trial3_score         Int       @default(-1)
-  grade2_trial4_score         Int       @default(-1)
-  grade3_trial1_score         Int       @default(-1)
-  grade3_trial2_score         Int       @default(-1)
-  grade3_trial3_score         Int       @default(-1)
-  grade3_trial4_score         Int       @default(-1)
-  grade4_trial1_score         Int       @default(-1)
-  grade4_trial2_score         Int       @default(-1)
-  grade4_trial3_score         Int       @default(-1)
-  grade4_trial4_score         Int       @default(-1)
-  grade5_trial1_score         Int       @default(-1)
-  grade5_trial2_score         Int       @default(-1)
-  grade5_trial3_score         Int       @default(-1)
-  grade5_trial4_score         Int       @default(-1)
-  grade1_trial1_time          Int       @default(-1)
-  grade1_trial2_time          Int       @default(-1)
-  grade1_trial3_time          Int       @default(-1)
-  grade1_trial4_time          Int       @default(-1)
-  grade1_trial5_time          Int       @default(-1)
-  grade2_trial1_time          Int       @default(-1)
-  grade2_trial2_time          Int       @default(-1)
-  grade2_trial3_time          Int       @default(-1)
-  grade2_trial4_time          Int       @default(-1)
-  grade3_trial1_time          Int       @default(-1)
-  grade3_trial2_time          Int       @default(-1)
-  grade3_trial3_time          Int       @default(-1)
-  grade3_trial4_time          Int       @default(-1)
-  isAssessmentComplete        Boolean   @default(false)
-  default_role                String?   @default("Employee")
-  erhms_code                  String?   @default("-")
-  isUserTeacher               Boolean?  @default(false)
-  push_time                   DateTime? @db.Timestamp(6)
-  district                    String?   @default("-")
-  block                       String?   @default("-")
-  score                       Int?      @default(-1)
-  start_time                  DateTime? @default(now()) @db.Timestamptz(6)
-  appVersion                  String?   @default("1.0")
-}
-
-model mentor {
-  id                                             BigInt                                           @id @default(autoincrement())
-  phone_no                                       String                                           @unique @db.VarChar(100)
-  district_name                                  String?                                          @db.VarChar(100)
-  block_town_name                                String?                                          @default("-") @db.VarChar(100)
-  area_type                                      String?                                          @db.VarChar(100)
-  officer_name                                   String?                                          @db.VarChar(100)
-  designation                                    String?                                          @db.VarChar(100)
-  subject_of_matter                              String?                                          @db.VarChar(200)
-  target_visits                                  String?                                          @db.VarChar(100)
-  pin                                            String?
-  district_id                                    Int
-  block_id                                       Int?
-  designation_id                                 Int
-  actor_id                                       Int                                              @default(1)
-  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
-  assessment_survey_result_v2                    assessment_survey_result_v2[]
-  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
-  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
-  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
-  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
-  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
-  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
-  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
-  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
-  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
-  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
-  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
-  assessment_visit_results_v2                    assessment_visit_results_v2[]
-  assessment_visit_results_v2_2023_apr_jun       assessment_visit_results_v2_2023_apr_jun[]
-  assessment_visit_results_v2_2023_jul_sep       assessment_visit_results_v2_2023_jul_sep[]
-  assessment_visit_results_v2_2023_oct_dec       assessment_visit_results_v2_2023_oct_dec[]
-  assessment_visit_results_v2_2024_apr_jun       assessment_visit_results_v2_2024_apr_jun[]
-  assessment_visit_results_v2_2024_jan_mar       assessment_visit_results_v2_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jul_sep       assessment_visit_results_v2_2024_jul_sep[]
-  assessment_visit_results_v2_2024_oct_dec       assessment_visit_results_v2_2024_oct_dec[]
-  assessment_visit_results_v2_2025_apr_jun       assessment_visit_results_v2_2025_apr_jun[]
-  assessment_visit_results_v2_2025_jan_mar       assessment_visit_results_v2_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jul_sep       assessment_visit_results_v2_2025_jul_sep[]
-  assessment_visit_results_v2_2025_oct_dec       assessment_visit_results_v2_2025_oct_dec[]
-  cache_mentor_metrics_daily                     cache_mentor_metrics_daily[]
-  cache_mentor_metrics_monthly                   cache_mentor_metrics_monthly[]
-  cache_mentor_metrics_weekly                    cache_mentor_metrics_weekly[]
-  actors                                         actors                                           @relation(fields: [actor_id], references: [id])
-  blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
-  designations                                   designations                                     @relation(fields: [designation_id], references: [id])
-  districts                                      districts                                        @relation(fields: [district_id], references: [id])
-  mentor_bot_telemetry                           mentor_bot_telemetry[]
-  mentor_segmentation                            mentor_segmentation[]
-  mentor_tokens                                  mentor_tokens?
-  mentor_update_logs                             mentor_update_logs[]
-  teacher_school_list_mapping                    teacher_school_list_mapping[]
-
-  @@index([actor_id], map: "mentor_actor_id_key")
-  @@index([designation_id], map: "mentor_designation_id_key")
+  @@index([mentor_id])
 }
 
 model mentor_bot_telemetry {
@@ -1590,53 +2029,6 @@ model mentor_bot_telemetry {
   @@index([action])
   @@index([bot_id])
   @@index([mentor_id])
-}
-
-model mentor_segmentation {
-  id         BigInt   @id @default(autoincrement())
-  mentor_id  BigInt
-  segment_id BigInt
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  segments   segments @relation(fields: [segment_id], references: [id], onUpdate: Restrict)
-
-  @@unique([mentor_id, segment_id])
-  @@index([mentor_id])
-  @@index([segment_id])
-}
-
-model mentor_tokens {
-  id         BigInt   @id @default(autoincrement())
-  mentor_id  BigInt   @unique
-  token      String
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-}
-
-model mentor_update_logs {
-  id         BigInt   @id @default(autoincrement())
-  mentor_id  BigInt
-  old_record Json
-  new_record Json
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-
-  @@index([mentor_id])
-}
-
-model mentors {
-  id                Int            @id @unique @default(autoincrement())
-  officer_name      String?        @db.VarChar
-  phone_no          String         @db.VarChar
-  district_name     String?        @db.VarChar
-  block_town_name   String?        @db.VarChar
-  area_type         String?        @db.VarChar
-  designation       String?        @db.VarChar
-  subject_of_matter String?        @db.VarChar
-  target_visits     String?        @db.VarChar
-  pin               Bytes?
-  school_visit      school_visit[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -1663,34 +2055,6 @@ model new_schools_25_07_2023 {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model new_table {
-  achievement     Json?
-  grade           Json?
-  subject         Json?
-  total_questions Json?
-  competency      Json?
-  udise           Json?
-  district        Json?
-  block           Json?
-  view_type       Json?
-
-  @@ignore
-}
-
-model nyay_panchayats {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.Char
-  district_id Int
-  block_id    Int
-  created_at  DateTime      @default(now()) @db.Timestamptz(6)
-  blocks      blocks        @relation(fields: [block_id], references: [id])
-  districts   districts     @relation(fields: [district_id], references: [id])
-  school_list school_list[]
-
-  @@unique([name, district_id, block_id])
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model query_result_2023_07_20 {
   id                       Int?
   district                 String?
@@ -1709,335 +2073,6 @@ model query_result_2023_07_20 {
   nyay_panchayat_id        Int?
   lat                      Decimal? @db.Decimal
   long                     Decimal? @db.Decimal
-
-  @@ignore
-}
-
-model school {
-  id           Int    @id @default(autoincrement())
-  districtCode String
-  districtName String
-  blockCode    String
-  blockName    String
-  schoolName   String
-  udise        String @unique
-  location     String
-  type         String
-}
-
-model school_list {
-  id                                       Int                                        @id @default(autoincrement())
-  district                                 String                                     @default("") @db.VarChar
-  area_type                                String                                     @db.VarChar
-  block                                    String                                     @default("") @db.VarChar
-  nypanchayat                              String                                     @db.VarChar
-  type                                     String?                                    @db.VarChar
-  category                                 String?                                    @db.VarChar
-  name                                     String?                                    @db.VarChar
-  udise_code                               String?                                    @unique @db.VarChar
-  total_student_registered                 Int?
-  is_sankul                                Boolean                                    @default(false)
-  district_id                              Int
-  block_id                                 Int
-  udise                                    BigInt                                     @unique @default(0)
-  nyay_panchayat_id                        Int?
-  lat                                      Decimal?                                   @db.Decimal
-  long                                     Decimal?                                   @db.Decimal
-  geo_fence_enabled                        Boolean                                    @default(true)
-  assessment_survey_result_v2              assessment_survey_result_v2[]
-  assessment_visit_results_v2              assessment_visit_results_v2[]
-  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
-  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
-  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
-  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
-  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
-  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
-  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
-  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
-  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  blocks                                   blocks                                     @relation(fields: [block_id], references: [id])
-  districts                                districts                                  @relation(fields: [district_id], references: [id])
-  nyay_panchayats                          nyay_panchayats?                           @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
-  school_visit                             school_visit[]
-  teacher_school_list_mapping              teacher_school_list_mapping[]
-
-  @@index([block, district], map: "sch_list_block_dist_index")
-  @@index([district_id, block_id], map: "sch_list_block_id_dist_id_index")
-  @@index([block_id], map: "schl_list_block_id_index")
-  @@index([block], map: "schl_list_block_index")
-  @@index([district_id], map: "schl_list_district_id_index")
-  @@index([district], map: "schl_list_district_index")
-  @@index([nyay_panchayat_id], map: "schl_list_ny_panchayat_id_index")
-  @@index([type], map: "schl_list_type_index")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model school_updated_udise {
-  id           Int
-  districtCode String @db.VarChar
-  districtName String @db.VarChar
-  blockCode    String @db.VarChar
-  blockName    String @db.VarChar
-  schoolName   String @db.VarChar
-  udise        String @db.VarChar
-  location     String @db.VarChar
-  type         String @db.VarChar
-  schooludise  String @db.VarChar
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model school_updated_udise1 {
-  id           Int
-  districtCode Int
-  districtName String @db.VarChar
-  blockCode    Int
-  blockName    String @db.VarChar
-  schoolName   String @db.VarChar
-  udise        BigInt
-  location     String @db.VarChar
-  type         String @db.VarChar
-  schooludise  BigInt
-
-  @@ignore
-}
-
-model school_visit {
-  school_visit_status Boolean     @default(false)
-  time_stamp          DateTime    @default(now()) @db.Timestamptz(6)
-  id                  Int         @id @default(autoincrement())
-  school_udise        String
-  mentor_id           Int?
-  mentors             mentors?    @relation(fields: [mentor_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  school_list         school_list @relation(fields: [school_udise], references: [udise_code], onUpdate: Restrict)
-}
-
-model script_config {
-  performance_last_process_id            Int
-  id                                     Int     @id(map: "scipt_config_pk")
-  perf_create_id                         Int?
-  visit_wise_student_result_visit_id     Int?
-  month_wise_performance_last_process_id BigInt?
-}
-
-model script_performance_month_wise_report {
-  id               Int     @id(map: "script_performance_month_wise_report_pk") @default(autoincrement())
-  district         String  @db.VarChar
-  block            String  @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  month            Int?
-  student_accessed Int?
-  nipun_students   Int?
-  year             Int?
-
-  @@index([competency], map: "sprmw_competency_idx")
-  @@index([grade], map: "sprmw_grade_idx")
-  @@index([school_udise], map: "sprmw_school_udise_idx")
-  @@index([subject], map: "sprmw_subject_idx")
-}
-
-model script_performance_report {
-  id               Int     @id(map: "script_performance_report_pk") @default(autoincrement())
-  district         String  @db.VarChar
-  block            String  @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-
-  @@index([competency], map: "scp_competency_idx")
-  @@index([grade], map: "scp_grade_idx")
-  @@index([school_udise], map: "scp_school_udise_idx")
-  @@index([subject], map: "scp_subject_idx")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model script_performance_report1 {
-  id               Int?
-  district         String? @db.VarChar
-  block            String? @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-  visit_res_id     Int?
-
-  @@ignore
-}
-
-model script_performance_report_mentor_wise {
-  id               Int       @id(map: "script_performance_report_mentor_wise_pk") @default(autoincrement())
-  district         String    @db.VarChar
-  block            String    @db.VarChar
-  school_udise     String?   @db.VarChar
-  grade            Int?
-  subject          String?   @db.VarChar
-  competency       String?   @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-  mentor_id        Int?
-  assessment_type  String?   @db.VarChar
-  actor            String?   @db.VarChar
-  created_at       DateTime? @db.Date
-
-  @@unique([district, block, school_udise, grade, subject, competency, mentor_id, assessment_type, actor, created_at], map: "scpmw_school_udise_grade_subject_competency_mentor_id_assessmen")
-  @@index([actor], map: "scpmw_actor_index")
-  @@index([assessment_type], map: "scpmw_assessment_type_index")
-  @@index([competency], map: "scpmw_competency_idx")
-  @@index([created_at], map: "scpmw_created_at_index")
-  @@index([grade], map: "scpmw_grade_idx")
-  @@index([mentor_id], map: "scpmw_mentor_id_index")
-  @@index([school_udise], map: "scpmw_school_udise_idx")
-  @@index([subject], map: "scpmw_subject_idx")
-}
-
-model segment_bots {
-  id         BigInt   @id @default(autoincrement())
-  segment_id BigInt
-  bot_id     String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  segments   segments @relation(fields: [segment_id], references: [id], onUpdate: Restrict)
-
-  @@unique([segment_id, bot_id])
-  @@index([segment_id])
-}
-
-model segments {
-  id                  BigInt                @id @default(autoincrement())
-  name                String                @unique @db.VarChar
-  description         String
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
-  mentor_segmentation mentor_segmentation[]
-  segment_bots        segment_bots[]
-}
-
-model start_learning_event {
-  deviceId      String
-  id            Int       @id @default(autoincrement())
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  subject       String
-  actualGrade   Int
-  default_role  String?   @default("Employee")
-  isUserTeacher Boolean?  @default(false)
-  erhms_code    String?   @default("-")
-  start_time    DateTime? @db.Timestamp(6)
-}
-
-model student_install {
-  default_role String   @default("Employee")
-  district     String
-  block        String
-  count        Int      @default(1)
-  id           Int      @id @default(autoincrement())
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime @default(now()) @db.Timestamptz(6)
-  device_id    String?
-  persona      String?  @default("-")
-  version      String?  @default("-")
-}
-
-model subjects {
-  id                                       Int                                        @id @default(autoincrement())
-  name                                     String                                     @unique @db.Char
-  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  assessment_survey_result_v2              assessment_survey_result_v2[]
-  assessment_visit_results_v2              assessment_visit_results_v2[]
-  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
-  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
-  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
-  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
-  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
-  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
-  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
-  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
-  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  competency_mapping                       competency_mapping[]
-  workflow_refids_mapping                  workflow_refids_mapping[]
-}
-
-model teacher_school_list_mapping {
-  mentor_id      BigInt
-  school_list_id Int
-  id             Int         @id @default(autoincrement())
-  mentor         mentor      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
-  school_list    school_list @relation(fields: [school_list_id], references: [id], onDelete: Cascade)
-
-  @@unique([mentor_id, school_list_id])
-}
-
-model temp_visit_wise_student_result {
-  id                    BigInt    @id(map: "temp_visit_wise_student_result_pk") @default(autoincrement())
-  visit_id              Int?
-  competency            String?   @db.VarChar
-  current_student_count Int?
-  start_time            DateTime? @db.Timestamp(6)
-  end_time              DateTime? @db.Timestamp(6)
-  achievement           Int?
-  total_questions       Int?
-  success_criteria      Int?
-  view_type             String?   @db.VarChar
-}
-
-model visit_wise_student_result {
-  id                    BigInt    @id(map: "visit_wise_student_result_pk") @default(autoincrement())
-  visit_id              Int?
-  competency            String?   @db.VarChar
-  current_student_count Int?
-  start_time            DateTime? @db.Timestamp(6)
-  end_time              DateTime? @db.Timestamp(6)
-  achievement           Int?
-  total_questions       Int?
-  success_criteria      Int?
-  view_type             String?   @db.VarChar
-
-  @@index([competency], map: "visit_wise_st_res_competency_index")
-  @@index([end_time], map: "visit_wise_st_res_end_time_index")
-  @@index([start_time], map: "visit_wise_st_res_start_time_index")
-  @@index([visit_id], map: "visit_wise_st_res_visit_id_index")
-}
-
-model workflow_refids_mapping {
-  grade              Int
-  subject            String
-  competency_id      Int
-  type               String
-  is_active          Boolean           @default(true)
-  ref_ids            Json              @default("[]")
-  id                 Int               @id @unique @default(autoincrement())
-  assessment_type    String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
-  subject_id         Int
-  assessment_type_id Int?
-  assessment_types   assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
-  subjects           subjects          @relation(fields: [subject_id], references: [id])
-
-  @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
-  @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")
-  @@index([subject_id])
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model wrm {
-  grade         Int?
-  subject       String?
-  competency_id Int?
-  type          String?
-  is_active     Boolean?
-  ref_ids       Json?
 
   @@ignore
 }
@@ -2090,20 +2125,31 @@ model cache_mentor_metrics_weekly {
 }
 
 model students {
-  id             Int          @id @default(autoincrement())
-  name           String       @db.VarChar(255)
-  gender         genders_enum
-  dob            DateTime?    @db.Date
-  admission_date DateTime?    @db.Date
-  roll_no        BigInt
-  unique_id      String       @unique(map: "unique_id_unique") @db.VarChar(15)
-  father_name    String       @default("") @db.VarChar(255)
-  mother_name    String       @default("") @db.VarChar(255)
-  grade          Int          @db.SmallInt
-  section        String       @default("") @db.Char(1)
-  udise          BigInt
-  created_at     DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  id                                             Int                                              @id @default(autoincrement())
+  name                                           String                                           @db.VarChar(255)
+  gender                                         genders_enum
+  dob                                            DateTime?                                        @db.Date
+  admission_date                                 DateTime?                                        @db.Date
+  roll_no                                        BigInt
+  unique_id                                      String                                           @unique(map: "unique_id_unique") @db.VarChar(15)
+  father_name                                    String                                           @default("") @db.VarChar(255)
+  mother_name                                    String                                           @default("") @db.VarChar(255)
+  grade                                          Int                                              @db.SmallInt
+  section                                        String                                           @default("") @db.Char(1)
+  udise                                          BigInt
+  created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
+  assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
+  assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
+  assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
+  assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
+  assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
+  assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
+  assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
+  assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
+  assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
+  assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
 
   @@index([udise, grade])
   @@index([udise])

@@ -45,6 +45,7 @@ import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { JwtService } from '@nestjs/jwt';
+import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 const moment = require('moment');
 
 @Injectable()
@@ -162,7 +163,7 @@ export class AppService {
           },
           extra: {
             submission_timestamp:
-            createAssessmentVisitResultData.submission_timestamp,
+              createAssessmentVisitResultData.submission_timestamp,
             mentor_id: createAssessmentVisitResultData.mentor_id,
             grade: createAssessmentVisitResultData.grade,
             subject_id: createAssessmentVisitResultData.subject_id,
@@ -188,18 +189,18 @@ export class AppService {
           },
           data: {
             submission_timestamp:
-            createAssessmentVisitResultData.submission_timestamp,
+              createAssessmentVisitResultData.submission_timestamp,
             grade: createAssessmentVisitResultData.grade,
             subject_id: createAssessmentVisitResultData.subject_id,
             mentor_id: createAssessmentVisitResultData.mentor_id,
             actor_id: createAssessmentVisitResultData.actor_id,
             block_id: createAssessmentVisitResultData.block_id,
             assessment_type_id:
-            createAssessmentVisitResultData.assessment_type_id,
+              createAssessmentVisitResultData.assessment_type_id,
             udise: createAssessmentVisitResultData.udise,
             no_of_student: createAssessmentVisitResultData.no_of_student,
             app_version_code:
-            createAssessmentVisitResultData.app_version_code,
+              createAssessmentVisitResultData.app_version_code,
             module_result: {}, // populating it default
           },
         });
@@ -309,7 +310,7 @@ export class AppService {
       const cacheHomeScreen = new MonthlyCacheManager(
         BigInt(createAssessmentVisitResultData.mentor_id),
         submissionDate.getFullYear(),
-        submissionDate.getMonth() +1,
+        submissionDate.getMonth() + 1,
         this.redisHelper
       );
 
@@ -536,7 +537,7 @@ export class AppService {
       };
 
       // find list of visited schools
-      const visitedSchoolsResult: Array<{udise: bigint}> = await this.prismaService.$queryRawUnsafe(`
+      const visitedSchoolsResult: Array<{ udise: bigint }> = await this.prismaService.$queryRawUnsafe(`
         select
           DISTINCT udise as udise
         from
@@ -1169,7 +1170,7 @@ export class AppService {
   }
 
   async upsertMentorToken(mentor: Mentor, token: string) {
-    return await this.prismaService.mentor_tokens.upsert({
+    return this.prismaService.mentor_tokens.upsert({
       where: {
         mentor_id: mentor.id,
       },
@@ -1214,13 +1215,18 @@ export class AppService {
     });
   }
 
-  async setMentorBotTelemetry(mentorId: bigint, botId: string, action: number) {
-    return this.prismaService.mentor_bot_telemetry.create({
-      data: {
-        "mentor_id": mentorId,
-        "bot_id": botId,
-        "action": action
-      }
+  async setMentorBotTelemetry(mentorId: bigint, telemetryObjects: CreateBotTelemetryDto[]) {
+    const insertionObjects = [];
+    for (const botTelemetry of telemetryObjects) {
+      insertionObjects.push({
+        mentor_id: mentorId,
+        bot_id: botTelemetry.botId,
+        action: botTelemetry.action
+      })
+    }
+    return this.prismaService.mentor_bot_telemetry.createMany({
+      data: insertionObjects,
+      skipDuplicates: true,
     });
   }
 

@@ -306,11 +306,11 @@ export class AppController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   async setMentorBotTelemetry(
-    @Body() body: CreateBotTelemetryDto,
+    @Body() body: CreateBotTelemetryDto[],
     @Headers('authorization') authToken: string,
   ) {
     const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    await this.appService.setMentorBotTelemetry(mentor.id, body.botId, body.action);
+    this.appService.setMentorBotTelemetry(mentor.id, body);
     return {
       msg: 'Success!',
       data: "Telemetry inserted",

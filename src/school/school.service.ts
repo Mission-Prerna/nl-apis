@@ -36,13 +36,15 @@ export class SchoolService {
         unique_id: true,
         name: true,
         grade: true,
+        roll_no: true,
       }
     });
     return response.map((item) => {
       return {
         id: item.unique_id,
         name: item.name,
-        grade: item.grade
+        grade: item.grade,
+        roll_no: item.roll_no,
       }
     });
   }

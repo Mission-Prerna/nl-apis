@@ -12,7 +12,6 @@ import {
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
-import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
@@ -35,6 +34,7 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
+import { JwtAdminGuard } from './auth/admin-jwt.guard';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -48,7 +48,6 @@ export class AppController {
     private redisIndicator: RedisHealthIndicator,
     @InjectRedis() private readonly redis: Redis,
     private readonly appService: AppService,
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     @InjectQueue(QueueEnum.AssessmentVisitResults)
     private readonly assessmentVisitResultQueue: Queue,
@@ -239,51 +238,43 @@ export class AppController {
     return this.appService.getTeacherHomeScreenMetric(mentor);
   }
 
-  private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
-    return this.appService.checkTokenIfInvalid(authToken, admin);
-  }
-
-  @Post('/api/mentor')
+  @Post(['/api/mentor', '/admin/mentor'])
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async createMentor(
     @Body() body: CreateMentorDto,
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentor(body);
   }
 
-  @Post('/api/mentor/old')
+  @Post(['/api/mentor/old', '/admin/mentor/old'])
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentorOld(body);
   }
 
   @Post('/admin/school/geo-fencing')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async schoolGeofencingBlacklist(
     @Body() body: SchoolGeofencingBlacklistDto,
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.schoolGeofencingBlacklist(body);
   }
 
   @Get('/admin/assessment-visit-results')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async getAssessmentVisitResults(
     @Query() queryParams: GetAssessmentVisitResultsDto,
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.getAssessmentVisitResults(queryParams);
   }
 
@@ -331,11 +322,10 @@ export class AppController {
 
   @Post('/admin/queues/pause')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async pauseQueues(
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     await Promise.all([
       this.assessmentVisitResultQueue.pause(false),
       this.assessmentSurveyResultQueue.pause(false),
@@ -345,11 +335,10 @@ export class AppController {
 
   @Post('/admin/queues/resume')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async resumeQueues(
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     await Promise.all([
       this.assessmentVisitResultQueue.resume(false),
       this.assessmentSurveyResultQueue.resume(false),
@@ -359,11 +348,10 @@ export class AppController {
 
   @Get('/admin/queues/count')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async countQueues(
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
@@ -372,11 +360,10 @@ export class AppController {
 
   @Get('/admin/queues/failed-count')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async countFailedQueues(
     @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),

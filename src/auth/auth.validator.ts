@@ -15,7 +15,7 @@ export class IsExist implements ValidatorConstraintInterface {
     const model = validationArguments.constraints[0];
     const pathToProperty = validationArguments.constraints[1];
     // @ts-ignore
-    if (!validationArguments.object[pathToProperty]) {
+    if (typeof validationArguments.object[pathToProperty] !== 'undefined') {
       // if the field is null or empty, no need to run db query
       return false;
     }
@@ -127,7 +127,6 @@ export class RequiredWithoutAll implements ValidatorConstraintInterface {
         allOthersAreEmpty = false;
         break;
       }
-      console.log(field);
     }
     return allOthersAreEmpty;
   }

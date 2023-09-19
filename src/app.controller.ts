@@ -30,8 +30,6 @@ import { UpdateMentorPinDto } from './dto/UpdateMentorPin.dto';
 import { SentryInterceptor } from './interceptors/sentry.interceptor';
 import { CreateMentorDto } from './dto/CreateMentor.dto';
 import { CreateMentorOldDto } from './dto/CreateMentorOld.dto';
-import { SchoolGeofencingBlacklistDto } from './dto/SchoolGeofencingBlacklistDto';
-import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dto';
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
@@ -230,7 +228,7 @@ export class AppController {
     return this.appService.getTeacherHomeScreenMetric(mentor);
   }
 
-  @Post(['/api/mentor', '/admin/mentor'])
+  @Post(['/api/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   async createMentor(
@@ -239,31 +237,13 @@ export class AppController {
     return this.appService.createMentor(body);
   }
 
-  @Post(['/api/mentor/old', '/admin/mentor/old'])
+  @Post(['/api/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
   ) {
     return this.appService.createMentorOld(body);
-  }
-
-  @Post('/admin/school/geo-fencing')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async schoolGeofencingBlacklist(
-    @Body() body: SchoolGeofencingBlacklistDto,
-  ) {
-    return this.appService.schoolGeofencingBlacklist(body);
-  }
-
-  @Get('/admin/assessment-visit-results')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async getAssessmentVisitResults(
-    @Query() queryParams: GetAssessmentVisitResultsDto,
-  ) {
-    return this.appService.getAssessmentVisitResults(queryParams);
   }
 
   @Put('/api/mentor/token')
@@ -306,47 +286,5 @@ export class AppController {
   ) {
     return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
-  }
-
-  @Post('/admin/queues/pause')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async pauseQueues() {
-    await Promise.all([
-      this.assessmentVisitResultQueue.pause(false),
-      this.assessmentSurveyResultQueue.pause(false),
-    ]);
-    return 'ok';
-  }
-
-  @Post('/admin/queues/resume')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async resumeQueues() {
-    await Promise.all([
-      this.assessmentVisitResultQueue.resume(false),
-      this.assessmentSurveyResultQueue.resume(false),
-    ]);
-    return 'ok';
-  }
-
-  @Get('/admin/queues/count')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async countQueues() {
-    return {
-      assessment_visit_results: await this.assessmentVisitResultQueue.count(),
-      assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
-    };
-  }
-
-  @Get('/admin/queues/failed-count')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  async countFailedQueues() {
-    return {
-      assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
-      assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
-    };
   }
 }

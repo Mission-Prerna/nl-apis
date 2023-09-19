@@ -19,6 +19,7 @@ import { RedisHelperService } from './RedisHelper.service';
 import { SchoolController } from './school/school.controller';
 import { SchoolService } from './school/school.service';
 import { EtagModule } from './modules/etag/etag.module';
+import { AdminController } from './admin/admin.controller';
 
 @Module({
   imports: [
@@ -76,7 +77,7 @@ import { EtagModule } from './modules/etag/etag.module';
     TerminusModule,
     EtagModule,
   ],
-  controllers: [AppController, SchoolController],
+  controllers: [AppController, SchoolController, AdminController],
   providers: [
     AppService,
     PrismaService,

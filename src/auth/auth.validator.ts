@@ -12,7 +12,7 @@ export class IsExist implements ValidatorConstraintInterface {
     const model = validationArguments.constraints[0];
     const pathToProperty = validationArguments.constraints[1];
     // @ts-ignore
-    if (typeof validationArguments.object[pathToProperty] === 'undefined' || validationArguments.object[pathToProperty] === null) {
+    if (typeof validationArguments.object[validationArguments.property] === 'undefined' || validationArguments.object[validationArguments.property] === null) {
       // if the field is null or empty, no need to run db query
       return false;
     }

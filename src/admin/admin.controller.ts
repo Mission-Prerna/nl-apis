@@ -1,10 +1,15 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  ParseArrayPipe,
+  Patch,
+  Post,
   Query,
   SetMetadata,
-  UseGuards, UseInterceptors,
-  Post, Body,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
@@ -16,6 +21,9 @@ import { CreateMentorDto } from '../dto/CreateMentor.dto';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from '../dto/GetAssessmentVisitResults.dto';
+import { CreateStudent } from './dto/CreateStudent';
+import { UpdateStudent } from './dto/UpdateStudent';
+import { DeleteStudent } from './dto/DeleteStudent';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -107,5 +115,32 @@ export class AdminController {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
     };
+  }
+
+  @Post('/students')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  async createStudents(
+    @Body(new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
+  ) {
+    return body;
+  }
+
+  @Patch('/students')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  async updateStudents(
+    @Body(new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
+  ) {
+    return body;
+  }
+
+  @Delete('/students')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  async deleteStudents(
+    @Body(new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
+  ) {
+    return body;
   }
 }

@@ -20,6 +20,7 @@ import { SchoolController } from './school/school.controller';
 import { SchoolService } from './school/school.service';
 import { EtagModule } from './modules/etag/etag.module';
 import { AdminController } from './admin/admin.controller';
+import { AdminService } from './admin/admin.service';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { AdminController } from './admin/admin.controller';
     FusionauthService,
     RedisHelperService,
     SchoolService,
+    AdminService,
   ],
 })
 export class AppModule {}

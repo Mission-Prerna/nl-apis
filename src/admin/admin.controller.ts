@@ -12,7 +12,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
-import { AppService } from '../app.service';
 import { QueueEnum, Role } from '../enums';
 import { JwtAdminGuard } from '../auth/admin-jwt.guard';
 import { InjectQueue } from '@nestjs/bull';
@@ -24,6 +23,7 @@ import { GetAssessmentVisitResultsDto } from '../dto/GetAssessmentVisitResults.d
 import { CreateStudent } from './dto/CreateStudent';
 import { UpdateStudent } from './dto/UpdateStudent';
 import { DeleteStudent } from './dto/DeleteStudent';
+import { AdminService } from './admin.service';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -31,7 +31,7 @@ export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 @UseInterceptors(SentryInterceptor)
 export class AdminController {
   constructor(
-    private readonly appService: AppService,
+    private readonly appService: AdminService,
     @InjectQueue(QueueEnum.AssessmentVisitResults)
     private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult)

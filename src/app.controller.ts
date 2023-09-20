@@ -2,13 +2,17 @@ import {
   Body,
   Controller,
   Get,
-  Request,
-  ParseArrayPipe, Patch,
+  NotImplementedException,
+  Param,
+  ParseArrayPipe,
+  Patch,
   Post,
+  Put,
   Query,
+  Request,
   SetMetadata,
-  UseGuards, UseInterceptors,
-  Put, NotImplementedException, Param
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
@@ -35,6 +39,7 @@ import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
 import { JwtAdminGuard } from './auth/admin-jwt.guard';
 import { MentorInterceptor } from './interceptors/mentor.interceptor';
+import { AdminService } from './admin/admin.service';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -53,6 +58,7 @@ export class AppController {
     private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult)
     private readonly assessmentSurveyResultQueue: Queue,
+    private readonly adminService: AdminService,
   ) {
     this.useQueues =
       configService.get<string>('API_QUEUES', 'false') === 'true';
@@ -234,7 +240,7 @@ export class AppController {
   async createMentor(
     @Body() body: CreateMentorDto,
   ) {
-    return this.appService.createMentor(body);
+    return this.adminService.createMentor(body);
   }
 
   @Post(['/api/mentor/old'])
@@ -243,7 +249,7 @@ export class AppController {
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
   ) {
-    return this.appService.createMentorOld(body);
+    return this.adminService.createMentorOld(body);
   }
 
   @Put('/api/mentor/token')

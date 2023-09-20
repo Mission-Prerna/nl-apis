@@ -2,19 +2,26 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { PrismaHealthIndicator } from './prisma.health';
 import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
 import { AssessmentSurveyResultProcessor } from './processors/assessment-survey-result.processor';
 import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { RedisModule, RedisService } from '@liaoliaots/nestjs-redis';
 import { BullModule } from '@nestjs/bull';
 import { QueueEnum } from './enums';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { FusionauthService } from './fusionauth.service';
+import { RedisHelperService } from './RedisHelper.service';
+
+class MockRedisService {
+  getClient(): Promise<any> {
+    return Promise.resolve();
+  }
+}
 
 describe('AppController', () => {
   let appController: AppController;
@@ -22,26 +29,10 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-        }),
+        ConfigModule,
         AuthModule,
         JwtModule,
-        BullModule.forRootAsync({
-          imports: [ConfigModule],
-          useFactory: async (configService: ConfigService) => ({
-            redis: {
-              host: configService.get('QUEUE_HOST'),
-              port: configService.get('QUEUE_PORT'),
-            },
-            /*limiter: {
-              max: 2,
-              duration: 1000,
-            },*/
-            prefix: configService.get('ENVIRONMENT', 'local') + ':',
-          }),
-          inject: [ConfigService],
-        }),
+        BullModule.forRoot({}),
         BullModule.registerQueue(
           {
             name: QueueEnum.AssessmentVisitResults,
@@ -50,19 +41,8 @@ describe('AppController', () => {
             name: QueueEnum.AssessmentSurveyResult,
           },
         ),
-        RedisModule.forRootAsync({
-          imports: [ConfigModule],
-          useFactory: (config: ConfigService) => {
-            return {
-              config: {
-                host: config.get('QUEUE_HOST'),
-                port: config.get('QUEUE_PORT'),
-              },
-            };
-          },
-          inject: [ConfigService],
-        }),
-        CacheModule.register({ isGlobal: true }),
+        CacheModule.register(),
+        RedisModule.forRoot({config: {}}),
         TerminusModule,
       ],
       controllers: [AppController],
@@ -74,6 +54,12 @@ describe('AppController', () => {
         PrismaHealthIndicator,
         RedisHealthIndicator,
         FusionauthService,
+        RedisHelperService,
+        RedisService,
+        {
+          provide: RedisService,
+          useClass: MockRedisService
+        },
       ],
     }).compile();
 
@@ -84,5 +70,10 @@ describe('AppController', () => {
     it('should be defined', () => {
       expect(appController.getHealth).toBeDefined();
     });
+  });
+
+  // Cleanup mocks after each test
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 });

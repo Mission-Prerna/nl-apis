@@ -50,6 +50,7 @@ export class SchoolService {
   }
 
   async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
+    // @TODO: to be redone using Continuous Aggregates
     const tables = this.appService.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
@@ -134,6 +135,7 @@ export class SchoolService {
   }
 
   async getSchoolStudentsResultsSummary(mentor: Mentor, udise: number, grades: Array<Number>, xMonths: number = 12) {
+    // @TODO: to be redone using Continuous Aggregates
     // find out all the months for which we wanted to fetch summary data for
     const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live
     let startDate = moment(globalStartDate).subtract(xMonths, 'months').startOf('month');
@@ -264,6 +266,7 @@ export class SchoolService {
   }
 
   async getSchoolTeacherPerformance(mentor: Mentor, udise: number) {
+    // @TODO: to be redone using Continuous Aggregates
     const lastDate = new Date();  // it's now() basically
     const temp = new Date();
     const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday

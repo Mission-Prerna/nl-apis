@@ -2,7 +2,8 @@ import {
   Body,
   Controller,
   Get,
-  Headers, ParseArrayPipe, Patch,
+  Request,
+  ParseArrayPipe, Patch,
   Post,
   Query,
   SetMetadata,
@@ -12,7 +13,6 @@ import {
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth-jwt.guard';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
-import { JwtService } from '@nestjs/jwt';
 import { GetMentorSchoolList } from './dto/GetMentorSchoolList.dto';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import { GetHomeScreenMetric } from './dto/GetHomeScreenMetric.dto';
@@ -35,6 +35,8 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import { UpsertMentorTokenDto } from './dto/UpsertMentorToken.dto';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
+import { JwtAdminGuard } from './auth/admin-jwt.guard';
+import { MentorInterceptor } from './interceptors/mentor.interceptor';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -48,7 +50,6 @@ export class AppController {
     private redisIndicator: RedisHealthIndicator,
     @InjectRedis() private readonly redis: Redis,
     private readonly appService: AppService,
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     @InjectQueue(QueueEnum.AssessmentVisitResults)
     private readonly assessmentVisitResultQueue: Queue,
@@ -73,22 +74,14 @@ export class AppController {
     ]);
   }
 
-  private async getLoggedInMentor(
-    authorizationHeader: string,
-  ): Promise<Mentor> {
-    return this.appService.getLoggedInMentor(authorizationHeader);
-  }
-
   @Post('/api/assessment-visit-results')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async createAssessmentVisitResults(
     @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
-    @Headers('authorization') authToken: string,
+    @Request() { mentorId }: { mentorId: number},
   ) {
-    const mentorId = Number(
-      (await this.getLoggedInMentor(authToken)).id,
-    );
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
@@ -122,11 +115,11 @@ export class AppController {
   @Get('/api/mentor/schools')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorSchoolListIfHeHasVisited(
       mentor,
       queryParams.month,
@@ -137,13 +130,11 @@ export class AppController {
   @Post('/api/assessment-survey-results')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async createAssessmentSurveyResult(
     @Body(new ParseArrayPipe({ items: CreateAssessmentSurveyResult })) body: CreateAssessmentSurveyResult[],
-    @Headers('authorization') authToken: string,
+    @Request() { mentorId }: { mentorId: number },
   ) {
-    const mentorId = Number(
-      (await this.getLoggedInMentor(authToken)).id,
-    );
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
@@ -177,11 +168,11 @@ export class AppController {
   @Get('/api/mentor/dashboard-overview')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getHomeScreenMetric(
       mentor,
       queryParams.month,
@@ -193,11 +184,11 @@ export class AppController {
   @Get('/api/mentor/details')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async getMentorDetails(
     @Query() queryParams: GetMentorDetailsDto,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorDetails(
       mentor,
       queryParams.month,
@@ -213,11 +204,11 @@ export class AppController {
   @Patch('/api/mentor/pin')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async setMentorPin(
     @Body() body: UpdateMentorPinDto,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
     this.appService.updateMentorPin(mentor, body.pin).then(() => true);
     return mentor;
   }
@@ -225,11 +216,11 @@ export class AppController {
   @Get('/api/actor/dashboard-overview')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async getActorHomeScreenMetric(
     @Param() id: number,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor = await this.getLoggedInMentor(authToken);
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
         break;
@@ -239,63 +230,51 @@ export class AppController {
     return this.appService.getTeacherHomeScreenMetric(mentor);
   }
 
-  private checkTokenIfInvalid(authToken: string, admin: boolean = false): any {
-    return this.appService.checkTokenIfInvalid(authToken, admin);
-  }
-
-  @Post('/api/mentor')
+  @Post(['/api/mentor', '/admin/mentor'])
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async createMentor(
     @Body() body: CreateMentorDto,
-    @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentor(body);
   }
 
-  @Post('/api/mentor/old')
+  @Post(['/api/mentor/old', '/admin/mentor/old'])
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
-    @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.createMentorOld(body);
   }
 
   @Post('/admin/school/geo-fencing')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async schoolGeofencingBlacklist(
     @Body() body: SchoolGeofencingBlacklistDto,
-    @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.schoolGeofencingBlacklist(body);
   }
 
   @Get('/admin/assessment-visit-results')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   async getAssessmentVisitResults(
     @Query() queryParams: GetAssessmentVisitResultsDto,
-    @Headers('authorization') authToken: string,
   ) {
-    this.checkTokenIfInvalid(authToken, true);
     return this.appService.getAssessmentVisitResults(queryParams);
   }
 
   @Put('/api/mentor/token')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async setMentorToken(
     @Body() body: UpsertMentorTokenDto,
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
-    this.appService.upsertMentorToken(mentor, body.token).then(r => true);
+    this.appService.upsertMentorToken(mentor, body.token).then(() => true);
     return {
       msg: 'Success!',
       data: "Token upserted successfully",
@@ -305,11 +284,11 @@ export class AppController {
   @Post('/api/mentor/bot/telemetry')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async setMentorBotTelemetry(
     @Body() body: CreateBotTelemetryDto[],
-    @Headers('authorization') authToken: string,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
     this.appService.setMentorBotTelemetry(mentor.id, body);
     return {
       msg: 'Success!',
@@ -320,22 +299,19 @@ export class AppController {
   @Get('/api/mentor/bot/telemetry')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
   async getMentorBotsWithAction(
-    @Headers('authorization') authToken: string,
-    @Query() query: GetMentorBotsWithActionDto
+    @Query() query: GetMentorBotsWithActionDto,
+    @Request() { mentor }: { mentor: Mentor},
   ) {
-    const mentor: Mentor = await this.getLoggedInMentor(authToken);
     return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
   }
 
   @Post('/admin/queues/pause')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
-  async pauseQueues(
-    @Headers('authorization') authToken: string,
-  ) {
-    this.checkTokenIfInvalid(authToken, true);
+  @UseGuards(JwtAdminGuard)
+  async pauseQueues() {
     await Promise.all([
       this.assessmentVisitResultQueue.pause(false),
       this.assessmentSurveyResultQueue.pause(false),
@@ -345,11 +321,8 @@ export class AppController {
 
   @Post('/admin/queues/resume')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
-  async resumeQueues(
-    @Headers('authorization') authToken: string,
-  ) {
-    this.checkTokenIfInvalid(authToken, true);
+  @UseGuards(JwtAdminGuard)
+  async resumeQueues() {
     await Promise.all([
       this.assessmentVisitResultQueue.resume(false),
       this.assessmentSurveyResultQueue.resume(false),
@@ -359,11 +332,8 @@ export class AppController {
 
   @Get('/admin/queues/count')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
-  async countQueues(
-    @Headers('authorization') authToken: string,
-  ) {
-    this.checkTokenIfInvalid(authToken, true);
+  @UseGuards(JwtAdminGuard)
+  async countQueues() {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
@@ -372,11 +342,8 @@ export class AppController {
 
   @Get('/admin/queues/failed-count')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
-  async countFailedQueues(
-    @Headers('authorization') authToken: string,
-  ) {
-    this.checkTokenIfInvalid(authToken, true);
+  @UseGuards(JwtAdminGuard)
+  async countFailedQueues() {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),

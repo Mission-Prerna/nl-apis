@@ -134,25 +134,3 @@ export class RequiredWithoutAll implements ValidatorConstraintInterface {
     return `${args.property} must be present & not empty when non of the fields ${args.constraints.join(', ')} are empty or not present.`;
   }
 }
-
-@Injectable()
-@ValidatorConstraint({ name: 'ValidateGrades', async: true })
-export class ValidateGrades implements ValidatorConstraintInterface {
-  async validate(value: string, validationArguments: ValidationArguments) {
-    if (!value) {
-      return false;
-    }
-    let success = true;
-    value.split(',').forEach((grade) => {
-      if (!validationArguments.constraints.includes(grade.trim())) {
-        success = false;
-      }
-    });
-
-    return success;
-  }
-
-  defaultMessage(validationArguments: ValidationArguments): string {
-    return `Allowed grades are ${validationArguments.constraints.join(', ')}.`;
-  }
-}

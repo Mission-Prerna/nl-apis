@@ -848,7 +848,7 @@ export class AppService {
 
   async createMentorOld(data: CreateMentorOldDto) {
     let blockId = null;
-    if (!['examiner', 'SRG'].includes(data.designation) && !data.block_town_name) {
+    if (!['examiner', 'SRG', 'Diet Mentor'].includes(data.designation) && !data.block_town_name) {
       throw new BadRequestException(['block_town_name is required when designation is not in [examiner, SRG]']);
     } else {
       if (data.block_town_name) {
@@ -1026,7 +1026,16 @@ export class AppService {
         },
         subjects: true,
         actors: true,
-        blocks: true,
+        blocks: {
+          include: {
+            districts: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
       }
       const studentRelation: Record<string, boolean> = {}
       studentRelation[tables.assessment_visit_results_student_odk_results] = true;
@@ -1118,7 +1127,8 @@ export class AppService {
           udise_code: assessmentVisitResult.udise ? (assessmentVisitResult.udise + '') : '',
           actor: assessmentVisitResult?.actors?.name ?? '',
           block: assessmentVisitResult.block_id ? assessmentVisitResult.blocks.name : null,
-          created_at: assessmentVisitResult.created_at
+          created_at: assessmentVisitResult.created_at,
+          district: assessmentVisitResult.block_id ? assessmentVisitResult.blocks.districts.name : null,
         })
       }
       if (results.length == 0) {

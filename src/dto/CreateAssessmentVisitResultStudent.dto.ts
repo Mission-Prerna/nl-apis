@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { CreateAssessmentVisitResultStudentOdkResult } from './CreateAssessmentVisitResultsStudentOdkResult.dto';
 import { Type } from 'class-transformer';
-import { IsExist } from '../auth/auth.validator';
+import { IsExist, RequiredWithoutAll } from '../auth/auth.validator';
 
 export class CreateAssessmentVisitResultStudent {
   @IsString()
@@ -57,11 +57,18 @@ export class CreateAssessmentVisitResultStudent {
   total_time_taken?: number;
 
   @IsUUID()
+  @IsOptional()
+  @Validate(RequiredWithoutAll, ['student_id'], {
+    message: '',
+  })
   student_session!: string;
 
   @IsString()
   @IsOptional()
   @Validate(IsExist, ['students', 'unique_id'], {
+    message: '',
+  })
+  @Validate(RequiredWithoutAll, ['student_session'], {
     message: '',
   })
   student_id!: string;

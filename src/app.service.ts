@@ -20,7 +20,7 @@ import {
   CacheKeyMetadata,
   CacheKeyMentorMonthlyMetrics,
   Mentor,
-  TypeActorHomeOverview,
+  TypeTeacherHomeOverview,
   TypeAssessmentQuarterTables,
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMentorDailyMetrics,
@@ -44,20 +44,22 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
+import { JwtService } from '@nestjs/jwt';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 const moment = require('moment');
 
 @Injectable()
 export class AppService {
-  private readonly logger = new Logger(AppService.name);
-  private allTables: Record<string, any> = {};
+  protected readonly logger = new Logger(AppService.name);
+  protected allTables: Record<string, any> = {};
 
   constructor(
-    private readonly prismaService: PrismaService,
-    private readonly configService: ConfigService,
-    private readonly faService: FusionauthService,
-    private readonly redisHelper: RedisHelperService,
+    protected readonly prismaService: PrismaService,
+    protected readonly configService: ConfigService,
+    protected readonly faService: FusionauthService,
+    protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
+    protected readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -88,7 +90,7 @@ export class AppService {
     '12': 'oct_dec',
   };
 
-  private getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): TypeAssessmentQuarterTables {
+  public getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): TypeAssessmentQuarterTables {
     if (year === null) {
       year = new Date().getFullYear();
     }
@@ -228,7 +230,8 @@ export class AppService {
               assessment_visit_results_v2_id: assessmentVisitResult.id,
               submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
               grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id
+              mentor_id: createAssessmentVisitResultData.mentor_id,
+              student_id: student.student_id ?? null,
             },
           });
           uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
@@ -286,7 +289,8 @@ export class AppService {
               assessment_visit_results_v2_id: assessmentVisitResultId,
               submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
               grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id
+              mentor_id: createAssessmentVisitResultData.mentor_id,
+              student_id: result.student_id ?? null,
             };
           });
 
@@ -724,7 +728,7 @@ export class AppService {
     mentor: Mentor,
     firstDayTimestamp: number,
     todayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeActorHomeOverview | null> {
+    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
     try {
       const query = `
           select weekly.assessments_total, weekly.nipun_total, daily.assessments_today, daily.nipun_today
@@ -752,7 +756,7 @@ export class AppService {
                      and avrs.submission_timestamp < ${lastDayTimestamp}
                ) as daily;
       `;
-      const result: Array<TypeActorHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
 
       return {
         assessments_total: result[0].assessments_total,
@@ -776,7 +780,7 @@ export class AppService {
     const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
     const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
 
-    let responseFirstTable: TypeActorHomeOverview | null;
+    let responseFirstTable: TypeTeacherHomeOverview | null;
     let responseSecondTable = null;
     if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
       // both tables are same
@@ -1247,5 +1251,4 @@ export class AppService {
       },
     });
   }
-
 }

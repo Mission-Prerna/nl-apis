@@ -56,16 +56,25 @@ export class SchoolService {
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     const query = `
-      select distinct on (student_id) student_id as id,
-                                           submission_timestamp last_assessment_date,
-                                           is_passed
-      from ${tables.assessment_visit_results_students}
-      where mentor_id = ${mentor.id}
-        and student_id is not null
-        and submission_timestamp > ${firstDayTimestamp}
-        and submission_timestamp < ${lastDayTimestamp}
-        and grade in (${grades.join(',')})
-      order by student_id, submission_timestamp DESC
+      SELECT
+        ss.id,
+        ss.last_assessment_date,
+        (case when ss.failed = 0 then true else false end) as is_passed
+      FROM (
+        SELECT
+          student_id AS id,
+          submission_timestamp AS last_assessment_date,
+          COUNT(CASE WHEN is_passed = false THEN 1 END) AS failed,
+          RANK() OVER (PARTITION BY student_id ORDER BY submission_timestamp DESC) AS rank
+        FROM ${tables.assessment_visit_results_students}
+        WHERE
+          mentor_id = ${mentor.id}
+          AND student_id IS NOT NULL
+          AND submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
+          and grade in (${grades.join(',')})
+        GROUP BY student_id, submission_timestamp
+      ) ss
+      WHERE rank = 1;
     `;
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);

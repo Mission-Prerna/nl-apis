@@ -32,7 +32,7 @@ export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 @UseInterceptors(SentryInterceptor)
 export class AdminController {
   constructor(
-    private readonly appService: AdminService,
+    private readonly service: AdminService,
     @InjectQueue(QueueEnum.AssessmentVisitResults)
     private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult)
@@ -46,7 +46,7 @@ export class AdminController {
   async createMentor(
     @Body() body: CreateMentorDto,
   ) {
-    return this.appService.createMentor(body);
+    return this.service.createMentor(body);
   }
 
   @Post(['/mentor/old'])
@@ -55,7 +55,7 @@ export class AdminController {
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
   ) {
-    return this.appService.createMentorOld(body);
+    return this.service.createMentorOld(body);
   }
 
   @Post('/school/geo-fencing')
@@ -64,7 +64,7 @@ export class AdminController {
   async schoolGeofencingBlacklist(
     @Body() body: SchoolGeofencingBlacklistDto,
   ) {
-    return this.appService.schoolGeofencingBlacklist(body);
+    return this.service.schoolGeofencingBlacklist(body);
   }
 
   @Get('/assessment-visit-results')
@@ -73,7 +73,7 @@ export class AdminController {
   async getAssessmentVisitResults(
     @Query() queryParams: GetAssessmentVisitResultsDto,
   ) {
-    return this.appService.getAssessmentVisitResults(queryParams);
+    return this.service.getAssessmentVisitResults(queryParams);
   }
 
   @Post('/queues/pause')
@@ -124,7 +124,7 @@ export class AdminController {
   async createStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
   ) {
-    await this.appService.createStudents(body);
+    await this.service.createStudents(body);
     return {
       msg: 'Success!',
       data: null,
@@ -137,7 +137,7 @@ export class AdminController {
   async updateStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
   ) {
-    await this.appService.updateStudents(body);
+    await this.service.updateStudents(body);
     return {
       msg: 'Success!',
       data: null,
@@ -150,6 +150,6 @@ export class AdminController {
   async deleteStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
   ) {
-    return this.appService.deleteStudents(body);
+    return this.service.deleteStudents(body);
   }
 }

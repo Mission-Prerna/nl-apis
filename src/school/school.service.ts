@@ -29,8 +29,9 @@ export class SchoolService {
       where: {
         udise: BigInt(parseInt(udise.toString())),
         grade: {
-          in: [1, 2, 3]
-        }
+          in: [1, 2, 3],
+        },
+        deleted_at: null,  // query only active students
       },
       select: {
         unique_id: true,

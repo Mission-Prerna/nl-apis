@@ -20,10 +20,11 @@ import { CreateMentorDto } from '../dto/CreateMentor.dto';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from '../dto/GetAssessmentVisitResults.dto';
-import { CreateStudent } from './dto/CreateStudent';
 import { UpdateStudent } from './dto/UpdateStudent';
 import { DeleteStudent } from './dto/DeleteStudent';
 import { AdminService } from './admin.service';
+import { CreateStudent } from './dto/CreateStudent';
+import { MaxItemsPipe } from '../pipes/max-items.pipe';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -121,26 +122,34 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   async createStudents(
-    @Body(new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
   ) {
-    return body;
+    await this.appService.createStudents(body);
+    return {
+      msg: 'Success!',
+      data: null,
+    };
   }
 
   @Patch('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   async updateStudents(
-    @Body(new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
   ) {
-    return body;
+    await this.appService.updateStudents(body);
+    return {
+      msg: 'Success!',
+      data: null,
+    };
   }
 
   @Delete('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   async deleteStudents(
-    @Body(new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
   ) {
-    return body;
+    return this.appService.deleteStudents(body);
   }
 }

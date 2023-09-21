@@ -24,11 +24,11 @@ export class CreateStudent {
 
   @IsDateString()
   @IsOptional()
-  dob!: string;
+  dob!: Date;
 
   @IsDateString()
   @IsOptional()
-  admission_date!: string;
+  admission_date!: Date;
 
   @IsInt()
   @IsNotEmpty()

@@ -9,6 +9,9 @@ import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
 import { GetAssessmentVisitResultsDto } from '../dto/GetAssessmentVisitResults.dto';
 import { AppService } from '../app.service';
+import { CreateStudent } from './dto/CreateStudent';
+import { UpdateStudent } from './dto/UpdateStudent';
+import { DeleteStudent } from './dto/DeleteStudent';
 
 @Injectable()
 export class AdminService {
@@ -335,5 +338,59 @@ export class AdminService {
       this.logger.error(`Error occurred: ${e}`);
       this.appService.handleRequestError(e);
     }
+  }
+
+  async createStudents(students: CreateStudent[]) {
+    // @ts-ignore
+    return this.prismaService.students.createMany({
+      // @ts-ignore
+      data: students.map(student => {
+        return {
+          name: student.name,
+          gender: student.gender,
+          roll_no: student.roll_no,
+          unique_id: student.unique_id,
+          grade: student.grade,
+          udise: student.udise,
+          dob: (student?.dob ? new Date(student.dob) : null) ?? null,
+          admission_date: (student?.admission_date ? new Date(student.admission_date) : null) ?? null,
+          father_name: student.father_name ?? '',
+          mother_name: student.mother_name ?? '',
+          section: student.section ?? '',
+        };
+      }),
+      skipDuplicates: true,
+    });
+  }
+
+  async updateStudents(students: UpdateStudent[]) {
+    return Promise.all(
+      students.map((student) => {
+        if (student.dob) {
+          student.dob = new Date(student.dob);
+        }
+        if (student.admission_date) {
+          student.admission_date = new Date(student.admission_date);
+        }
+        student.deleted_at = null;  // whenever there is an update, we'll restore the student
+        return this.prismaService.students.update({
+          // @ts-ignore
+          where: { unique_id: student.unique_id }, data: student,
+        });
+      }),
+    );
+  }
+
+  async deleteStudents(students: DeleteStudent[]) {
+    return this.prismaService.students.updateMany({
+      data: {
+        deleted_at: new Date(),
+      },
+      where: {
+        unique_id: {
+          in: students.map(student => student.unique_id),
+        },
+      },
+    });
   }
 }

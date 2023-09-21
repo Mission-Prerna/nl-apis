@@ -26,11 +26,11 @@ export class UpdateStudent {
 
   @IsDateString()
   @IsOptional()
-  dob!: string;
+  dob!: Date;
 
   @IsDateString()
   @IsOptional()
-  admission_date!: string;
+  admission_date!: Date;
 
   @IsInt()
   @IsNotEmpty()
@@ -72,4 +72,8 @@ export class UpdateStudent {
   })
   @IsOptional()
   udise!: number;
+
+  @IsDateString()
+  @IsOptional()
+  deleted_at!: Date | null;
 }

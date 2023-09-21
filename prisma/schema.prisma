@@ -2139,6 +2139,7 @@ model students {
   udise                                          BigInt
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  deleted_at                                     DateTime?                                        @db.Timestamptz(6)
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
@@ -2150,9 +2151,21 @@ model students {
   assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
   assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
+  student_update_logs                            student_update_logs[]
 
   @@index([udise, grade])
   @@index([udise])
+}
+
+model student_update_logs {
+  id         BigInt   @id @default(autoincrement())
+  student_id String   @db.VarChar(15)
+  old_record Json
+  new_record Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  students   students @relation(fields: [student_id], references: [unique_id], onDelete: Cascade)
+
+  @@index([student_id])
 }
 
 enum genders_enum {

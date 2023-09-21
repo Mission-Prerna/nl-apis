@@ -109,24 +109,24 @@ export class SchoolService {
         summary: [
           {
             label: 'Total',
-            colour: '#FF0000',
-            count: gradeStudents[grade.toString()].students.length
+            colour: '#FFFFFF',
+            count: gradeStudents[grade.toString()].students.length,
           },
           {
             label: 'Nipun',
-            colour: '#FFFFFF',
-            count: gradeStudents[grade.toString()].nipun
+            colour: '#72BA86',
+            count: gradeStudents[grade.toString()].nipun,
           },
           {
             label: 'Not Nipun',
-            colour: '#000000',
-            count: gradeStudents[grade.toString()].not_nipun
+            colour: '#C98A7A',
+            count: gradeStudents[grade.toString()].not_nipun,
           },
           {
             label: 'Not assessed',
-            colour: '#000000',
-            count: (gradeStudents[grade.toString()].students.length - gradeStudents[grade.toString()].nipun - gradeStudents[grade.toString()].not_nipun)
-          }
+            colour: '#E2E2E2',
+            count: (gradeStudents[grade.toString()].students.length - gradeStudents[grade.toString()].nipun - gradeStudents[grade.toString()].not_nipun),
+          },
         ],
         students: gradeStudents[grade.toString()].students
       });

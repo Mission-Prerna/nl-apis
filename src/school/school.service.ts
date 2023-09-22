@@ -113,8 +113,7 @@ export class SchoolService {
       }
     });
     let response: Array<Record<string, any>> = [];
-    // @ts-ignore
-    const lang = I18nContext.current().lang;
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
     for (const grade of grades) {
       response.push({
         grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
@@ -187,8 +186,7 @@ export class SchoolService {
 
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
-    // @ts-ignore
-    const lang = I18nContext.current().lang;
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
     monthsForQuery.forEach(item => {
       const monthName = moment().month(item.month).year(item.year).date(1).format('MMMM');
       summaries[monthName] = {
@@ -361,9 +359,7 @@ export class SchoolService {
       lastMonthStartTimestamp,
       lastMonthEndTimestamp,
     );
-
-    // @ts-ignore
-    const lang = I18nContext.current().lang;
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
     return [
       {
         period: this.i18n.t(`common.Weekly`, { lang: lang }),

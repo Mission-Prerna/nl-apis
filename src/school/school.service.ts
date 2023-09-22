@@ -11,6 +11,7 @@ import {
 import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
 import { Cache } from 'cache-manager';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
 const moment = require('moment');
 
@@ -22,6 +23,7 @@ export class SchoolService {
     protected readonly prismaService: PrismaService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
     protected readonly appService: AppService,
+    private readonly i18n: I18nService,
   ) {}
 
   async getSchoolStudents(udise: number): Promise<Array<Student>> {
@@ -111,33 +113,33 @@ export class SchoolService {
       }
     });
     let response: Array<Record<string, any>> = [];
+    // @ts-ignore
+    const lang = I18nContext.current().lang;
     for (const grade of grades) {
       response.push({
-        grade: grade,
-        period: moment(month, 'M').format('MMMM') + ' माह',
+        grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
+        period: this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, { lang: lang }),
         summary: [
           {
-            label: 'Total',
-            colour: '#FFFFFF',
-            count: gradeStudents[grade.toString()].students.length,
-          },
-          {
-            label: 'Nipun',
+            label: this.i18n.t(`common.Nipun`, { lang: lang }),
             colour: '#72BA86',
-            count: gradeStudents[grade.toString()].nipun,
+            count: gradeStudents[grade.toString()]?.nipun ?? 0,
+            identifier: StudentMonthlyAssessmentStatus.PASS,
           },
           {
-            label: 'Not Nipun',
+            label: this.i18n.t(`common.NotNipun`, { lang: lang }),
             colour: '#C98A7A',
-            count: gradeStudents[grade.toString()].not_nipun,
+            count: gradeStudents[grade.toString()]?.not_nipun ?? 0,
+            identifier: StudentMonthlyAssessmentStatus.FAIL,
           },
           {
-            label: 'Not assessed',
+            label: this.i18n.t(`common.NotAssessed`, { lang: lang }),
             colour: '#E2E2E2',
-            count: (gradeStudents[grade.toString()].students.length - gradeStudents[grade.toString()].nipun - gradeStudents[grade.toString()].not_nipun),
+            count: (gradeStudents[grade.toString()]?.students.length - gradeStudents[grade.toString()]?.nipun ?? 0 - gradeStudents[grade.toString()]?.not_nipun ?? 0),
+            identifier: StudentMonthlyAssessmentStatus.PENDING,
           },
         ],
-        students: gradeStudents[grade.toString()].students
+        students: gradeStudents[grade.toString()]?.students,
       });
     }
     return response;
@@ -185,15 +187,17 @@ export class SchoolService {
 
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
+    // @ts-ignore
+    const lang = I18nContext.current().lang;
     monthsForQuery.forEach(item => {
       const monthName = moment().month(item.month).year(item.year).date(1).format('MMMM');
       summaries[monthName] = {
-        period: monthName,
+        period: this.i18n.t(`months.${monthName}`, { lang: lang }),
         total: 0,
         assessed: 0,
-        successful: 0
-      }
-    })
+        successful: 0,
+      };
+    });
     for (let grade of grades) {
       let summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
       const gradeTotal = await this.prismaService.students.count({
@@ -208,7 +212,7 @@ export class SchoolService {
         summary[key[0]].total = gradeTotal;
       })
       gradeWiseSummary[grade.toString()] = {
-        grade: grade,
+        grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
         summary: summary,
       }
     }
@@ -348,55 +352,57 @@ export class SchoolService {
     const lastMonth = (currentMonth == 1) ? 12 : (currentMonth - 1);
     const lastYear = (currentMonth == 1) ? (currentYear - 1) : currentYear;
     const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix()*1000; // in milliseconds
-    const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix()*1000; // in milliseconds
+    const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix() * 1000; // in milliseconds
     const lastMonthTables = this.appService.getAssessmentVisitResultsTables(lastYear, lastMonth);
     const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
       lastMonthTables,
       mentor,
       udise,
       lastMonthStartTimestamp,
-      lastMonthEndTimestamp
+      lastMonthEndTimestamp,
     );
 
+    // @ts-ignore
+    const lang = I18nContext.current().lang;
     return [
       {
-        period: "Weekly",
+        period: this.i18n.t(`common.Weekly`, { lang: lang }),
         insights: [
           {
-            label: "Assessed students",
-            count: weekly?.assessments_total ?? 0
+            label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
+            count: weekly?.assessments_total ?? 0,
           },
           {
-            label: "Nipun students",
-            count: weekly?.nipun_total ?? 0
-          }
-        ]
+            label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
+            count: weekly?.nipun_total ?? 0,
+          },
+        ],
       },
       {
-        period: currentMonthName,
+        period: this.i18n.t(`months.${currentMonthName}Month`, { lang: lang }),
         insights: [
           {
-            label: "Assessed students",
-            count: currentMonthStats?.assessments_total ?? 0
+            label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
+            count: currentMonthStats?.assessments_total ?? 0,
           },
           {
-            label: "Nipun students",
-            count: currentMonthStats?.nipun_total ?? 0
-          }
-        ]
+            label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
+            count: currentMonthStats?.nipun_total ?? 0,
+          },
+        ],
       },
       {
-        period: lastMonthName,
+        period: this.i18n.t(`months.${lastMonthName}Month`, { lang: lang }),
         insights: [
           {
-            label: "Assessed students",
-            count: lastMonthStats?.assessments_total ?? 0
+            label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
+            count: lastMonthStats?.assessments_total ?? 0,
           },
           {
-            label: "Nipun students",
-            count: lastMonthStats?.nipun_total ?? 0
-          }
-        ]
+            label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
+            count: lastMonthStats?.nipun_total ?? 0,
+          },
+        ],
       }
     ];
   }

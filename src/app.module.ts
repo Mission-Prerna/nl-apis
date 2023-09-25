@@ -21,6 +21,8 @@ import { SchoolService } from './school/school.service';
 import { EtagModule } from './modules/etag/etag.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminService } from './admin/admin.service';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -77,6 +79,10 @@ import { AdminService } from './admin/admin.service';
     }),
     TerminusModule,
     EtagModule,
+    ThrottlerModule.forRoot([{
+      ttl: process.env?.RATE_LIMIT_TTL ? parseInt(process.env.RATE_LIMIT_TTL) : 60000, // in milliseconds
+      limit: process.env?.RATE_LIMIT ? parseInt(process.env.RATE_LIMIT) : 50,
+    }]),
   ],
   controllers: [AppController, SchoolController, AdminController],
   providers: [
@@ -90,6 +96,10 @@ import { AdminService } from './admin/admin.service';
     RedisHelperService,
     SchoolService,
     AdminService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

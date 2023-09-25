@@ -25,6 +25,7 @@ import { DeleteStudent } from './dto/DeleteStudent';
 import { AdminService } from './admin.service';
 import { CreateStudent } from './dto/CreateStudent';
 import { MaxItemsPipe } from '../pipes/max-items.pipe';
+import { Throttle } from '@nestjs/throttler';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -43,6 +44,7 @@ export class AdminController {
   @Post(['/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 500, ttl: 60000 } })
   async createMentor(
     @Body() body: CreateMentorDto,
   ) {
@@ -52,6 +54,7 @@ export class AdminController {
   @Post(['/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 500, ttl: 60000 } })
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
   ) {
@@ -61,6 +64,7 @@ export class AdminController {
   @Post('/school/geo-fencing')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async schoolGeofencingBlacklist(
     @Body() body: SchoolGeofencingBlacklistDto,
   ) {
@@ -79,6 +83,7 @@ export class AdminController {
   @Post('/queues/pause')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async pauseQueues() {
     await Promise.all([
       this.assessmentVisitResultQueue.pause(false),
@@ -90,6 +95,7 @@ export class AdminController {
   @Post('/queues/resume')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async resumeQueues() {
     await Promise.all([
       this.assessmentVisitResultQueue.resume(false),
@@ -101,6 +107,7 @@ export class AdminController {
   @Get('/queues/count')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async countQueues() {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
@@ -111,6 +118,7 @@ export class AdminController {
   @Get('/queues/failed-count')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async countFailedQueues() {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
@@ -121,6 +129,7 @@ export class AdminController {
   @Post('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
   ) {
@@ -134,6 +143,7 @@ export class AdminController {
   @Patch('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
   async updateStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
   ) {
@@ -147,6 +157,7 @@ export class AdminController {
   @Delete('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
   async deleteStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
   ) {

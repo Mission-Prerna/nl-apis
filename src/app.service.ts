@@ -15,17 +15,18 @@ import {
   AssessmentTypeEnum,
   AssessmentVisitResultsStudentModule,
   CacheConstants,
+  CacheKeyMentorDailyMetrics,
   CacheKeyMentorDetail,
-  CacheKeyMentorSchoolList,
-  CacheKeyMetadata,
   CacheKeyMentorMonthlyMetrics,
+  CacheKeyMentorSchoolList,
+  CacheKeyMentorWeeklyMetrics,
+  CacheKeyMetadata,
   Mentor,
   TypeTeacherHomeOverview,
-  TypeAssessmentQuarterTables,
-  CacheKeyMentorWeeklyMetrics,
-  CacheKeyMentorDailyMetrics,
+  MentorDailyMetrics,
   MentorMonthlyMetrics,
-  MentorWeeklyMetrics, MentorDailyMetrics,
+  MentorWeeklyMetrics,
+  TypeAssessmentQuarterTables,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -44,7 +45,6 @@ import { GetAssessmentVisitResultsDto } from './dto/GetAssessmentVisitResults.dt
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
-import { JwtService } from '@nestjs/jwt';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 const moment = require('moment');
 
@@ -59,7 +59,6 @@ export class AppService {
     protected readonly faService: FusionauthService,
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
-    protected readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -301,6 +300,8 @@ export class AppService {
             skipDuplicates: true,
           });
         }
+
+        await this.dumpAssessmentsInHypertable(createAssessmentVisitResultData);  // dump into hypertable
         return assessmentVisitResult;
       }, {
         timeout: 15000,
@@ -1221,7 +1222,50 @@ export class AppService {
         grade_1_assessments: parseInt(result.grade_2_assessments.toString()),
         grade_2_assessments: parseInt(result.grade_2_assessments.toString()),
         grade_3_assessments: parseInt(result.grade_3_assessments.toString()),
-      }
+      },
+    });
+  }
+
+  async dumpAssessmentsInHypertable(assessment: CreateAssessmentVisitResult) {
+    console.log('here');
+    let assessments = [];
+    for (const result of assessment.results) {
+      assessments.push({
+        subject_id: assessment.subject_id,
+        mentor_id: assessment.mentor_id,
+        actor_id: assessment.actor_id,
+        block_id: assessment.block_id,
+        assessment_type_id: assessment.assessment_type_id,
+        udise: assessment.udise,
+        submission_timestamp: assessment.submission_timestamp,
+        submitted_at: (new Date(assessment.submission_timestamp)),
+        app_version_code: assessment.app_version_code,
+        student_name: result.student_name,
+        competency_id: result.competency_id,
+        module: result.module,
+        end_time: result.end_time,
+        is_passed: result.is_passed,
+        start_time: result.start_time,
+        statement: result.statement,
+        achievement: result.achievement,
+        total_questions: result.total_questions,
+        success_criteria: result.success_criteria,
+        session_completed: result.session_completed,
+        is_network_active: result.is_network_active,
+        workflow_ref_id: result.workflow_ref_id,
+        student_session: result.student_session,
+        total_time_taken: result.total_time_taken,
+        grade: assessment.grade,
+        old_assessment_id: 0,
+        old_student_id: 0,
+        results_json: result.odk_results,
+      });
+    }
+
+    return this.prismaService.assessments.createMany({
+      // @ts-ignore
+      data: assessments,
+      skipDuplicates: true,
     });
   }
 

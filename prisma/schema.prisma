@@ -233,6 +233,8 @@ model assessment_visit_results_student_odk_results {
   answer                               String                            @db.VarChar
   assessment_visit_results_students_id BigInt
   assessment_visit_results_students    assessment_visit_results_students @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_stud_assessment_visit_results_stu_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_key_idx")
 }
 
 model assessment_visit_results_students {
@@ -1130,6 +1132,8 @@ model assessment_visit_results_student_odk_results_2023_apr_jun {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_apr_jun_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_apr_jun_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2023_jul_sep {
@@ -1138,6 +1142,8 @@ model assessment_visit_results_student_odk_results_2023_jul_sep {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_jul_sep_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_jul_sep_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2023_oct_dec {
@@ -1146,6 +1152,8 @@ model assessment_visit_results_student_odk_results_2023_oct_dec {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_oct_dec_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_oct_dec_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2024_apr_jun {

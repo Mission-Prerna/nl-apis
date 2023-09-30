@@ -35,6 +35,7 @@ model actors {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  assessments                              assessments[]
   mentor                                   mentor[]
 }
 
@@ -150,23 +151,25 @@ model assessment_visit_result_date_map {
 }
 
 model assessment_visit_result_flatten {
-  achievement     Int?
-  block           String?   @db.VarChar
-  competency      String?   @db.VarChar
-  district        String?   @db.VarChar
-  grade           Int?
-  subject         String?   @db.VarChar
-  total_questions Int?
-  udise           String?   @db.VarChar
-  view_type       String?   @db.VarChar
-  id              Int       @id @default(autoincrement())
-  assessment_id   Int
-  is_nipun        Int?      @default(0)
-  mentor_id       Int?
-  assessment_type String?   @db.VarChar
-  created_at      DateTime? @db.Date
-  actor           String?   @db.VarChar
-  student_session String?   @db.VarChar
+  achievement      Int?
+  block            String?   @db.VarChar
+  competency       String?   @db.VarChar
+  district         String?   @db.VarChar
+  grade            Int?
+  subject          String?   @db.VarChar
+  total_questions  Int?
+  udise            String?   @db.VarChar
+  view_type        String?   @db.VarChar
+  id               Int       @id @default(autoincrement())
+  assessment_id    Int
+  is_nipun         Int?      @default(0)
+  mentor_id        Int?
+  assessment_type  String?   @db.VarChar
+  created_at       DateTime? @db.Date
+  actor            String?   @db.VarChar
+  student_session  String?   @db.VarChar
+  session_complete Boolean?
+  session_duration BigInt    @default(0)
 
   @@index([grade], map: "assessment_visit_result_flatten_ grade_idx")
   @@index([achievement])
@@ -230,6 +233,8 @@ model assessment_visit_results_student_odk_results {
   answer                               String                            @db.VarChar
   assessment_visit_results_students_id BigInt
   assessment_visit_results_students    assessment_visit_results_students @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_stud_assessment_visit_results_stu_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_key_idx")
 }
 
 model assessment_visit_results_students {
@@ -387,6 +392,7 @@ model blocks {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  assessments                              assessments[]
   districts                                districts                                  @relation(fields: [district_id], references: [id])
   mentor                                   mentor[]
   nyay_panchayats                          nyay_panchayats[]
@@ -707,6 +713,7 @@ model mentor {
   assessment_visit_results_v2_2025_jan_mar       assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep       assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec       assessment_visit_results_v2_2025_oct_dec[]
+  assessments                                    assessments[]
   cache_mentor_metrics_daily                     cache_mentor_metrics_daily[]
   cache_mentor_metrics_monthly                   cache_mentor_metrics_monthly[]
   cache_mentor_metrics_weekly                    cache_mentor_metrics_weekly[]
@@ -832,6 +839,7 @@ model school_list {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  assessments                              assessments[]
   blocks                                   blocks                                     @relation(fields: [block_id], references: [id])
   districts                                districts                                  @relation(fields: [district_id], references: [id])
   nyay_panchayats                          nyay_panchayats?                           @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
@@ -1041,6 +1049,7 @@ model subjects {
   assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
   assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
+  assessments                              assessments[]
   competency_mapping                       competency_mapping[]
   workflow_refids_mapping                  workflow_refids_mapping[]
 }
@@ -1123,6 +1132,8 @@ model assessment_visit_results_student_odk_results_2023_apr_jun {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_apr_jun_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_apr_jun_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2023_jul_sep {
@@ -1131,6 +1142,8 @@ model assessment_visit_results_student_odk_results_2023_jul_sep {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_jul_sep_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_jul_sep_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2023_oct_dec {
@@ -1139,6 +1152,8 @@ model assessment_visit_results_student_odk_results_2023_oct_dec {
   answer                                         String                                         @db.VarChar
   assessment_visit_results_students_id           BigInt
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec @relation(fields: [assessment_visit_results_students_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_student_odk_results_2023_oct_dec_fkey")
+
+  @@index([assessment_visit_results_students_id], map: "assessment_visit_results_student_odk_results_2023_oct_dec_key_i")
 }
 
 model assessment_visit_results_student_odk_results_2024_apr_jun {
@@ -2024,4 +2039,52 @@ model new_schools__2023_07_25 {
 
   @@map("new schools _2023_07_25")
   @@ignore
+}
+
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+model assessments {
+  id                   Int          @default(autoincrement())
+  created_at           DateTime     @default(now()) @db.Timestamptz(6)
+  subject_id           Int
+  mentor_id            BigInt?
+  actor_id             Int
+  block_id             Int?
+  assessment_type_id   Int?
+  udise                BigInt?
+  submission_timestamp BigInt       @default(0)
+  submitted_at         DateTime     @db.Timestamptz(6)
+  app_version_code     Int          @default(0)
+  student_name         String       @db.VarChar
+  competency_id        Int
+  module               String       @db.VarChar
+  end_time             BigInt
+  is_passed            Boolean
+  start_time           BigInt
+  statement            String?
+  achievement          Int
+  total_questions      Int
+  success_criteria     Int
+  session_completed    Boolean
+  is_network_active    Boolean
+  workflow_ref_id      String       @db.VarChar
+  student_session      String?      @db.Uuid
+  total_time_taken     Int?
+  grade                Int          @db.SmallInt
+  old_assessment_id    BigInt
+  old_student_id       BigInt
+  results_json         Json?
+  actors               actors       @relation(fields: [actor_id], references: [id])
+  blocks               blocks?      @relation(fields: [block_id], references: [id], onDelete: Restrict)
+  mentor               mentor?      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  subjects             subjects     @relation(fields: [subject_id], references: [id])
+  school_list          school_list? @relation(fields: [udise], references: [udise], onDelete: Restrict)
+
+  @@unique([id, submitted_at])
+  @@unique([udise, mentor_id, grade, subject_id, submitted_at, competency_id, student_session, submission_timestamp], map: "assessments_udise_mentor_id_grade_subject_id_submitted_at_compe")
+  @@index([actor_id, submitted_at], map: "assessments_actor_id_comp_idx")
+  @@index([block_id, submitted_at], map: "assessments_block_id_comp_idx")
+  @@index([mentor_id, submitted_at], map: "assessments_mentor_id_comp_idx")
+  @@index([old_assessment_id])
+  @@index([submitted_at(sort: Desc)])
+  @@index([udise, submitted_at], map: "assessments_udise_comp_idx")
 }

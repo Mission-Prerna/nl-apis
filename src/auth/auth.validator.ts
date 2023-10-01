@@ -1,7 +1,4 @@
-import {
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
+import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { ValidationArguments } from 'class-validator/types/validation/ValidationArguments';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
@@ -15,13 +12,13 @@ export class IsExist implements ValidatorConstraintInterface {
     const model = validationArguments.constraints[0];
     const pathToProperty = validationArguments.constraints[1];
     // @ts-ignore
-    if (typeof validationArguments.object[pathToProperty] !== 'undefined') {
+    if (typeof validationArguments.object[validationArguments.property] === 'undefined' || validationArguments.object[validationArguments.property] === null) {
       // if the field is null or empty, no need to run db query
       return false;
     }
 
     // @ts-ignore
-    const entity = await prisma[model].findFirst({
+    const entity = await prisma[model].count({
       where: {
         [pathToProperty ? pathToProperty : validationArguments.property]:
           pathToProperty ? value : value,

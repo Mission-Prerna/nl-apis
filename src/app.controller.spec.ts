@@ -16,6 +16,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { FusionauthService } from './fusionauth.service';
 import { RedisHelperService } from './RedisHelper.service';
+import { AdminService } from './admin/admin.service';
 
 class MockRedisService {
   getClient(): Promise<any> {
@@ -58,8 +59,9 @@ describe('AppController', () => {
         RedisService,
         {
           provide: RedisService,
-          useClass: MockRedisService
+          useClass: MockRedisService,
         },
+        AdminService,
       ],
     }).compile();
 

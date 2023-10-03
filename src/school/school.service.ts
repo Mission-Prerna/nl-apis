@@ -166,11 +166,12 @@ export class SchoolService {
     const query = `
       select t.grade,
         count(t.student_id)                                        as assessed,
-        count(case when t.is_passed is true then t.student_id end) as nipun
+        count(case when t.is_passed is true then t.student_id end) as nipun,
+        max(t.submission_timestamp) as updated_at
       from (
         select distinct on (avrs.student_id) student_id,
           avrs.grade,
-          avrs.created_at,
+          avrs.submission_timestamp,
           avrs.is_passed
         from %table_student% avrs 
         join %table_v2% avr2 on (
@@ -180,7 +181,7 @@ export class SchoolService {
           and avrs.submission_timestamp > %start_time%
           and avrs.submission_timestamp < %end_time%
           and avrs.grade in (%grades%)
-         order by avrs.student_id, avrs.created_at DESC
+         order by avrs.student_id, avrs.submission_timestamp DESC
            ) t
       group by grade;
     `;
@@ -191,10 +192,13 @@ export class SchoolService {
     monthsForQuery.forEach(item => {
       const monthName = moment().month(item.month).year(item.year).date(1).format('MMMM');
       summaries[monthName] = {
+        year: item.year,
+        month: item.month + 1,  // as item.month is index of the month
         period: this.i18n.t(`months.${monthName}`, { lang: lang }),
         total: 0,
         assessed: 0,
         successful: 0,
+        updated_at: 0,
       };
     });
     for (let grade of grades) {
@@ -229,6 +233,7 @@ export class SchoolService {
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].updated_at = row.updated_at;
       }
     }
 

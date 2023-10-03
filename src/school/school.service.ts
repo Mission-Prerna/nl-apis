@@ -253,12 +253,14 @@ export class SchoolService {
     try {
       const query = `
         select count(distinct student_id)                                     as assessments_total,
-               count(distinct case when is_passed = true then student_id end) as nipun_total
+          count(distinct case when is_passed = true then student_id end) as nipun_total,
+          max(submission_timestamp) as updated_at,
+          string_agg(distinct student_id, ',') as assessed_student_ids,
+          string_agg(distinct case when is_passed = true then student_id end, ',') as nipun_student_ids
         from (
-          select distinct on (student_id) student_id,
-                                         assessment_visit_results_v2_id
-                                             submission_timestamp,
-                                         is_passed
+          select distinct on (student_id) avrs.student_id,
+                                         avrs.submission_timestamp,
+                                         avrs.is_passed
           from ${tables.assessment_visit_results_students} avrs
                   join ${tables.assessment_visit_results_v2} as avr2
                        on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
@@ -273,7 +275,10 @@ export class SchoolService {
       const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
       return {
         assessments_total: result[0].assessments_total,
-        nipun_total: result[0].nipun_total
+        nipun_total: result[0].nipun_total,
+        updated_at: result[0].updated_at,
+        assessed_student_ids: result[0].assessed_student_ids,
+        nipun_student_ids: result[0].nipun_student_ids,
       };
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -304,8 +309,9 @@ export class SchoolService {
         mentor,
         udise,
         firstDayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
+      console.log(responseFirstTable);
     } else {
       // if the data needs to queried from two tables, we'll query for both separately
       let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
@@ -335,6 +341,9 @@ export class SchoolService {
       weekly = {
         assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
         nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
+        updated_at: (responseFirstTable?.updated_at || 0) + (responseSecondTable?.updated_at || 0),
+        assessed_student_ids: (responseFirstTable?.assessed_student_ids || '').split(',').concat((responseSecondTable?.assessed_student_ids || '').split(',')).join(','),
+        nipun_student_ids: (responseFirstTable?.nipun_student_ids || '').split(',').concat((responseSecondTable?.nipun_student_ids || '').split(',')).join(','),
       }
     }
 
@@ -368,44 +377,68 @@ export class SchoolService {
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     return [
       {
+        type: 'week',
+        year: currentYear,
+        month: currentMonth,
         period: this.i18n.t(`common.Weekly`, { lang: lang }),
         insights: [
           {
             label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
             count: weekly?.assessments_total ?? 0,
+            identifier: 'assessed',
+            student_ids: weekly?.assessed_student_ids?.split(',') ?? [],
           },
           {
             label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
             count: weekly?.nipun_total ?? 0,
+            identifier: 'pass',
+            student_ids: weekly?.nipun_student_ids?.split(',') ?? [],
           },
         ],
+        updated_at: weekly?.updated_at ?? 0,
       },
       {
+        type: 'month',
+        year: currentYear,
+        month: currentMonth,
         period: this.i18n.t(`months.${currentMonthName}Month`, { lang: lang }),
         insights: [
           {
             label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
             count: currentMonthStats?.assessments_total ?? 0,
+            identifier: 'assessed',
+            student_ids: currentMonthStats?.assessed_student_ids?.split(',') ?? [],
           },
           {
             label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
             count: currentMonthStats?.nipun_total ?? 0,
+            identifier: 'pass',
+            student_ids: currentMonthStats?.nipun_student_ids?.split(',') ?? [],
           },
         ],
+        updated_at: currentMonthStats?.updated_at ?? 0,
       },
       {
+        type: 'month',
+        year: lastYear,
+        month: lastMonth,
         period: this.i18n.t(`months.${lastMonthName}Month`, { lang: lang }),
         insights: [
           {
             label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
             count: lastMonthStats?.assessments_total ?? 0,
+            identifier: 'assessed',
+            student_ids: lastMonthStats?.assessed_student_ids?.split(',') ?? [],
           },
           {
             label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
             count: lastMonthStats?.nipun_total ?? 0,
+            identifier: 'pass',
+            student_ids: lastMonthStats?.nipun_student_ids?.split(',') ?? [],
           },
         ],
-      }
+        updated_at: lastMonthStats?.updated_at ?? 0,
+      },
     ];
   }
 }

@@ -92,7 +92,10 @@ export type TypeTeacherHomeOverview = {
   assessments_total: number,
   nipun_total: number,
   assessments_today?: number,
-  nipun_today?: number
+  nipun_today?: number,
+  updated_at?: number,
+  assessed_student_ids?: string,
+  nipun_student_ids?: string,
 }
 
 export type MentorMonthlyMetrics = {

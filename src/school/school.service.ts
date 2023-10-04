@@ -33,6 +33,9 @@ export class SchoolService {
         grade: {
           in: [1, 2, 3],
         },
+        unique_id: {
+          notIn: ['-1', '-2', '-3'], // we don't want anonymous students
+        },
         deleted_at: null,  // query only active students
       },
       select: {
@@ -65,20 +68,22 @@ export class SchoolService {
         (case when ss.failed = 0 then true else false end) as is_passed
       FROM (
         SELECT
-          student_id AS id,
-          submission_timestamp AS last_assessment_date,
-          COUNT(CASE WHEN is_passed = false THEN 1 END) AS failed,
-          RANK() OVER (PARTITION BY student_id ORDER BY submission_timestamp DESC) AS rank
-        FROM ${tables.assessment_visit_results_students}
+          avrs.student_id AS id,
+          avrs.submission_timestamp AS last_assessment_date,
+          COUNT(CASE WHEN avrs.is_passed = false THEN 1 END) AS failed,
+          RANK() OVER (PARTITION BY avrs.student_id ORDER BY avrs.submission_timestamp DESC) AS rank
+        FROM ${tables.assessment_visit_results_students} avrs
+        JOIN ${tables.assessment_visit_results_v2} avr2 ON (avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise})
         WHERE
-          mentor_id = ${mentor.id}
-          AND student_id IS NOT NULL
-          AND submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
-          and grade in (${grades.join(',')})
-        GROUP BY student_id, submission_timestamp
+          avrs.student_id IS NOT NULL
+          AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+          AND avrs.submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
+          and avrs.grade in (${grades.join(',')})
+        GROUP BY avrs.student_id, avrs.submission_timestamp
       ) ss
       WHERE rank = 1;
     `;
+    console.log(query);
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
@@ -178,6 +183,7 @@ export class SchoolService {
           avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise}
         )
         where avrs.student_id is not null
+          and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
           and avrs.submission_timestamp > %start_time%
           and avrs.submission_timestamp < %end_time%
           and avrs.grade in (%grades%)
@@ -267,6 +273,7 @@ export class SchoolService {
                            avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS} and avr2.udise = ${udise})
           where avrs.mentor_id = ${mentor.id}
            and avrs.student_id is not null
+           and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
            and avrs.submission_timestamp > ${firstDayTimestamp}
            and avrs.submission_timestamp < ${lastDayTimestamp}
           order by student_id, submission_timestamp DESC

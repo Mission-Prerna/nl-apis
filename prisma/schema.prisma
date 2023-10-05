@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model School_Name {
-  udise_district_code Int
-  district_name       String @db.VarChar
-  udise_block_code    Int
-  block_name          String @db.VarChar
-  school_name         String @db.VarChar(255)
-  udise_sch_code      String @db.VarChar
-
-  @@ignore
-}
-
 model actors {
   id                                       Int                                        @id @default(autoincrement())
   name                                     String                                     @unique @db.Char
@@ -121,26 +109,6 @@ model assessment_types {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model assessment_visit_result_bc {
-  id               Int?
-  created_at       DateTime? @db.Timestamptz(6)
-  grade            Int?
-  subject          String?
-  module_result    String?
-  is_visited       Boolean?
-  mentor_id        Int?
-  no_of_student    Int?
-  udise_code       String?
-  total_time_taken String?
-  actor            String?
-  block            String?
-  is_processed     Boolean?  @default(false)
-  id_not_available Boolean?
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model assessment_visit_result_date_map {
   visit_id     Int?
   timestamp    DateTime? @db.Timestamp(6)
@@ -148,40 +116,6 @@ model assessment_visit_result_date_map {
   school_udise BigInt?
 
   @@ignore
-}
-
-model assessment_visit_result_flatten {
-  achievement     Int?
-  block           String?   @db.VarChar
-  competency      String?   @db.VarChar
-  district        String?   @db.VarChar
-  grade           Int?
-  subject         String?   @db.VarChar
-  total_questions Int?
-  udise           String?   @db.VarChar
-  view_type       String?   @db.VarChar
-  id              Int       @id @default(autoincrement())
-  assessment_id   Int
-  is_nipun        Int?      @default(0)
-  mentor_id       Int?
-  assessment_type String?   @db.VarChar
-  created_at      DateTime? @db.Date
-  actor           String?   @db.VarChar
-  student_session String?   @db.VarChar
-
-  @@index([grade], map: "assessment_visit_result_flatten_ grade_idx")
-  @@index([achievement])
-  @@index([actor])
-  @@index([assessment_id], map: "assessment_visit_result_flatten_ass_id_idx")
-  @@index([assessment_type])
-  @@index([block])
-  @@index([competency])
-  @@index([created_at])
-  @@index([district])
-  @@index([is_nipun])
-  @@index([mentor_id])
-  @@index([udise])
-  @@index([view_type], map: "assessment_visit_result_flatten_view_tye_idx")
 }
 
 model assessment_visit_results {
@@ -215,14 +149,6 @@ model assessment_visit_results {
   @@index([student_session], map: "idx_assessment_visit_results_student_session")
   @@index([udise], map: "idx_assessment_visit_results_udise")
   @@index([udise_code], map: "idx_assessment_visit_results_udise_code")
-}
-
-model assessment_visit_results_module_results {
-  id         Int  @id @default(autoincrement())
-  module_res Json
-  length     Int?
-
-  @@index([length], map: "assessment_visit_results_module_results_length_index")
 }
 
 model assessment_visit_results_student_odk_results {
@@ -584,24 +510,6 @@ model django_session {
   @@index([session_key], map: "django_session_session_key_c0390e0f_like")
 }
 
-model employees {
-  id                     Int       @default(autoincrement())
-  employee_name          String
-  erhms_code             String
-  designation            String
-  posting_school         String
-  reporting_block_office String
-  district               String
-  default_role           String?   @default("Employee")
-  is_registered          Boolean?
-  date_of_registration   DateTime? @db.Date
-  created_at             DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
-  device_id              String?
-
-  @@id([id, erhms_code])
-}
-
 model form_config {
   id                Int @id @default(autoincrement())
   grade             Int
@@ -614,68 +522,6 @@ model form_config {
 model health_check_db_testmodel {
   id    Int    @id @default(autoincrement())
   title String @db.VarChar(128)
-}
-
-model homelearning_event {
-  deviceId                    String
-  id                          Int       @id @default(autoincrement())
-  created_at                  DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime  @default(now()) @db.Timestamptz(6)
-  subject                     String
-  actualGrade                 Int
-  currentGrade                Int
-  grade1_trial1_correct_words Int       @default(-1)
-  grade1_trial2_correct_words Int       @default(-1)
-  grade1_trial3_correct_words Int       @default(-1)
-  grade1_trial4_correct_words Int       @default(-1)
-  grade1_trial5_correct_words Int       @default(-1)
-  grade2_trial1_correct_words Int       @default(-1)
-  grade2_trial2_correct_words Int       @default(-1)
-  grade2_trial3_correct_words Int       @default(-1)
-  grade2_trial4_correct_words Int       @default(-1)
-  grade3_trial1_correct_words Int       @default(-1)
-  grade3_trial2_correct_words Int       @default(-1)
-  grade3_trial3_correct_words Int       @default(-1)
-  grade3_trial4_correct_words Int       @default(-1)
-  grade2_trial1_score         Int       @default(-1)
-  grade2_trial2_score         Int       @default(-1)
-  grade2_trial3_score         Int       @default(-1)
-  grade2_trial4_score         Int       @default(-1)
-  grade3_trial1_score         Int       @default(-1)
-  grade3_trial2_score         Int       @default(-1)
-  grade3_trial3_score         Int       @default(-1)
-  grade3_trial4_score         Int       @default(-1)
-  grade4_trial1_score         Int       @default(-1)
-  grade4_trial2_score         Int       @default(-1)
-  grade4_trial3_score         Int       @default(-1)
-  grade4_trial4_score         Int       @default(-1)
-  grade5_trial1_score         Int       @default(-1)
-  grade5_trial2_score         Int       @default(-1)
-  grade5_trial3_score         Int       @default(-1)
-  grade5_trial4_score         Int       @default(-1)
-  grade1_trial1_time          Int       @default(-1)
-  grade1_trial2_time          Int       @default(-1)
-  grade1_trial3_time          Int       @default(-1)
-  grade1_trial4_time          Int       @default(-1)
-  grade1_trial5_time          Int       @default(-1)
-  grade2_trial1_time          Int       @default(-1)
-  grade2_trial2_time          Int       @default(-1)
-  grade2_trial3_time          Int       @default(-1)
-  grade2_trial4_time          Int       @default(-1)
-  grade3_trial1_time          Int       @default(-1)
-  grade3_trial2_time          Int       @default(-1)
-  grade3_trial3_time          Int       @default(-1)
-  grade3_trial4_time          Int       @default(-1)
-  isAssessmentComplete        Boolean   @default(false)
-  default_role                String?   @default("Employee")
-  erhms_code                  String?   @default("-")
-  isUserTeacher               Boolean?  @default(false)
-  push_time                   DateTime? @db.Timestamp(6)
-  district                    String?   @default("-")
-  block                       String?   @default("-")
-  score                       Int?      @default(-1)
-  start_time                  DateTime? @default(now()) @db.Timestamptz(6)
-  appVersion                  String?   @default("1.0")
 }
 
 model mentor {
@@ -759,35 +605,6 @@ model mentor_tokens {
   mentor     mentor   @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
 }
 
-model mentors {
-  id                Int            @id @unique @default(autoincrement())
-  officer_name      String?        @db.VarChar
-  phone_no          String         @db.VarChar
-  district_name     String?        @db.VarChar
-  block_town_name   String?        @db.VarChar
-  area_type         String?        @db.VarChar
-  designation       String?        @db.VarChar
-  subject_of_matter String?        @db.VarChar
-  target_visits     String?        @db.VarChar
-  pin               Bytes?
-  school_visit      school_visit[]
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model new_table {
-  achievement     Json?
-  grade           Json?
-  subject         Json?
-  total_questions Json?
-  competency      Json?
-  udise           Json?
-  district        Json?
-  block           Json?
-  view_type       Json?
-
-  @@ignore
-}
-
 model nyay_panchayats {
   id          Int           @id @default(autoincrement())
   name        String        @db.Char
@@ -799,18 +616,6 @@ model nyay_panchayats {
   school_list school_list[]
 
   @@unique([name, district_id, block_id])
-}
-
-model school {
-  id           Int    @id @default(autoincrement())
-  districtCode String
-  districtName String
-  blockCode    String
-  blockName    String
-  schoolName   String
-  udise        String @unique
-  location     String
-  type         String
 }
 
 model school_list {
@@ -849,7 +654,6 @@ model school_list {
   blocks                                   blocks                                     @relation(fields: [block_id], references: [id])
   districts                                districts                                  @relation(fields: [district_id], references: [id])
   nyay_panchayats                          nyay_panchayats?                           @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
-  school_visit                             school_visit[]
   teacher_school_list_mapping              teacher_school_list_mapping[]
 
   @@index([block, district], map: "sch_list_block_dist_index")
@@ -860,134 +664,6 @@ model school_list {
   @@index([district], map: "schl_list_district_index")
   @@index([nyay_panchayat_id], map: "schl_list_ny_panchayat_id_index")
   @@index([type], map: "schl_list_type_index")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model school_updated_udise {
-  id           Int
-  districtCode String @db.VarChar
-  districtName String @db.VarChar
-  blockCode    String @db.VarChar
-  blockName    String @db.VarChar
-  schoolName   String @db.VarChar
-  udise        String @db.VarChar
-  location     String @db.VarChar
-  type         String @db.VarChar
-  schooludise  String @db.VarChar
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model school_updated_udise1 {
-  id           Int
-  districtCode Int
-  districtName String @db.VarChar
-  blockCode    Int
-  blockName    String @db.VarChar
-  schoolName   String @db.VarChar
-  udise        BigInt
-  location     String @db.VarChar
-  type         String @db.VarChar
-  schooludise  BigInt
-
-  @@ignore
-}
-
-model school_visit {
-  school_visit_status Boolean     @default(false)
-  time_stamp          DateTime    @default(now()) @db.Timestamptz(6)
-  id                  Int         @id @default(autoincrement())
-  school_udise        String
-  mentor_id           Int?
-  mentors             mentors?    @relation(fields: [mentor_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  school_list         school_list @relation(fields: [school_udise], references: [udise_code], onUpdate: Restrict)
-}
-
-model script_config {
-  performance_last_process_id            Int
-  id                                     Int     @id(map: "scipt_config_pk")
-  perf_create_id                         Int?
-  visit_wise_student_result_visit_id     Int?
-  month_wise_performance_last_process_id BigInt?
-}
-
-model script_performance_month_wise_report {
-  id               Int     @id(map: "script_performance_month_wise_report_pk") @default(autoincrement())
-  district         String  @db.VarChar
-  block            String  @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  month            Int?
-  student_accessed Int?
-  nipun_students   Int?
-  year             Int?
-
-  @@index([competency], map: "sprmw_competency_idx")
-  @@index([grade], map: "sprmw_grade_idx")
-  @@index([school_udise], map: "sprmw_school_udise_idx")
-  @@index([subject], map: "sprmw_subject_idx")
-}
-
-model script_performance_report {
-  id               Int     @id(map: "script_performance_report_pk") @default(autoincrement())
-  district         String  @db.VarChar
-  block            String  @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-
-  @@index([competency], map: "scp_competency_idx")
-  @@index([grade], map: "scp_grade_idx")
-  @@index([school_udise], map: "scp_school_udise_idx")
-  @@index([subject], map: "scp_subject_idx")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model script_performance_report1 {
-  id               Int?
-  district         String? @db.VarChar
-  block            String? @db.VarChar
-  school_udise     String? @db.VarChar
-  grade            Int?
-  subject          String? @db.VarChar
-  competency       String? @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-  visit_res_id     Int?
-
-  @@ignore
-}
-
-model script_performance_report_mentor_wise {
-  id               Int       @id(map: "script_performance_report_mentor_wise_pk") @default(autoincrement())
-  district         String    @db.VarChar
-  block            String    @db.VarChar
-  school_udise     String?   @db.VarChar
-  grade            Int?
-  subject          String?   @db.VarChar
-  competency       String?   @db.VarChar
-  student_accessed Int?
-  nipun_students   Int?
-  mentor_id        Int?
-  assessment_type  String?   @db.VarChar
-  actor            String?   @db.VarChar
-  created_at       DateTime? @db.Date
-
-  @@unique([district, block, school_udise, grade, subject, competency, mentor_id, assessment_type, actor, created_at], map: "scpmw_school_udise_grade_subject_competency_mentor_id_assessmen")
-  @@index([actor], map: "scpmw_actor_index")
-  @@index([assessment_type], map: "scpmw_assessment_type_index")
-  @@index([competency], map: "scpmw_competency_idx")
-  @@index([created_at], map: "scpmw_created_at_index")
-  @@index([grade], map: "scpmw_grade_idx")
-  @@index([mentor_id], map: "scpmw_mentor_id_index")
-  @@index([school_udise], map: "scpmw_school_udise_idx")
-  @@index([subject], map: "scpmw_subject_idx")
 }
 
 model segment_bots {
@@ -1009,32 +685,6 @@ model segments {
   updated_at          DateTime              @default(now()) @db.Timestamptz(6)
   mentor_segmentation mentor_segmentation[]
   segment_bots        segment_bots[]
-}
-
-model start_learning_event {
-  deviceId      String
-  id            Int       @id @default(autoincrement())
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  subject       String
-  actualGrade   Int
-  default_role  String?   @default("Employee")
-  isUserTeacher Boolean?  @default(false)
-  erhms_code    String?   @default("-")
-  start_time    DateTime? @db.Timestamp(6)
-}
-
-model student_install {
-  default_role String   @default("Employee")
-  district     String
-  block        String
-  count        Int      @default(1)
-  id           Int      @id @default(autoincrement())
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime @default(now()) @db.Timestamptz(6)
-  device_id    String?
-  persona      String?  @default("-")
-  version      String?  @default("-")
 }
 
 model subjects {
@@ -1070,37 +720,6 @@ model teacher_school_list_mapping {
   @@unique([mentor_id, school_list_id])
 }
 
-model temp_visit_wise_student_result {
-  id                    BigInt    @id(map: "temp_visit_wise_student_result_pk") @default(autoincrement())
-  visit_id              Int?
-  competency            String?   @db.VarChar
-  current_student_count Int?
-  start_time            DateTime? @db.Timestamp(6)
-  end_time              DateTime? @db.Timestamp(6)
-  achievement           Int?
-  total_questions       Int?
-  success_criteria      Int?
-  view_type             String?   @db.VarChar
-}
-
-model visit_wise_student_result {
-  id                    BigInt    @id(map: "visit_wise_student_result_pk") @default(autoincrement())
-  visit_id              Int?
-  competency            String?   @db.VarChar
-  current_student_count Int?
-  start_time            DateTime? @db.Timestamp(6)
-  end_time              DateTime? @db.Timestamp(6)
-  achievement           Int?
-  total_questions       Int?
-  success_criteria      Int?
-  view_type             String?   @db.VarChar
-
-  @@index([competency], map: "visit_wise_st_res_competency_index")
-  @@index([end_time], map: "visit_wise_st_res_end_time_index")
-  @@index([start_time], map: "visit_wise_st_res_start_time_index")
-  @@index([visit_id], map: "visit_wise_st_res_visit_id_index")
-}
-
 model workflow_refids_mapping {
   grade              Int
   subject            String
@@ -1118,18 +737,6 @@ model workflow_refids_mapping {
   @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
   @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")
   @@index([subject_id])
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model wrm {
-  grade         Int?
-  subject       String?
-  competency_id Int?
-  type          String?
-  is_active     Boolean?
-  ref_ids       Json?
-
-  @@ignore
 }
 
 model assessment_visit_results_student_odk_results_2023_apr_jun {
@@ -2042,52 +1649,6 @@ model mentor_bot_telemetry {
   @@index([action])
   @@index([bot_id])
   @@index([mentor_id])
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model new_schools_25_07_2023 {
-  id                       Int?
-  district                 String?
-  area_type                String?
-  block                    String?
-  nypanchayat              String?
-  type                     String?
-  category                 String?
-  name                     String?
-  udise_code               Decimal? @db.Decimal
-  total_student_registered String?
-  is_sankul                String?
-  district_id              Int?
-  block_id                 Int?
-  udise                    Decimal? @db.Decimal
-  nyay_panchayat_id        String?
-  lat                      String?
-  long                     String?
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model query_result_2023_07_20 {
-  id                       Int?
-  district                 String?
-  area_type                String?
-  block                    String?
-  nypanchayat              String?
-  type                     String?
-  category                 String?
-  name                     String?
-  udise_code               Decimal? @db.Decimal
-  total_student_registered Int?
-  is_sankul                String?
-  district_id              Int?
-  block_id                 Int?
-  udise                    Decimal? @db.Decimal
-  nyay_panchayat_id        Int?
-  lat                      Decimal? @db.Decimal
-  long                     Decimal? @db.Decimal
-
-  @@ignore
 }
 
 model cache_mentor_metrics_daily {

@@ -73,7 +73,7 @@ export class SchoolService {
           COUNT(CASE WHEN avrs.is_passed = false THEN 1 END) AS failed,
           RANK() OVER (PARTITION BY avrs.student_id ORDER BY avrs.submission_timestamp DESC) AS rank
         FROM ${tables.assessment_visit_results_students} avrs
-        JOIN ${tables.assessment_visit_results_v2} avr2 ON (avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise})
+        JOIN ${tables.assessment_visit_results_v2} avr2 ON (avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER})
         WHERE
           avrs.student_id IS NOT NULL
           AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
@@ -83,7 +83,7 @@ export class SchoolService {
       ) ss
       WHERE rank = 1;
     `;
-    console.log(query);
+    // console.log(query);
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
@@ -180,7 +180,7 @@ export class SchoolService {
           avrs.is_passed
         from %table_student% avrs 
         join %table_v2% avr2 on (
-          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise}
+          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER}
         )
         where avrs.student_id is not null
           and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
@@ -279,6 +279,7 @@ export class SchoolService {
           order by student_id, submission_timestamp DESC
           ) t
       `;
+      // console.log(query);
       const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
       return {
         assessments_total: result[0].assessments_total,
@@ -318,7 +319,7 @@ export class SchoolService {
         firstDayTimestamp,
         lastDayTimestamp,
       );
-      console.log(responseFirstTable);
+      // console.log(responseFirstTable);
     } else {
       // if the data needs to queried from two tables, we'll query for both separately
       let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);

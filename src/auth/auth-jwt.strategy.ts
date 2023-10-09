@@ -14,6 +14,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    return { roles: payload.roles, apiRoles: payload.apiRoles };
+    return {
+      roles: payload.roles,
+      apiRoles: payload.apiRoles,
+      applicationId: payload.applicationId,
+      id: payload['https://hasura.io/jwt/claims']['X-Hasura-User-Id'] ?? null,
+    };
   }
 }

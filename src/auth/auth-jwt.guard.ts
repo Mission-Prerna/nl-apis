@@ -1,11 +1,19 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { AuthGuard, IAuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/minimal';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
-  constructor(private reflector: Reflector) {
+  protected logger = new Logger(JwtAuthGuard.name);
+  protected applicationId: string;
+  constructor(
+    protected reflector: Reflector,
+    protected readonly configService: ConfigService,
+  ) {
     super();
+    this.applicationId = this.configService.get<string>('FA_APPLICATION_ID', '');
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -23,6 +31,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
           isAllowed = true;
           break;
         }
+      }
+
+      // We'll check if the token is from the very same application as needed in the app
+      if (request['user']['applicationId'] !== this.applicationId) {
+        // as this token doesn't belongs to the regular user Application
+        isAllowed = false;
+        this.logger.error('Authorization failed for token <> Application ID');
+        Sentry.captureMessage('Duplicate submission detected', {
+          user: {
+            id: request['user']['id'],
+          },
+          extra: {
+            applicationId: request['user']['applicationId'],
+          }
+        });
       }
     } catch (error) {
       isAllowed = false;

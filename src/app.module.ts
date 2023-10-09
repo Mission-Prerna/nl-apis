@@ -16,6 +16,15 @@ import { RedisHealthIndicator } from '@liaoliaots/nestjs-redis-health';
 import { FusionauthService } from './fusionauth.service';
 import { redisStore } from 'cache-manager-redis-store';
 import { RedisHelperService } from './RedisHelper.service';
+import { SchoolController } from './school/school.controller';
+import { SchoolService } from './school/school.service';
+import { EtagModule } from './modules/etag/etag.module';
+import { AcceptLanguageResolver, HeaderResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
+import * as path from 'path';
+import { AdminController } from './admin/admin.controller';
+import { AdminService } from './admin/admin.service';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -71,8 +80,28 @@ import { RedisHelperService } from './RedisHelper.service';
       inject: [ConfigService],
     }),
     TerminusModule,
+    EtagModule,
+    I18nModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        fallbackLanguage: configService.get<string>('FALLBACK_LANGUAGE', 'en'),
+        loaderOptions: {
+          path: path.join(__dirname, '/i18n/'),
+          watch: true,
+        },
+      }),
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+        new HeaderResolver(['x-lang']),
+      ],
+      inject: [ConfigService],
+    }),
+    ThrottlerModule.forRoot([{
+      ttl: process.env?.RATE_LIMIT_TTL ? parseInt(process.env.RATE_LIMIT_TTL) : 60000, // in milliseconds
+      limit: process.env?.RATE_LIMIT ? parseInt(process.env.RATE_LIMIT) : 50,
+    }]),
   ],
-  controllers: [AppController],
+  controllers: [AppController, SchoolController, AdminController],
   providers: [
     AppService,
     PrismaService,
@@ -82,6 +111,12 @@ import { RedisHelperService } from './RedisHelper.service';
     RedisHealthIndicator,
     FusionauthService,
     RedisHelperService,
+    SchoolService,
+    AdminService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

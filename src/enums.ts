@@ -18,6 +18,23 @@ export type Mentor = {
   }
 };
 
+export type Student = {
+  id: bigint | string;
+  grade?: number;
+  name?: string;
+  is_passed?: boolean;
+
+  // for GET /api/school/:udise/students/result?grade=1,2,3&month=8&year=2023
+  status?: string;  // pass/fail/pending
+  last_assessment_date?: number | null;  // unix timestamp in milliseconds
+};
+
+export enum StudentMonthlyAssessmentStatus {
+  PENDING = 'pending',
+  PASS = 'pass',
+  FAIL = 'fail',
+}
+
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
   AssessmentSurveyResult = 'AssessmentSurveyResult',
@@ -56,6 +73,7 @@ export enum CacheConstants {
   TTL_MENTOR_FROM_TOKEN = 90000, // in seconds
   TTL_MENTOR_SCHOOL_LIST = 600, // in seconds
   TTL_METADATA = 86400, // in seconds
+  TTL_SCHOOL_STUDENTS = 86400, // in seconds
 }
 
 export enum Role {
@@ -70,11 +88,14 @@ export type TypeAssessmentQuarterTables = {
   assessment_visit_results_student_odk_results: string;
 }
 
-export type TypeActorHomeOverview = {
+export type TypeTeacherHomeOverview = {
   assessments_total: number,
   nipun_total: number,
-  assessments_today: number,
-  nipun_today: number
+  assessments_today?: number,
+  nipun_today?: number,
+  updated_at?: number,
+  assessed_student_ids?: string,
+  nipun_student_ids?: string,
 }
 
 export type MentorMonthlyMetrics = {
@@ -128,4 +149,8 @@ export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day:
   const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   const dayIdentifier = day < 10 ? `0${day.toString()}` : `${day.toString()}`;
   return `hm.daily:${year.toString()}${monthIdentifier}${dayIdentifier}:mentor:${mentorId.toString()}`;
+}
+
+export function CacheKeySchoolStudents(udise: number) {
+  return `school:${udise.toString()}:students:etag`;
 }

@@ -1299,6 +1299,7 @@ model assessment_visit_results_v2_2023_jul_sep {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
+  @@index([mentor_id, submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_mentor_id_submission_t")
 }
 
 model assessment_visit_results_v2_2023_oct_dec {
@@ -1725,6 +1726,7 @@ model students {
   assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
   assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
+  assessments                                    assessments[]
   student_update_logs                            student_update_logs[]
 
   @@index([udise, grade])
@@ -1763,14 +1765,17 @@ model assessments {
   old_assessment_id    BigInt
   old_student_id       BigInt
   results_json         Json?
+  student_id           String?      @db.VarChar(15)
   actors               actors       @relation(fields: [actor_id], references: [id])
   blocks               blocks?      @relation(fields: [block_id], references: [id], onDelete: Restrict)
   mentor               mentor?      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
+  students             students?    @relation(fields: [student_id], references: [unique_id], onDelete: Cascade)
   subjects             subjects     @relation(fields: [subject_id], references: [id])
   school_list          school_list? @relation(fields: [udise], references: [udise], onDelete: Restrict)
 
   @@unique([id, submitted_at])
   @@unique([udise, mentor_id, grade, subject_id, submitted_at, competency_id, student_session, submission_timestamp], map: "assessments_udise_mentor_id_grade_subject_id_submitted_at_compe")
+  @@unique([submission_timestamp, student_id, competency_id, submitted_at, subject_id, grade, mentor_id, udise], map: "assessments_submission_timestamp_student_id_competency_id_submi")
   @@index([actor_id, submitted_at], map: "assessments_actor_id_comp_idx")
   @@index([block_id, submitted_at], map: "assessments_block_id_comp_idx")
   @@index([mentor_id, submitted_at], map: "assessments_mentor_id_comp_idx")
@@ -1788,6 +1793,29 @@ model student_update_logs {
   students   students @relation(fields: [student_id], references: [unique_id], onDelete: Cascade)
 
   @@index([student_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model new_schools__2023_07_25 {
+  id                       Int?
+  district                 String?
+  area_type                String?
+  block                    String?
+  nypanchayat              String?
+  type                     String?
+  category                 String?
+  name                     String?
+  udise_code               Decimal? @db.Decimal
+  total_student_registered Decimal? @db.Decimal
+  is_sankul                Boolean?
+  district_id              Int?
+  block_id                 Int?
+  udise                    Decimal? @db.Decimal
+  lat                      Decimal? @db.Decimal
+  long                     Decimal? @db.Decimal
+
+  @@map("new schools _2023_07_25")
+  @@ignore
 }
 
 enum genders_enum {

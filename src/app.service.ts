@@ -22,11 +22,11 @@ import {
   CacheKeyMentorWeeklyMetrics,
   CacheKeyMetadata,
   Mentor,
-  TypeTeacherHomeOverview,
   MentorDailyMetrics,
   MentorMonthlyMetrics,
   MentorWeeklyMetrics,
   TypeAssessmentQuarterTables,
+  TypeTeacherHomeOverview,
 } from './enums';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
@@ -934,12 +934,13 @@ export class AppService {
         session_completed: result.session_completed,
         is_network_active: result.is_network_active,
         workflow_ref_id: result.workflow_ref_id,
-        student_session: result.student_session,
+        student_session: result.student_session ?? null,
         total_time_taken: result.total_time_taken,
         grade: assessment.grade,
         old_assessment_id: 0,
         old_student_id: 0,
         results_json: result.odk_results,
+        student_id: result.student_id ?? null,
       });
     }
 

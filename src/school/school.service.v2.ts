@@ -5,83 +5,53 @@ import {
   Mentor,
   Student,
   StudentMonthlyAssessmentStatus,
-  TypeAssessmentQuarterTables,
   TypeTeacherHomeOverview,
 } from '../enums';
 import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { StudentService } from './student.service';
+import { SchoolService } from './school.service';
 
 const moment = require('moment');
 
 @Injectable()
-export class SchoolService {
-  protected readonly logger = new Logger(SchoolService.name);
+export class SchoolServiceV2 extends SchoolService {
+  protected readonly logger = new Logger(SchoolServiceV2.name);
 
   constructor(
     protected readonly prismaService: PrismaService,
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
-  ) {}
-
-  async getSchoolStudents(udise: number): Promise<Array<Student>> {
-    const response = await this.prismaService.students.findMany({
-      where: {
-        udise: BigInt(parseInt(udise.toString())),
-        grade: {
-          in: [1, 2, 3],
-        },
-        unique_id: {
-          notIn: ['-1', '-2', '-3'], // we don't want anonymous students
-        },
-        deleted_at: null,  // query only active students
-      },
-      select: {
-        unique_id: true,
-        name: true,
-        grade: true,
-        roll_no: true,
-      }
-    });
-    return response.map((item) => {
-      return {
-        id: item.unique_id,
-        name: item.name,
-        grade: item.grade,
-        roll_no: item.roll_no,
-      }
-    });
+    protected readonly studentService: StudentService,
+  ) {
+    super(prismaService, appService, i18n);
   }
 
   async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
     // @TODO: to be redone using Continuous Aggregates
-    const tables = this.appService.getAssessmentVisitResultsTables(year, month);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
-    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
+    const firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
+    const lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
 
     const query = `
-      SELECT
-        ss.id,
+      SELECT ss.id,
         ss.last_assessment_date,
         (case when ss.failed = 0 then true else false end) as is_passed
       FROM (
-        SELECT
-          avrs.student_id AS id,
-          avrs.submission_timestamp AS last_assessment_date,
-          COUNT(CASE WHEN avrs.is_passed = false THEN 1 END) AS failed,
-          RANK() OVER (PARTITION BY avrs.student_id ORDER BY avrs.submission_timestamp DESC) AS rank
-        FROM ${tables.assessment_visit_results_students} avrs
-        JOIN ${tables.assessment_visit_results_v2} avr2 ON (avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER})
-        WHERE
-          avrs.student_id IS NOT NULL
-          AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          AND avrs.submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
-          and avrs.grade in (${grades.join(',')})
-        GROUP BY avrs.student_id, avrs.submission_timestamp
+        SELECT a.student_id                                                         AS id,
+              a.submitted_at                                                       AS last_assessment_date,
+              COUNT(CASE WHEN a.is_passed = false THEN 1 END)                      AS failed,
+              RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
+        FROM assessments a
+        WHERE a.student_id IS NOT NULL
+         AND a.udise = ${udise}
+         AND a.actor_id = ${ActorEnum.TEACHER}
+         AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+         AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
+         and a.grade in (${grades.join(',')})
+        GROUP BY a.student_id, a.submitted_at
       ) ss
-      WHERE rank = 1;
-    `;
-    // console.log(query);
+      WHERE rank = 1`;
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
@@ -90,8 +60,8 @@ export class SchoolService {
     });
 
     // Grade summary
-    const gradeStudents: Record<string, {students: Array<Student>, nipun: number, not_nipun: number}> = {};
-    (await this.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
+    const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
+    (await this.studentService.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
       grade = grade ?? 0; // just a ts check
       const assessedStudent = studentWiseResults[id.toString()] ?? null;
       if (!gradeStudents.hasOwnProperty(grade)) {
@@ -99,14 +69,14 @@ export class SchoolService {
           students: [],
           nipun: 0,
           not_nipun: 0,
-        }
+        };
       }
       if (assessedStudent) {
         assessedStudent.is_passed ? gradeStudents[grade].nipun++ : gradeStudents[grade].not_nipun++;
         gradeStudents[grade].students.push({
           id: id,
           status: assessedStudent.is_passed ? StudentMonthlyAssessmentStatus.PASS : StudentMonthlyAssessmentStatus.FAIL,
-          last_assessment_date: assessedStudent.last_assessment_date,
+          last_assessment_date: moment(assessedStudent.last_assessment_date).unix() * 1000,
         });
       } else {
         gradeStudents[grade].students.push({
@@ -116,6 +86,7 @@ export class SchoolService {
         });
       }
     });
+
     let response: Array<Record<string, any>> = [];
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     for (const grade of grades) {
@@ -145,6 +116,7 @@ export class SchoolService {
         students: gradeStudents[grade.toString()]?.students,
       });
     }
+
     return response;
   }
 
@@ -154,7 +126,7 @@ export class SchoolService {
     const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live
     let startDate = moment(globalStartDate).subtract(xMonths, 'months').startOf('month');
     const now = moment();
-    const monthsForQuery: Array<{year: number, month: number}> = [];
+    const monthsForQuery: Array<{ year: number, month: number }> = [];
     while (startDate < now) {
       if (startDate >= globalStartDate) {
         // this is the month we shall consider
@@ -170,25 +142,23 @@ export class SchoolService {
       select t.grade,
         count(t.student_id)                                        as assessed,
         count(case when t.is_passed is true then t.student_id end) as nipun,
-        max(t.submission_timestamp) as updated_at
+        max(t.submission_timestamp)                                as updated_at
       from (
-        select distinct on (avrs.student_id) student_id,
-          avrs.grade,
-          avrs.submission_timestamp,
-          avrs.is_passed
-        from %table_student% avrs 
-        join %table_v2% avr2 on (
-          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER}
-        )
-        where avrs.student_id is not null
-          and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and avrs.submission_timestamp > %start_time%
-          and avrs.submission_timestamp < %end_time%
-          and avrs.grade in (%grades%)
-         order by avrs.student_id, avrs.submission_timestamp DESC
-           ) t
-      group by grade;
-    `;
+        select distinct on (a.student_id) student_id,
+                                         a.grade,
+                                         a.submitted_at,
+                                         a.submission_timestamp,
+                                         a.is_passed
+        from assessments a
+        where a.student_id is not null
+          and a.udise = ${udise}
+          and a.actor_id = ${ActorEnum.TEACHER}
+          and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+          and a.submitted_at between '%start_time%' and '%end_time%'
+          and a.grade in (%grades%)
+        order by a.student_id, a.submitted_at DESC
+      ) t
+      group by grade`;
 
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
@@ -205,34 +175,33 @@ export class SchoolService {
         updated_at: 0,
       };
     });
+
+    const gradesTotal = await this.studentService.getGradeStudentsCount(udise);
     for (let grade of grades) {
       let summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
-      const gradeTotal = await this.prismaService.students.count({
-        where: {
-          udise: udise,
-          grade: parseInt(grade.toString())
-        }
+      const gradeTotal = gradesTotal.filter((item) => {
+        return item.grade == grade;
       });
 
       // set total for each summary object
       Object.entries(summary).forEach(key => {
-        summary[key[0]].total = gradeTotal;
-      })
+        summary[key[0]].total = gradeTotal[0]?.count ?? 0;
+      });
       gradeWiseSummary[grade.toString()] = {
         grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
         summary: summary,
-      }
+      };
     }
     for (const item of monthsForQuery) {
-      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month+1);
+      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
         query
           .replace('%table_student%', tables.assessment_visit_results_students)
           .replace('%table_v2%', tables.assessment_visit_results_v2)
           .replace('%mentor_id%', mentor.id.toString())
-          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%end_time%', (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%grades%', grades.join(','))
+          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%end_time%', (moment().month(item.month + 1).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%grades%', grades.join(',')),
       );
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
@@ -248,41 +217,37 @@ export class SchoolService {
     return response;
   }
 
-  async getTeacherStudentsSummaryResultForPeriod(
-    tables: TypeAssessmentQuarterTables,
+  async getTeacherStudentsSummaryResultForPeriodV2(
     mentor: Mentor,
     udise: number,
     firstDayTimestamp: number,
     lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
     try {
       const query = `
-        select count(distinct student_id)                                     as assessments_total,
-          count(distinct case when is_passed = true then student_id end) as nipun_total,
-          max(submission_timestamp) as updated_at,
-          string_agg(distinct student_id, ',') as assessed_student_ids,
+        select count(distinct student_id)                                               as assessments_total,
+          count(distinct case when is_passed = true then student_id end)           as nipun_total,
+          max(submitted_at)                                                        as updated_at,
+          string_agg(distinct student_id, ',')                                     as assessed_student_ids,
           string_agg(distinct case when is_passed = true then student_id end, ',') as nipun_student_ids
         from (
-          select distinct on (student_id) avrs.student_id,
-                                         avrs.submission_timestamp,
-                                         avrs.is_passed
-          from ${tables.assessment_visit_results_students} avrs
-                  join ${tables.assessment_visit_results_v2} as avr2
-                       on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
-                           avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS} and avr2.udise = ${udise})
-          where avrs.mentor_id = ${mentor.id}
-           and avrs.student_id is not null
-           and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-           and avrs.submission_timestamp > ${firstDayTimestamp}
-           and avrs.submission_timestamp < ${lastDayTimestamp}
-          order by student_id, submission_timestamp DESC
-          ) t
-      `;
-      // console.log(query);
+          select distinct on (student_id) a.student_id,
+                                         a.submitted_at,
+                                         a.is_passed
+          from assessments a
+          where a.mentor_id = ${mentor.id}
+            and a.actor_id = ${ActorEnum.TEACHER}
+            and a.udise = ${udise}
+            and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+            and a.student_id is not null
+            and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+            and a.submitted_at between '${moment.unix(firstDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}' and '${moment.unix(lastDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}'
+          order by student_id, submitted_at DESC
+        ) t`;
       const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
       return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,
-        updated_at: result[0].updated_at,
+        updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,
         assessed_student_ids: result[0].assessed_student_ids,
         nipun_student_ids: result[0].nipun_student_ids,
       };
@@ -300,81 +265,42 @@ export class SchoolService {
     const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
     const firstDate = new Date(temp.setDate(diff));
 
-    const tablesForFirstDate = this.appService.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
-    const tablesForLastDate = this.appService.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
+    const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
+    const lastDayTimestamp = lastDate.getTime();
 
-    let responseFirstTable: TypeTeacherHomeOverview | null;
-    let responseSecondTable = null;
-    if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
-      // both tables are same
-      const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
-      const lastDayTimestamp = lastDate.getTime();
+    let responseFirstTable: TypeTeacherHomeOverview | null = await this.getTeacherStudentsSummaryResultForPeriodV2(
+      mentor,
+      udise,
+      firstDayTimestamp,
+      lastDayTimestamp,
+    );
 
-      responseFirstTable = await this.getTeacherStudentsSummaryResultForPeriod(
-        tablesForFirstDate,
-        mentor,
-        udise,
-        firstDayTimestamp,
-        lastDayTimestamp,
-      );
-      // console.log(responseFirstTable);
-    } else {
-      // if the data needs to queried from two tables, we'll query for both separately
-      let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
-      let lastDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth() + 1, 1, 0, 0, 0); // next month's first date
-      responseFirstTable = await this.getTeacherStudentsSummaryResultForPeriod(
-        tablesForFirstDate,
-        mentor,
-        udise,
-        firstDayTimestamp,
-        lastDayTimestamp
-      );
-
-      firstDayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), 1, 0, 0, 0);  // first day of current month
-      lastDayTimestamp = lastDate.getTime();
-
-      responseSecondTable = await this.getTeacherStudentsSummaryResultForPeriod(
-        tablesForLastDate,
-        mentor,
-        udise,
-        firstDayTimestamp,
-        lastDayTimestamp
-      );
-    }
-    let weekly = responseFirstTable;
-    if (responseSecondTable) {
-      // we need to merge both table's response
-      weekly = {
-        assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
-        nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
-        updated_at: (responseFirstTable?.updated_at || 0) + (responseSecondTable?.updated_at || 0),
-        assessed_student_ids: (responseFirstTable?.assessed_student_ids || '').split(',').concat((responseSecondTable?.assessed_student_ids || '').split(',')).join(','),
-        nipun_student_ids: (responseFirstTable?.nipun_student_ids || '').split(',').concat((responseSecondTable?.nipun_student_ids || '').split(',')).join(','),
-      }
-    }
+    const weekly = {
+      assessments_total: (responseFirstTable?.assessments_total || 0),
+      nipun_total: (responseFirstTable?.nipun_total || 0),
+      updated_at: (responseFirstTable?.updated_at || 0),
+      assessed_student_ids: (responseFirstTable?.assessed_student_ids || ''),
+      nipun_student_ids: (responseFirstTable?.nipun_student_ids || ''),
+    };
 
     const currentMonthName = moment().utc().format('MMMM');
     const currentMonth = moment().utc().month() + 1;
     const currentYear = moment().utc().year();
-    const currentMonthStartTimestamp = moment().utc().startOf('month').unix()*1000; // in milliseconds
-    const currentMonthEndTimestamp = moment().utc().unix()*1000;  // in milliseconds
-    const currentMonthTables = this.appService.getAssessmentVisitResultsTables(currentYear, currentMonth);
-    const currentMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
-      currentMonthTables,
+    const currentMonthStartTimestamp = moment().utc().startOf('month').unix() * 1000; // in milliseconds
+    const currentMonthEndTimestamp = moment().utc().unix() * 1000;  // in milliseconds
+    const currentMonthStats = await this.getTeacherStudentsSummaryResultForPeriodV2(
       mentor,
       udise,
       currentMonthStartTimestamp,
-      currentMonthEndTimestamp
+      currentMonthEndTimestamp,
     );
 
     const lastMonthName = moment().utc().subtract(1, 'month').format('MMMM');
     const lastMonth = (currentMonth == 1) ? 12 : (currentMonth - 1);
     const lastYear = (currentMonth == 1) ? (currentYear - 1) : currentYear;
-    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix()*1000; // in milliseconds
+    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix() * 1000; // in milliseconds
     const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix() * 1000; // in milliseconds
-    const lastMonthTables = this.appService.getAssessmentVisitResultsTables(lastYear, lastMonth);
-    const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
-      lastMonthTables,
+    const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriodV2(
       mentor,
       udise,
       lastMonthStartTimestamp,

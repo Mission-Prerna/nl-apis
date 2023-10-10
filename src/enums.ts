@@ -74,6 +74,7 @@ export enum CacheConstants {
   TTL_MENTOR_SCHOOL_LIST = 600, // in seconds
   TTL_METADATA = 86400, // in seconds
   TTL_SCHOOL_STUDENTS = 86400, // in seconds
+  TTL_SCHOOL_STUDENTS_COUNT = 86400, // in seconds
 }
 
 export enum Role {
@@ -153,4 +154,8 @@ export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day:
 
 export function CacheKeySchoolStudents(udise: number) {
   return `school:${udise.toString()}:students:etag`;
+}
+
+export function CacheKeySchoolStudentsCount(udise: number) {
+  return `school:${udise.toString()}:students:count`;
 }

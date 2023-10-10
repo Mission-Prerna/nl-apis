@@ -25,6 +25,8 @@ import { AdminController } from './admin/admin.controller';
 import { AdminService } from './admin/admin.service';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { StudentService } from './school/student.service';
+import { SchoolServiceV2 } from './school/school.service.v2';
 
 @Module({
   imports: [
@@ -112,6 +114,8 @@ import { APP_GUARD } from '@nestjs/core';
     FusionauthService,
     RedisHelperService,
     SchoolService,
+    SchoolServiceV2,
+    StudentService,
     AdminService,
     {
       provide: APP_GUARD,

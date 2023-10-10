@@ -36,7 +36,6 @@ import {
   getAssessmentVisitResultStudentOdkResultsQuery,
 } from './queries.template';
 import { DbTableNotFoundException } from './exceptions/db-table-not-found.exception';
-import { FusionauthService } from './fusionauth.service';
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
@@ -52,7 +51,6 @@ export class AppService {
   constructor(
     protected readonly prismaService: PrismaService,
     protected readonly configService: ConfigService,
-    protected readonly faService: FusionauthService,
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {

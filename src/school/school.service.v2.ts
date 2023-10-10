@@ -11,49 +11,26 @@ import {
 import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { StudentService } from './student.service';
+import { SchoolService } from './school.service';
 
 const moment = require('moment');
 
 @Injectable()
-export class SchoolService {
-  protected readonly logger = new Logger(SchoolService.name);
+export class SchoolServiceV2 extends SchoolService {
+  protected readonly logger = new Logger(SchoolServiceV2.name);
 
   constructor(
     protected readonly prismaService: PrismaService,
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
-  ) {}
-
-  async getSchoolStudents(udise: number): Promise<Array<Student>> {
-    const response = await this.prismaService.students.findMany({
-      where: {
-        udise: BigInt(parseInt(udise.toString())),
-        grade: {
-          in: [1, 2, 3],
-        },
-        unique_id: {
-          notIn: ['-1', '-2', '-3'], // we don't want anonymous students
-        },
-        deleted_at: null,  // query only active students
-      },
-      select: {
-        unique_id: true,
-        name: true,
-        grade: true,
-        roll_no: true,
-      }
-    });
-    return response.map((item) => {
-      return {
-        id: item.unique_id,
-        name: item.name,
-        grade: item.grade,
-        roll_no: item.roll_no,
-      }
-    });
+    protected readonly studentService: StudentService,
+  ) {
+    super(prismaService, appService, i18n);
   }
 
   async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
+    let startTime = new Date().getTime();
     // @TODO: to be redone using Continuous Aggregates
     const tables = this.appService.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
@@ -81,17 +58,19 @@ export class SchoolService {
       ) ss
       WHERE rank = 1;
     `;
-    // console.log(query);
+    console.log(query);
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
     });
+    console.log('1111: ', new Date().getTime() - startTime);
+    startTime = new Date().getTime();
 
     // Grade summary
-    const gradeStudents: Record<string, {students: Array<Student>, nipun: number, not_nipun: number}> = {};
-    (await this.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
+    const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
+    (await this.studentService.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
       grade = grade ?? 0; // just a ts check
       const assessedStudent = studentWiseResults[id.toString()] ?? null;
       if (!gradeStudents.hasOwnProperty(grade)) {
@@ -99,7 +78,7 @@ export class SchoolService {
           students: [],
           nipun: 0,
           not_nipun: 0,
-        }
+        };
       }
       if (assessedStudent) {
         assessedStudent.is_passed ? gradeStudents[grade].nipun++ : gradeStudents[grade].not_nipun++;
@@ -116,6 +95,8 @@ export class SchoolService {
         });
       }
     });
+    console.log('2222: ', new Date().getTime() - startTime);
+    startTime = new Date().getTime();
     let response: Array<Record<string, any>> = [];
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     for (const grade of grades) {
@@ -145,16 +126,19 @@ export class SchoolService {
         students: gradeStudents[grade.toString()]?.students,
       });
     }
+    console.log('3333: ', new Date().getTime() - startTime);
+    startTime = new Date().getTime();
     return response;
   }
 
   async getSchoolStudentsResultsSummary(mentor: Mentor, udise: number, grades: Array<Number>, xMonths: number = 12) {
+    let startTime = new Date().getTime();
     // @TODO: to be redone using Continuous Aggregates
     // find out all the months for which we wanted to fetch summary data for
     const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live
     let startDate = moment(globalStartDate).subtract(xMonths, 'months').startOf('month');
     const now = moment();
-    const monthsForQuery: Array<{year: number, month: number}> = [];
+    const monthsForQuery: Array<{ year: number, month: number }> = [];
     while (startDate < now) {
       if (startDate >= globalStartDate) {
         // this is the month we shall consider
@@ -170,25 +154,23 @@ export class SchoolService {
       select t.grade,
         count(t.student_id)                                        as assessed,
         count(case when t.is_passed is true then t.student_id end) as nipun,
-        max(t.submission_timestamp) as updated_at
+        max(t.submission_timestamp)                                as updated_at
       from (
-        select distinct on (avrs.student_id) student_id,
-          avrs.grade,
-          avrs.submission_timestamp,
-          avrs.is_passed
-        from %table_student% avrs 
-        join %table_v2% avr2 on (
-          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER}
-        )
-        where avrs.student_id is not null
-          and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and avrs.submission_timestamp > %start_time%
-          and avrs.submission_timestamp < %end_time%
-          and avrs.grade in (%grades%)
-         order by avrs.student_id, avrs.submission_timestamp DESC
-           ) t
-      group by grade;
-    `;
+        select distinct on (a.student_id) student_id,
+                                         a.grade,
+                                         a.submitted_at,
+                                         a.submission_timestamp,
+                                         a.is_passed
+        from assessments a
+        where a.student_id is not null
+          and a.udise = ${udise}
+          and a.actor_id = ${ActorEnum.TEACHER}
+          and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+          and a.submitted_at between '%start_time%' and '%end_time%'
+          and a.grade in (%grades%)
+        order by a.student_id, a.submitted_at DESC
+      ) t
+      group by grade`;
 
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
@@ -205,34 +187,33 @@ export class SchoolService {
         updated_at: 0,
       };
     });
+
+    const gradesTotal = await this.studentService.getGradeStudentsCount(udise);
     for (let grade of grades) {
       let summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
-      const gradeTotal = await this.prismaService.students.count({
-        where: {
-          udise: udise,
-          grade: parseInt(grade.toString())
-        }
+      const gradeTotal = gradesTotal.filter((item) => {
+        return item.grade == grade;
       });
 
       // set total for each summary object
       Object.entries(summary).forEach(key => {
-        summary[key[0]].total = gradeTotal;
-      })
+        summary[key[0]].total = gradeTotal[0]?.count ?? 0;
+      });
       gradeWiseSummary[grade.toString()] = {
         grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
         summary: summary,
-      }
+      };
     }
     for (const item of monthsForQuery) {
-      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month+1);
+      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
         query
           .replace('%table_student%', tables.assessment_visit_results_students)
           .replace('%table_v2%', tables.assessment_visit_results_v2)
           .replace('%mentor_id%', mentor.id.toString())
-          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%end_time%', (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%grades%', grades.join(','))
+          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%end_time%', (moment().month(item.month + 1).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%grades%', grades.join(',')),
       );
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
@@ -327,7 +308,7 @@ export class SchoolService {
         mentor,
         udise,
         firstDayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
 
       firstDayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), 1, 0, 0, 0);  // first day of current month
@@ -338,7 +319,7 @@ export class SchoolService {
         mentor,
         udise,
         firstDayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
     }
     let weekly = responseFirstTable;
@@ -350,27 +331,27 @@ export class SchoolService {
         updated_at: (responseFirstTable?.updated_at || 0) + (responseSecondTable?.updated_at || 0),
         assessed_student_ids: (responseFirstTable?.assessed_student_ids || '').split(',').concat((responseSecondTable?.assessed_student_ids || '').split(',')).join(','),
         nipun_student_ids: (responseFirstTable?.nipun_student_ids || '').split(',').concat((responseSecondTable?.nipun_student_ids || '').split(',')).join(','),
-      }
+      };
     }
 
     const currentMonthName = moment().utc().format('MMMM');
     const currentMonth = moment().utc().month() + 1;
     const currentYear = moment().utc().year();
-    const currentMonthStartTimestamp = moment().utc().startOf('month').unix()*1000; // in milliseconds
-    const currentMonthEndTimestamp = moment().utc().unix()*1000;  // in milliseconds
+    const currentMonthStartTimestamp = moment().utc().startOf('month').unix() * 1000; // in milliseconds
+    const currentMonthEndTimestamp = moment().utc().unix() * 1000;  // in milliseconds
     const currentMonthTables = this.appService.getAssessmentVisitResultsTables(currentYear, currentMonth);
     const currentMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(
       currentMonthTables,
       mentor,
       udise,
       currentMonthStartTimestamp,
-      currentMonthEndTimestamp
+      currentMonthEndTimestamp,
     );
 
     const lastMonthName = moment().utc().subtract(1, 'month').format('MMMM');
     const lastMonth = (currentMonth == 1) ? 12 : (currentMonth - 1);
     const lastYear = (currentMonth == 1) ? (currentYear - 1) : currentYear;
-    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix()*1000; // in milliseconds
+    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix() * 1000; // in milliseconds
     const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix() * 1000; // in milliseconds
     const lastMonthTables = this.appService.getAssessmentVisitResultsTables(lastYear, lastMonth);
     const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriod(

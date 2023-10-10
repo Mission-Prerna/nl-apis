@@ -1,22 +1,26 @@
 import {
   Controller,
   Get,
-  Headers, ParseArrayPipe,
-  Query,
-  SetMetadata,
-  UseGuards, UseInterceptors,
+  Headers,
   Param,
-  ParseIntPipe, Request, Res,
+  ParseArrayPipe,
+  ParseIntPipe,
+  Query,
+  Request,
+  Res,
+  SetMetadata,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
 import { CacheConstants, CacheKeySchoolStudents, Mentor, Role } from '../enums';
 import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { GetSchoolStudentsDto } from '../dto/GetSchoolStudents.dto';
-import { SchoolService } from './school.service';
 import { Response } from 'express';
 import { EtagService } from '../modules/etag/etag.service';
 import { MentorInterceptor } from '../interceptors/mentor.interceptor';
+import { SchoolServiceV2 } from './school.service.v2';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -24,7 +28,7 @@ export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 @UseInterceptors(SentryInterceptor)
 export class SchoolController {
   constructor(
-    private readonly service: SchoolService,
+    private readonly service: SchoolServiceV2,
     private readonly appService: AppService,
     private readonly etagService: EtagService,
   ) {

@@ -30,43 +30,35 @@ export class SchoolServiceV2 extends SchoolService {
   }
 
   async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
-    let startTime = new Date().getTime();
     // @TODO: to be redone using Continuous Aggregates
-    const tables = this.appService.getAssessmentVisitResultsTables(year, month);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
-    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
+    const firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
+    const lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
 
     const query = `
-      SELECT
-        ss.id,
+      SELECT ss.id,
         ss.last_assessment_date,
         (case when ss.failed = 0 then true else false end) as is_passed
       FROM (
-        SELECT
-          avrs.student_id AS id,
-          avrs.submission_timestamp AS last_assessment_date,
-          COUNT(CASE WHEN avrs.is_passed = false THEN 1 END) AS failed,
-          RANK() OVER (PARTITION BY avrs.student_id ORDER BY avrs.submission_timestamp DESC) AS rank
-        FROM ${tables.assessment_visit_results_students} avrs
-        JOIN ${tables.assessment_visit_results_v2} avr2 ON (avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER})
-        WHERE
-          avrs.student_id IS NOT NULL
-          AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          AND avrs.submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
-          and avrs.grade in (${grades.join(',')})
-        GROUP BY avrs.student_id, avrs.submission_timestamp
+        SELECT a.student_id                                                         AS id,
+              a.submitted_at                                                       AS last_assessment_date,
+              COUNT(CASE WHEN a.is_passed = false THEN 1 END)                      AS failed,
+              RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
+        FROM assessments a
+        WHERE a.student_id IS NOT NULL
+         AND a.udise = ${udise}
+         AND a.actor_id = ${ActorEnum.TEACHER}
+         AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+         AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
+         and a.grade in (${grades.join(',')})
+        GROUP BY a.student_id, a.submitted_at
       ) ss
-      WHERE rank = 1;
-    `;
-    console.log(query);
+      WHERE rank = 1`;
     const studentWiseResults: Record<string, Student> = {};
     const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
     });
-    console.log('1111: ', new Date().getTime() - startTime);
-    startTime = new Date().getTime();
 
     // Grade summary
     const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
@@ -95,8 +87,7 @@ export class SchoolServiceV2 extends SchoolService {
         });
       }
     });
-    console.log('2222: ', new Date().getTime() - startTime);
-    startTime = new Date().getTime();
+
     let response: Array<Record<string, any>> = [];
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     for (const grade of grades) {
@@ -126,13 +117,11 @@ export class SchoolServiceV2 extends SchoolService {
         students: gradeStudents[grade.toString()]?.students,
       });
     }
-    console.log('3333: ', new Date().getTime() - startTime);
-    startTime = new Date().getTime();
+
     return response;
   }
 
   async getSchoolStudentsResultsSummary(mentor: Mentor, udise: number, grades: Array<Number>, xMonths: number = 12) {
-    let startTime = new Date().getTime();
     // @TODO: to be redone using Continuous Aggregates
     // find out all the months for which we wanted to fetch summary data for
     const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live

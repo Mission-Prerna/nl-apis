@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
@@ -12,6 +12,7 @@ import { AppService } from '../app.service';
 import { CreateStudent } from './dto/CreateStudent';
 import { UpdateStudent } from './dto/UpdateStudent';
 import { DeleteStudent } from './dto/DeleteStudent';
+import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 
 @Injectable()
 export class AdminService {
@@ -390,6 +391,38 @@ export class AdminService {
         unique_id: {
           in: students.map(student => student.unique_id),
         },
+      },
+    });
+  }
+
+  async createAssessmentCycle(cycleData: CreateAssessmentCycle) {
+    const startDate = new Date(cycleData.start_date);
+    const endDate = new Date(cycleData.end_date);
+    if (endDate < startDate) {
+      throw new UnprocessableEntityException('Start Date must be less than End Date.');
+    } else if (await this.prismaService.assessment_cycles.count({
+      where: {
+        start_date: {
+          lte: endDate,
+        },
+        end_date: {
+          gte: startDate,
+        },
+      },
+    })) {
+      throw new UnprocessableEntityException('There already exists a date range falling between the current start/end dates.');
+    }
+    return this.prismaService.assessment_cycles.create({
+      data: {
+        name: cycleData.name,
+        start_date: new Date(cycleData.start_date),
+        end_date: new Date(cycleData.end_date),
+        class_1_students_count: cycleData.class_1_students_count,
+        class_1_nipun_percentage: cycleData.nipun_percentage,
+        class_2_students_count: cycleData.class_2_students_count,
+        class_2_nipun_percentage: cycleData.nipun_percentage,
+        class_3_students_count: cycleData.class_3_students_count,
+        class_3_nipun_percentage: cycleData.nipun_percentage,
       },
     });
   }

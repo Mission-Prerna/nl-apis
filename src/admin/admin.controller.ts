@@ -26,6 +26,7 @@ import { AdminService } from './admin.service';
 import { CreateStudent } from './dto/CreateStudent';
 import { MaxItemsPipe } from '../pipes/max-items.pipe';
 import { Throttle } from '@nestjs/throttler';
+import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -162,5 +163,13 @@ export class AdminController {
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
   ) {
     return this.service.deleteStudents(body);
+  }
+
+  @Post('assessment-cycle')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  createAssessmentCycle(@Body() cycleData: CreateAssessmentCycle) {
+    return this.service.createAssessmentCycle(cycleData);
   }
 }

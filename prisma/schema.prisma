@@ -347,14 +347,16 @@ model designations {
 }
 
 model districts {
-  id              Int               @id @default(autoincrement())
-  name            String            @unique @db.Char
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-  blocks          blocks[]
-  mentor          mentor[]
-  nyay_panchayats nyay_panchayats[]
-  school_list     school_list[]
+  id                                       Int                                        @id @default(autoincrement())
+  name                                     String                                     @unique @db.Char
+  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  assessment_cycle_district_mentor_mapping assessment_cycle_district_mentor_mapping[]
+  assessment_cycle_district_school_mapping assessment_cycle_district_school_mapping[]
+  blocks                                   blocks[]
+  mentor                                   mentor[]
+  nyay_panchayats                          nyay_panchayats[]
+  school_list                              school_list[]
 }
 
 model django_admin_log {
@@ -541,6 +543,8 @@ model mentor {
   actor_id                                       Int                                              @default(1)
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  assessment_cycle_district_mentor_mapping       assessment_cycle_district_mentor_mapping[]
+  assessment_cycle_school_nipun_results          assessment_cycle_school_nipun_results[]
   assessment_survey_result_v2                    assessment_survey_result_v2[]
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
@@ -637,6 +641,8 @@ model school_list {
   lat                                      Decimal?                                   @db.Decimal
   long                                     Decimal?                                   @db.Decimal
   geo_fence_enabled                        Boolean                                    @default(true)
+  assessment_cycle_district_school_mapping assessment_cycle_district_school_mapping[]
+  assessment_cycle_school_nipun_results    assessment_cycle_school_nipun_results[]
   assessment_survey_result_v2              assessment_survey_result_v2[]
   assessment_visit_results_v2              assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
@@ -1299,7 +1305,6 @@ model assessment_visit_results_v2_2023_jul_sep {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
-  @@index([mentor_id, submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_mentor_id_submission_t")
 }
 
 model assessment_visit_results_v2_2023_oct_dec {
@@ -1795,27 +1800,78 @@ model student_update_logs {
   @@index([student_id])
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model new_schools__2023_07_25 {
-  id                       Int?
-  district                 String?
-  area_type                String?
-  block                    String?
-  nypanchayat              String?
-  type                     String?
-  category                 String?
-  name                     String?
-  udise_code               Decimal? @db.Decimal
-  total_student_registered Decimal? @db.Decimal
-  is_sankul                Boolean?
-  district_id              Int?
-  block_id                 Int?
-  udise                    Decimal? @db.Decimal
-  lat                      Decimal? @db.Decimal
-  long                     Decimal? @db.Decimal
+model assessment_cycle_district_mentor_mapping {
+  id                BigInt            @id @default(autoincrement())
+  cycle_id          Int
+  district_id       Int
+  mentor_id         BigInt
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id])
+  districts         districts         @relation(fields: [district_id], references: [id])
+  mentor            mentor            @relation(fields: [mentor_id], references: [id])
 
-  @@map("new schools _2023_07_25")
-  @@ignore
+  @@unique([cycle_id, district_id, mentor_id], map: "assessment_cycle_district_men_cycle_id_district_id_mentor_i_key")
+  @@index([cycle_id], map: "assessment_cycle_district_mentor_mapping_cycle_idx")
+  @@index([district_id], map: "assessment_cycle_district_mentor_mapping_district_idx")
+  @@index([mentor_id], map: "assessment_cycle_district_mentor_mapping_mentor_idx")
+}
+
+model assessment_cycle_district_school_mapping {
+  id                BigInt            @id @default(autoincrement())
+  cycle_id          Int
+  district_id       Int
+  udise             BigInt
+  class_1_students  Json
+  class_2_students  Json
+  class_3_students  Json
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id])
+  districts         districts         @relation(fields: [district_id], references: [id])
+  school_list       school_list       @relation(fields: [udise], references: [udise])
+
+  @@unique([cycle_id, district_id, udise], map: "assessment_cycle_district_school_cycle_id_district_id_udise_key")
+  @@index([cycle_id])
+}
+
+model assessment_cycle_school_nipun_results {
+  id                BigInt            @id @default(autoincrement())
+  cycle_id          Int
+  udise             BigInt
+  mentor_id         BigInt
+  is_nipun          Boolean
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id])
+  mentor            mentor            @relation(fields: [mentor_id], references: [id])
+  school_list       school_list       @relation(fields: [udise], references: [udise])
+
+  @@unique([cycle_id, udise, mentor_id], map: "assessment_cycle_school_nipun_resu_cycle_id_udise_mentor_id_key")
+  @@index([cycle_id], map: "assessment_cycle_school_nipun_results_cycle_idx")
+  @@index([mentor_id], map: "assessment_cycle_school_nipun_results_mentor_idx")
+  @@index([udise])
+}
+
+model assessment_cycles {
+  id                                       Int                                        @id @default(autoincrement())
+  start_date                               DateTime                                   @db.Date
+  end_date                                 DateTime                                   @db.Date
+  class_1_students_count                   Int                                        @db.SmallInt
+  class_1_nipun_percentage                 Int                                        @db.SmallInt
+  class_2_students_count                   Int                                        @db.SmallInt
+  class_2_nipun_percentage                 Int                                        @db.SmallInt
+  class_3_students_count                   Int                                        @db.SmallInt
+  class_3_nipun_percentage                 Int                                        @db.SmallInt
+  name                                     String                                     @db.VarChar(255)
+  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
+  assessment_cycle_district_mentor_mapping assessment_cycle_district_mentor_mapping[]
+  assessment_cycle_district_school_mapping assessment_cycle_district_school_mapping[]
+  assessment_cycle_school_nipun_results    assessment_cycle_school_nipun_results[]
+
+  @@index([end_date], map: "assessment_cycles_end_date")
+  @@index([start_date], map: "assessment_cycles_start_date")
 }
 
 enum genders_enum {

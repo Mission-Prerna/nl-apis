@@ -288,9 +288,55 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getMentorBotsWithAction(
     @Query() query: GetMentorBotsWithActionDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
+  }
+
+  @Get('/api/examiner/performance/insights')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getExaminerPerformanceInsights(
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return [
+      {
+        'period': 'Cycle Name',
+        'insights': [
+          {
+            'type': 'school',
+            'label': 'Assessed schools',
+            'count': 3,
+          },
+          {
+            'type': 'student',
+            'label': 'Assessed students',
+            'count': 30,
+          },
+        ],
+      },
+      {
+        'period': 'Class Summary',
+        'insights': [
+          {
+            'type': 'grade_1',
+            'label': 'Class 1 Assessed',
+            'count': 15,
+          },
+          {
+            'type': 'grade_2',
+            'label': 'Class 2 Assessed',
+            'count': 10,
+          },
+          {
+            'type': 'grade_3',
+            'label': 'Class 3 Assessed',
+            'count': 5,
+          },
+        ],
+      },
+    ];
   }
 }

@@ -89,4 +89,39 @@ export class SchoolController {
   ) {
     return this.service.getSchoolTeacherPerformance(mentor, udise);
   }
+
+  @Get('status')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getSchoolStatus() {
+    return [
+      {
+        id: 157684,
+        udise: 9261201101,
+        status: 'pending',
+        updated_at: 1697201003000,
+      },
+      {
+        id: 157685,
+        udise: 9261201102,
+        status: 'fail',
+        updated_at: 1697201503000,
+      },
+      {
+        id: 157699,
+        udise: 9261205002,
+        status: 'pending',
+        updated_at: null,
+      },
+    ];
+  }
+
+  @Get(':udise/result/calculate')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async calculateExaminerCycleResult() {
+    return {};
+  }
 }

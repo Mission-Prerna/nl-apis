@@ -30,6 +30,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
 import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
+import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -182,8 +183,19 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictSchoolMapping(
     @Param() params: CycleIdValidateDto,
-    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
+    @Body(new MaxItemsPipe(1000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
   ) {
     return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
+  }
+
+  @Post('assessment-cycle/:cycle_id/district-examiner-mapping')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createAssessmentCycleDistrictExaminerMapping(
+    @Param() params: CycleIdValidateDto,
+    @Body(new MaxItemsPipe(5000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictExaminerMapping })) body: CreateAssessmentCycleDistrictExaminerMapping[],
+  ) {
+    return this.service.createAssessmentCycleDistrictExaminerMapping(params.cycle_id, body);
   }
 }

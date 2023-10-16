@@ -14,6 +14,7 @@ import { UpdateStudent } from './dto/UpdateStudent';
 import { DeleteStudent } from './dto/DeleteStudent';
 import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
+import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 
 @Injectable()
 export class AdminService {
@@ -525,5 +526,24 @@ export class AdminService {
       }
     });
     return response;
+  }
+
+  async createAssessmentCycleDistrictExaminerMapping(cycleId: number, data: Array<CreateAssessmentCycleDistrictExaminerMapping>) {
+    const records: Array<{
+      cycle_id: number,
+      district_id: number,
+      mentor_id: number,
+    }> = [];
+    data.forEach(item => {
+      records.push({
+        cycle_id: cycleId,
+        district_id: item.district_id,
+        mentor_id: item.mentor_id,
+      });
+    });
+    return this.prismaService.assessment_cycle_district_mentor_mapping.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
   }
 }

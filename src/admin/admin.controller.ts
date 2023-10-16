@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   ParseArrayPipe,
   Patch,
   Post,
@@ -27,6 +28,8 @@ import { CreateStudent } from './dto/CreateStudent';
 import { MaxItemsPipe } from '../pipes/max-items.pipe';
 import { Throttle } from '@nestjs/throttler';
 import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
+import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
+import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -169,7 +172,18 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-  createAssessmentCycle(@Body() cycleData: CreateAssessmentCycle) {
+  async createAssessmentCycle(@Body() cycleData: CreateAssessmentCycle) {
     return this.service.createAssessmentCycle(cycleData);
+  }
+
+  @Post('assessment-cycle/:cycle_id/district-school-mapping')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createAssessmentCycleDistrictSchoolMapping(
+    @Param() params: CycleIdValidateDto,
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
+  ) {
+    return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
   }
 }

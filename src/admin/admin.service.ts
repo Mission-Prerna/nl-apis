@@ -13,6 +13,7 @@ import { CreateStudent } from './dto/CreateStudent';
 import { UpdateStudent } from './dto/UpdateStudent';
 import { DeleteStudent } from './dto/DeleteStudent';
 import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
+import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
 
 @Injectable()
 export class AdminService {
@@ -425,5 +426,104 @@ export class AdminService {
         class_3_nipun_percentage: cycleData.nipun_percentage,
       },
     });
+  }
+
+  async createAssessmentCycleDistrictSchoolMapping(cycleId: number, data: Array<CreateAssessmentCycleDistrictSchoolMapping>) {
+    const cycle: Record<string, number> = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+      where: {
+        id: cycleId,
+      },
+      select: {
+        class_1_students_count: true,
+        class_2_students_count: true,
+        class_3_students_count: true,
+      },
+    });
+    const schoolWiseRandomStudents = await this.getRandomStudentsForUdise(cycle, data.map(item => item.udise));
+
+    const records: Array<{
+      cycle_id: number,
+      district_id: number,
+      udise: number,
+      class_1_students: Array<string>,
+      class_2_students: Array<string>,
+      class_3_students: Array<string>
+    }> = [];
+    data.forEach(item => {
+      records.push({
+        cycle_id: cycleId,
+        district_id: item.district_id,
+        udise: item.udise,
+        class_1_students: schoolWiseRandomStudents[item.udise]['grade1'] ?? [],
+        class_2_students: schoolWiseRandomStudents[item.udise]['grade2'] ?? [],
+        class_3_students: schoolWiseRandomStudents[item.udise]['grade3'] ?? [],
+      });
+    });
+    return this.prismaService.assessment_cycle_district_school_mapping.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
+  }
+
+  private async getRandomStudentsForUdise(cycle: Record<string, number>, udises: Array<number>) {
+    let response: Record<number, { grade1: Array<string>, grade2: Array<string>, grade3: Array<string> }> = {};
+    const grade1Count = cycle.class_1_students_count > 0 ? cycle.class_1_students_count : 100;
+    const grade2Count = cycle.class_2_students_count > 0 ? cycle.class_2_students_count : 100;
+    const grade3Count = cycle.class_3_students_count > 0 ? cycle.class_3_students_count : 100;
+    const rankConditions: Array<string> = [];
+    rankConditions.push('case');
+    udises.forEach(udise => {
+      // populate response with all udises with grade keys
+      response[udise] = {
+        grade1: [],
+        grade2: [],
+        grade3: [],
+      };
+
+      // populating rand conditions
+      rankConditions.push(`when udise = ${udise} and grade = 1 then ${grade1Count} `);
+      rankConditions.push(`when udise = ${udise} and grade = 2 then ${grade2Count} `);
+      rankConditions.push(`when udise = ${udise} and grade = 3 then ${grade3Count} `);
+    });
+    rankConditions.push('else 100 end');
+    const query = `
+      WITH random_unique_ids AS (
+        SELECT udise,
+               grade,
+               unique_id
+        FROM (
+           SELECT udise,
+                  grade,
+                  unique_id,
+                  ROW_NUMBER() OVER (PARTITION BY udise, grade ORDER BY RANDOM()) AS rn
+           FROM students
+           WHERE deleted_at IS NULL
+             and grade in (1,2,3)
+             and udise in (${udises.join(',')})
+             ) subquery
+        WHERE rn <= (${rankConditions.join('\n')})
+      )
+      SELECT udise,
+             grade,
+             json_agg(unique_id) AS random_unique_ids
+      FROM random_unique_ids
+      GROUP BY udise, grade;
+    `;
+    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
+
+    records.forEach(record => {
+      switch (record.grade) {
+        case 1:
+          response[record.udise]['grade1'] = record.random_unique_ids;
+          break;
+        case 2:
+          response[record.udise]['grade2'] = record.random_unique_ids;
+          break;
+        case 3:
+          response[record.udise]['grade3'] = record.random_unique_ids;
+          break;
+      }
+    });
+    return response;
   }
 }

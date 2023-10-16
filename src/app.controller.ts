@@ -303,7 +303,9 @@ export class AppController {
   ) {
     return [
       {
+        'cycle_id': 1,
         'period': 'Cycle Name',
+        'updated_at': 0,
         'insights': [
           {
             'type': 'school',
@@ -318,7 +320,9 @@ export class AppController {
         ],
       },
       {
+        'cycle_id': 1,
         'period': 'Class Summary',
+        'updated_at': 0,
         'insights': [
           {
             'type': 'grade_1',

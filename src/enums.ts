@@ -35,6 +35,12 @@ export enum StudentMonthlyAssessmentStatus {
   FAIL = 'fail',
 }
 
+export enum SchoolCycleAssessmentStatus {
+  PENDING = 'pending',
+  PASS = 'pass',
+  FAIL = 'fail',
+}
+
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
   AssessmentSurveyResult = 'AssessmentSurveyResult',

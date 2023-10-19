@@ -3,6 +3,7 @@ import {
   ActorEnum,
   AssessmentTypeEnum,
   Mentor,
+  SchoolCycleAssessmentStatus,
   Student,
   StudentMonthlyAssessmentStatus,
   TypeAssessmentQuarterTables,
@@ -11,6 +12,7 @@ import {
 import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
 
 const moment = require('moment');
 
@@ -446,5 +448,29 @@ export class SchoolService {
         updated_at: lastMonthStats?.updated_at ?? 0,
       },
     ];
+  }
+
+  async getSchoolStatus(mentor: Mentor, params: GetSchoolStatusDto) {
+    if (params.cycle_id) {
+      // it's for assessment cycle drives & we'll process accordingly
+      const query = `
+        select dsm.udise,
+           (case
+                when snr.is_nipun = true then '${SchoolCycleAssessmentStatus.PASS}'
+                when snr.is_nipun = false then '${SchoolCycleAssessmentStatus.FAIL}'
+                else '${SchoolCycleAssessmentStatus.PENDING}' end) as status,
+           (EXTRACT(EPOCH FROM case when snr.updated_at is not null then snr.updated_at else '1970-01-01 00:00:00+00:00' end) * 1000)::bigint as updated_at
+        from assessment_cycle_district_school_mapping dsm
+                 left join assessment_cycle_school_nipun_results snr
+                           on dsm.udise = snr.udise and snr.mentor_id = ${mentor.id} and snr.cycle_id = ${params.cycle_id}
+        where dsm.cycle_id = ${params.cycle_id}
+          and district_id in (select district_id
+                              from assessment_cycle_district_mentor_mapping
+                              where mentor_id = ${mentor.id}
+                                and cycle_id = ${params.cycle_id})
+      `;
+      return this.prismaService.$queryRawUnsafe(query);
+    }
+    return null;
   }
 }

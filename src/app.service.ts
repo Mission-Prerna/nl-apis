@@ -983,17 +983,16 @@ export class AppService {
     }
     const query = `
       select id,
-         start_date,
-         end_date,
-         name,
-         (select jsonb_agg(udise) as udises
-          from assessment_cycle_district_school_mapping
-          where cycle_id = assessment_cycles.id
-            and district_id = (select district_id
-                               from assessment_cycle_district_mentor_mapping
-                               where mentor_id = ${mentor.id}
-                                 and cycle_id = assessment_cycles.id
-                               limit 1))
+             start_date,
+             end_date,
+             name,
+             (select jsonb_agg(udise) as udises
+              from assessment_cycle_district_school_mapping
+              where cycle_id = assessment_cycles.id
+                and district_id in (select district_id
+                                    from assessment_cycle_district_mentor_mapping
+                                    where mentor_id = ${mentor.id}
+                                      and cycle_id = assessment_cycles.id))
       from assessment_cycles
       order by end_date desc
       limit 1

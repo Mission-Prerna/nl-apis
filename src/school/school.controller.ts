@@ -21,6 +21,7 @@ import { Response } from 'express';
 import { EtagService } from '../modules/etag/etag.service';
 import { MentorInterceptor } from '../interceptors/mentor.interceptor';
 import { SchoolServiceV2 } from './school.service.v2';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -94,24 +95,11 @@ export class SchoolController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
-  async getSchoolStatus() {
-    return [
-      {
-        udise: 9261201101,
-        status: 'pending',
-        updated_at: 1697201003000,
-      },
-      {
-        udise: 9261201102,
-        status: 'fail',
-        updated_at: 1697201503000,
-      },
-      {
-        udise: 9261205002,
-        status: 'pending',
-        updated_at: null,
-      },
-    ];
+  async getSchoolStatus(
+    @Query() params: GetSchoolStatusDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return this.service.getSchoolStatus(mentor, params);
   }
 
   @Get(':udise/result/calculate')

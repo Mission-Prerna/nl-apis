@@ -650,13 +650,7 @@ export class AppService {
       mentor: mentor,
       school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
-      examiner_cycle_details: {
-        id: 1,
-        name: 'Cycle XXX',
-        start_date: '2023-01-01',
-        end_date: '2023-10-01',
-        school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
-      },
+      examiner_cycle_details: await this.getExaminerCycleDetails(mentor),
     };
   }
 
@@ -978,8 +972,60 @@ export class AppService {
       },
       where: {
         mentor_id: mentorId,
-        action: action
+        action: action,
       },
     });
+  }
+
+  async getExaminerCycleDetails(mentor: Mentor) {
+    if (mentor.actor_id != ActorEnum.EXAMINER) {
+      return null;
+    }
+    const query = `
+      select id,
+         start_date,
+         end_date,
+         name,
+         (select jsonb_agg(udise) as udises
+          from assessment_cycle_district_school_mapping
+          where cycle_id = assessment_cycles.id
+            and district_id = (select district_id
+                               from assessment_cycle_district_mentor_mapping
+                               where mentor_id = ${mentor.id}
+                                 and cycle_id = assessment_cycles.id
+                               limit 1))
+      from assessment_cycles
+      order by end_date desc
+      limit 1
+    `;
+    const cycle: Array<Record<string, number | string | null | Array<string | object>>> | null = await this.prismaService.$queryRawUnsafe(query);
+    if (cycle?.length) {
+      cycle[0].start_date = moment(cycle[0].start_date).format('YYYY-MM-DD');
+      cycle[0].end_date = moment(cycle[0].end_date).format('YYYY-MM-DD');
+
+      // @ts-ignore
+      const udises: null | Array<string> = cycle[0].udises;
+      if (udises) {
+        cycle[0].schools_list = await this.prismaService.$queryRawUnsafe(`SELECT
+            s.id as school_id,
+            s."name" as school_name, 
+            s.udise,
+            s.district_id,
+            d.name as district_name,
+            s.block_id,
+            b.name as block_name,
+            s.nyay_panchayat_id,
+            n.name as nyay_panchayat_name,
+            s.lat,
+            s.long,
+            s.geo_fence_enabled
+          from school_list as s
+          join districts d on d.id = s.district_id
+          join blocks b on b.id = s.block_id
+          left join nyay_panchayats n on n.id = s.nyay_panchayat_id
+          where s.udise in (${udises.join(',')})`);
+      }
+    }
+    return cycle ? cycle[0] : null;
   }
 }

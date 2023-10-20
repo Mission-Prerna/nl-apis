@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
@@ -1029,11 +1030,14 @@ export class AppService {
   }
 
   async getExaminerHomeScreenMetric(mentor: Mentor, cycleId: number) {
-    const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+    const cycle = await this.prismaService.assessment_cycles.findUnique({
       where: {
         id: cycleId,
       },
     });
+    if (!cycle) {
+      throw new UnprocessableEntityException('Invalid cycle_id.');
+    }
     const assessedSchoolsCount = await this.prismaService.assessment_cycle_school_nipun_results.count({
       where: {
         mentor_id: mentor.id,

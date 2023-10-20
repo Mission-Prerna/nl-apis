@@ -1027,4 +1027,88 @@ export class AppService {
     }
     return cycle ? cycle[0] : null;
   }
+
+  async getExaminerHomeScreenMetric(mentor: Mentor, cycleId: number) {
+    const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+      where: {
+        id: cycleId,
+      },
+    });
+    const assessedSchoolsCount = await this.prismaService.assessment_cycle_school_nipun_results.count({
+      where: {
+        mentor_id: mentor.id,
+        cycle_id: cycleId,
+      },
+    });
+
+    const query = `
+      select a.grade, count(distinct a.student_id) as assessed,
+        (EXTRACT(EPOCH FROM max(a.submitted_at)) * 1000) as updated_at
+      from assessments a
+      where a.mentor_id = ${mentor.id}
+        and a.actor_id = ${ActorEnum.EXAMINER}
+        and a.student_id in (
+          select jsonb_array_elements_text(
+                         dsm.class_1_students || dsm.class_2_students || dsm.class_3_students) as student_ids
+          from assessment_cycle_district_school_mapping dsm
+          where dsm.district_id in (
+              select district_id
+              from assessment_cycle_district_mentor_mapping adsm
+              where adsm.mentor_id = ${mentor.id}
+                and adsm.cycle_id = ${cycleId})
+            and dsm.cycle_id = ${cycleId})
+        and a.submitted_at between '${moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss')}' and '${moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss')}'
+      group by a.grade;
+    `;
+    const gradeWiseAssessedCount: Array<{ grade: number, assessed: number, updated_at: number }> = await this.prismaService.$queryRawUnsafe(query);
+    const grade1Count = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.assessed ?? 0;
+    const grade1Updated = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.updated_at ?? 0;
+    const grade2Count = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.assessed ?? 0;
+    const grade2Updated = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.updated_at ?? 0;
+    const grade3Count = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.assessed ?? 0;
+    const grade3Updated = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.updated_at ?? 0;
+    const updated_at = Math.max(grade1Updated, grade2Updated, grade3Updated);
+
+    return [
+      {
+        cycle_id: cycleId,
+        period: cycle.name,
+        updated_at: updated_at,
+        insights: [
+          {
+            type: 'school',
+            label: 'Assessed schools',
+            count: assessedSchoolsCount,
+          },
+          {
+            type: 'student',
+            label: 'Assessed students',
+            count: (parseInt(grade1Count.toString()) + parseInt(grade2Count.toString()) + parseInt(grade3Count.toString())),
+          },
+        ],
+      },
+      {
+        cycle_id: cycleId,
+        period: 'Class summary',
+        updated_at: updated_at,
+        insights: [
+          {
+            type: 'grade_1',
+            label: 'Class 1 Assessed',
+            count: grade1Count,
+          },
+          {
+            type: 'grade_2',
+            label: 'Class 2 Assessed',
+            count: grade2Count,
+          },
+          {
+            type: 'grade_3',
+            label: 'Class 3 Assessed',
+            count: grade3Count,
+          },
+        ],
+      },
+    ];
+  }
 }

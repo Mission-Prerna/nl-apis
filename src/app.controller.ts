@@ -5,6 +5,7 @@ import {
   NotImplementedException,
   Param,
   ParseArrayPipe,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -299,48 +300,12 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getExaminerPerformanceInsights(
+    @Query('cycle_id', ParseIntPipe) cycleId: number,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return [
-      {
-        'cycle_id': 1,
-        'period': 'Cycle Name',
-        'updated_at': 0,
-        'insights': [
-          {
-            'type': 'school',
-            'label': 'Assessed schools',
-            'count': 3,
-          },
-          {
-            'type': 'student',
-            'label': 'Assessed students',
-            'count': 30,
-          },
-        ],
-      },
-      {
-        'cycle_id': 1,
-        'period': 'Class Summary',
-        'updated_at': 0,
-        'insights': [
-          {
-            'type': 'grade_1',
-            'label': 'Class 1 Assessed',
-            'count': 15,
-          },
-          {
-            'type': 'grade_2',
-            'label': 'Class 2 Assessed',
-            'count': 10,
-          },
-          {
-            'type': 'grade_3',
-            'label': 'Class 3 Assessed',
-            'count': 5,
-          },
-        ],
-      },
-    ];
+    if (mentor.actor_id != ActorEnum.EXAMINER) {
+      throw new NotImplementedException('Only Examiners are allowed to access this endpoint.');
+    }
+    return this.appService.getExaminerHomeScreenMetric(mentor, cycleId);
   }
 }

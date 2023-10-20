@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -12,6 +12,8 @@ import { PrismaService } from '../prisma.service';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { StudentService } from './student.service';
 import { SchoolService } from './school.service';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
+import * as Sentry from '@sentry/minimal';
 
 const moment = require('moment');
 
@@ -28,10 +30,53 @@ export class SchoolServiceV2 extends SchoolService {
     super(prismaService, appService, i18n);
   }
 
-  async getSchoolStudentsResults(mentor: Mentor, udise: number, grades: Array<Number>, year: number, month: number) {
+  async getSchoolStudentsResultsV2(mentor: Mentor, udise: number, params: GetSchoolStudentsResultDto) {
     // @TODO: to be redone using Continuous Aggregates
-    const firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
-    const lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
+    const year = params.year;
+    const month = params.month;
+    const grades = params.grade.split(',').map(grade => parseInt(grade.trim()));
+    const cycleId = params.cycle_id;
+
+    let firstDayTimestamp = '';
+    let lastDayTimestamp = '';
+    let studentsList: Array<Student> = [];
+    switch (mentor.actor_id) {
+      case ActorEnum.TEACHER:
+        // for teacher
+        if (!month || !year) {
+          throw new UnprocessableEntityException('Missing [month,year] params.');
+        }
+        firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
+        lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
+        studentsList = await this.studentService.getSchoolStudents(udise);
+        break;
+      case ActorEnum.EXAMINER:
+        // for examiner
+        if (!cycleId) {
+          throw new UnprocessableEntityException('Missing [cycle_id] param.');
+        }
+        const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+          where: { id: cycleId },
+        });
+        firstDayTimestamp = moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss');
+        lastDayTimestamp = moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss');
+        studentsList = await this.studentService.getCycleStudents(udise, cycleId, grades);
+        break;
+      default:
+        Sentry.captureMessage('Un-supported Actor found.', {
+          user: {
+            id: mentor.id + '',
+          },
+          extra: {
+            actor_id: mentor.actor_id,
+            udise: udise,
+            cycle_id: cycleId,
+            year: year,
+            month: month,
+          },
+        });
+        throw new UnauthorizedException('You are not allowed to perform this action.');
+    }
 
     const query = `
       SELECT ss.id,
@@ -45,7 +90,7 @@ export class SchoolServiceV2 extends SchoolService {
         FROM assessments a
         WHERE a.student_id IS NOT NULL
          AND a.udise = ${udise}
-         AND a.actor_id = ${ActorEnum.TEACHER}
+         AND a.actor_id = ${mentor.actor_id}
          AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
          and a.grade in (${grades.join(',')})
@@ -61,7 +106,7 @@ export class SchoolServiceV2 extends SchoolService {
 
     // Grade summary
     const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
-    (await this.studentService.getSchoolStudents(udise)).forEach(({ grade, id }: Student) => {
+    studentsList.forEach(({ grade, id }: Student) => {
       grade = grade ?? 0; // just a ts check
       const assessedStudent = studentWiseResults[id.toString()] ?? null;
       if (!gradeStudents.hasOwnProperty(grade)) {
@@ -92,7 +137,7 @@ export class SchoolServiceV2 extends SchoolService {
     for (const grade of grades) {
       response.push({
         grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
-        period: this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, { lang: lang }),
+        period: month ? this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, { lang: lang }) : '',
         summary: [
           {
             label: this.i18n.t(`common.Nipun`, { lang: lang }),

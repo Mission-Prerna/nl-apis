@@ -22,6 +22,7 @@ import { EtagService } from '../modules/etag/etag.service';
 import { MentorInterceptor } from '../interceptors/mentor.interceptor';
 import { SchoolServiceV2 } from './school.service.v2';
 import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -60,12 +61,10 @@ export class SchoolController {
   @UseInterceptors(MentorInterceptor)
   async getSchoolStudentsResults(
     @Param('udise', ParseIntPipe) udise: number,
-    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
-    @Query('month', ParseIntPipe) month: number,
-    @Query('year', ParseIntPipe) year: number,
+    @Query() params: GetSchoolStudentsResultDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.service.getSchoolStudentsResults(mentor, udise, grades, year, month);
+    return this.service.getSchoolStudentsResultsV2(mentor, udise, params);
   }
 
   @Get(':udise/students/result/summary')

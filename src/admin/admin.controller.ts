@@ -43,6 +43,8 @@ export class AdminController {
     private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult)
     private readonly assessmentSurveyResultQueue: Queue,
+    @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
+    private readonly calculateExaminerCycleUdiseResult: Queue,
   ) {
   }
 
@@ -93,6 +95,7 @@ export class AdminController {
     await Promise.all([
       this.assessmentVisitResultQueue.pause(false),
       this.assessmentSurveyResultQueue.pause(false),
+      this.calculateExaminerCycleUdiseResult.pause(false),
     ]);
     return 'ok';
   }
@@ -105,6 +108,7 @@ export class AdminController {
     await Promise.all([
       this.assessmentVisitResultQueue.resume(false),
       this.assessmentSurveyResultQueue.resume(false),
+      this.calculateExaminerCycleUdiseResult.resume(false),
     ]);
     return 'ok';
   }
@@ -117,6 +121,7 @@ export class AdminController {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
+      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.count(),
     };
   }
 
@@ -128,6 +133,7 @@ export class AdminController {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
+      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.getFailedCount(),
     };
   }
 

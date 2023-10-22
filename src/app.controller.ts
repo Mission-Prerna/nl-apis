@@ -5,7 +5,6 @@ import {
   NotImplementedException,
   Param,
   ParseArrayPipe,
-  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -41,6 +40,7 @@ import { GetMentorBotsWithActionDto } from './dto/GetMentorBotsWithAction.dto';
 import { JwtAdminGuard } from './auth/admin-jwt.guard';
 import { MentorInterceptor } from './interceptors/mentor.interceptor';
 import { AdminService } from './admin/admin.service';
+import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -300,12 +300,12 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getExaminerPerformanceInsights(
-    @Query('cycle_id', ParseIntPipe) cycleId: number,
+    @Query() params: AssessmentCycleValidatorDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
     if (mentor.actor_id != ActorEnum.EXAMINER) {
       throw new NotImplementedException('Only Examiners are allowed to access this endpoint.');
     }
-    return this.appService.getExaminerHomeScreenMetric(mentor, cycleId);
+    return this.appService.getExaminerHomeScreenMetric(mentor, params.cycle_id);
   }
 }

@@ -27,6 +27,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { StudentService } from './school/student.service';
 import { SchoolServiceV2 } from './school/school.service.v2';
+import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calculate-examiner-cycle-udise-result.processor';
 
 @Module({
   imports: [
@@ -56,6 +57,9 @@ import { SchoolServiceV2 } from './school/school.service.v2';
       },
       {
         name: QueueEnum.AssessmentSurveyResult,
+      },
+      {
+        name: QueueEnum.CalculateExaminerCycleUdiseResult,
       },
     ),
     RedisModule.forRootAsync({
@@ -109,6 +113,7 @@ import { SchoolServiceV2 } from './school/school.service.v2';
     PrismaService,
     AssessmentVisitResultsProcessor,
     AssessmentSurveyResultProcessor,
+    CalculateExaminerCycleUdiseResultProcessor,
     PrismaHealthIndicator,
     RedisHealthIndicator,
     FusionauthService,

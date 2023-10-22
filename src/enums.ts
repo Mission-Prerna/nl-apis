@@ -44,11 +44,13 @@ export enum SchoolCycleAssessmentStatus {
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
   AssessmentSurveyResult = 'AssessmentSurveyResult',
+  CalculateExaminerCycleUdiseResult = 'CalculateExaminerCycleUdiseResult',
 }
 
 export enum JobEnum {
   CreateAssessmentVisitResults = 'CreateAssessmentVisitResults',
   CreateAssessmentSurveyResult = 'CreateAssessmentSurveyResult',
+  ProcessExaminerCycleUdiseResult = 'ProcessExaminerCycleUdiseResult',
 }
 
 export enum ActorEnum {

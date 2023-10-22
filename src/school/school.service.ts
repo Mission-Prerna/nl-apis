@@ -473,4 +473,101 @@ export class SchoolService {
     }
     return null;
   }
+
+  async calculateExaminerCycleUdiseResult(mentor: Mentor, cycleId: number, udise: number) {
+    // find out cycle details, students list & nipun percentage for the udise
+    const cycleDetails: Array<Record<string, number | string | Array<string>>> = await this.prismaService.$queryRawUnsafe(`
+      select 
+        c.id,
+        c.start_date,
+        c.end_date,
+        c.class_1_nipun_percentage,
+        c.class_2_nipun_percentage,
+        c.class_3_nipun_percentage,
+        string_agg(dsm.class_1_students::text, ',')::jsonb as class_1_students,
+        string_agg(dsm.class_2_students::text, ',')::jsonb as class_2_students,
+        string_agg(dsm.class_3_students::text, ',')::jsonb as class_3_students
+      from assessment_cycles c
+               join assessment_cycle_district_school_mapping dsm
+                    on c.id = dsm.cycle_id and dsm.udise = ${udise} and dsm.cycle_id = ${cycleId}
+                        and c.id = ${cycleId}
+      group by c.id
+      limit 1`);
+    if (cycleDetails.length == 0) {
+      // this udise is not mapped to any cycle for this examiner
+      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentor.id})`);
+      return true;  // returning true so that the queue job just terminate gracefully
+    }
+
+    // @ts-ignore prepare list of student ids
+    const studentIds = [...cycleDetails[0].class_1_students, ...cycleDetails[0].class_2_students, ...cycleDetails[0].class_3_students];
+
+    // find the grade wise nipun percentage
+    const query = `
+      select grade,
+             (
+                 case
+                     when t.grade = 1 then (count(t.student_id) * 100) / ${cycleDetails[0].class_1_nipun_percentage}
+                     when t.grade = 2 then (count(t.student_id) * 100) / ${cycleDetails[0].class_2_nipun_percentage}
+                     when t.grade = 3 then (count(t.student_id) * 100) / ${cycleDetails[0].class_3_nipun_percentage}
+                     else 0
+                     end
+                 )::int as percentage
+      from (select distinct on (a.student_id) student_id,
+                                              a.is_passed,
+                                              a.grade
+            from assessments a
+            where a.student_id in (
+                                   ${'\''+studentIds.join('\',\'')+'\''}
+                )
+              and udise = ${udise}
+              and grade in (1,2,3)
+              and mentor_id = ${mentor.id}
+              and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}') t
+      where t.is_passed = true
+      group by t.grade    
+    `;
+    const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
+
+    // the school will be nipun if all 3 grades are nipun
+    let isNipun = true;
+    if (gradeWisePercentage.length != 3) {
+      // i.e. not all class assessments has been done (OR) no Nipun student percentage - the school is NOT_NIPUN
+      isNipun = false;
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 1 && item.percentage < cycleDetails[0].class_1_nipun_percentage;
+    }).length) {
+      // i.e. grade 1 % < cycle defined percentage
+      isNipun = false;
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 2 && item.percentage < cycleDetails[0].class_2_nipun_percentage;
+    }).length) {
+      // i.e. grade 2 % < cycle defined percentage
+      isNipun = false;
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 3 && item.percentage < cycleDetails[0].class_3_nipun_percentage;
+    }).length) {
+      // i.e. grade 3 % < cycle defined percentage
+      isNipun = false;
+    }
+    this.logger.debug(`School Nipun status: ${isNipun}`);
+
+    return this.prismaService.assessment_cycle_school_nipun_results.upsert({
+      where: {
+        cycle_id_udise_mentor_id: {
+          cycle_id: cycleId,
+          udise: udise,
+          mentor_id: mentor.id,
+        },
+      },
+      create: {
+        cycle_id: cycleId,
+        udise: udise,
+        mentor_id: mentor.id,
+        is_nipun: isNipun,
+      }, update: {
+        is_nipun: isNipun,
+      },
+    });
+  }
 }

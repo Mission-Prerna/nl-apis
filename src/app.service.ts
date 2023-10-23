@@ -986,6 +986,9 @@ export class AppService {
              start_date,
              end_date,
              name,
+             class_1_nipun_percentage,
+             class_2_nipun_percentage,
+             class_3_nipun_percentage,
              (select jsonb_agg(udise) as udises
               from assessment_cycle_district_school_mapping
               where cycle_id = assessment_cycles.id

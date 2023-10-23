@@ -15,6 +15,7 @@ import { DeleteStudent } from './dto/DeleteStudent';
 import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
+import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 
 @Injectable()
 export class AdminService {
@@ -545,5 +546,54 @@ export class AdminService {
       data: records,
       skipDuplicates: true,
     });
+  }
+
+  async invalidateAssessmentCycleExaminerAssessments(cycleId: number, data: InvalidateExaminerCycleAssessmentsDto) {
+    const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+      where: {
+        id: cycleId,
+      },
+    });
+    const promises = [
+      // delete assessments
+      this.prismaService.assessments.deleteMany({
+        where: {
+          udise: {
+            in: data.udises,
+          },
+          mentor_id: data.mentor_id,
+          actor_id: ActorEnum.EXAMINER,
+          submitted_at: {
+            gte: new Date(cycle.start_date),
+            lte: new Date(cycle.end_date),
+          },
+          NOT: {
+            student_id: null,
+          },
+        },
+      }),
+    ];
+    if (data.delete_all) {
+      // delete school nipun results
+      promises.push(this.prismaService.assessment_cycle_school_nipun_results.deleteMany({
+        where: {
+          udise: {
+            in: data.udises,
+          },
+          mentor_id: data.mentor_id,
+          cycle_id: cycleId,
+        },
+      }));
+
+      // delete cycle mentor mapping
+      promises.push(this.prismaService.assessment_cycle_district_mentor_mapping.deleteMany({
+        where: {
+          mentor_id: data.mentor_id,
+          cycle_id: cycleId,
+        },
+      }));
+    }
+
+    return Promise.all(promises);
   }
 }

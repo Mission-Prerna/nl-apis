@@ -3,14 +3,14 @@ import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { JobEnum as JobEnum, QueueEnum } from '../enums';
 import * as Sentry from '@sentry/node';
-import { SchoolService } from '../school/school.service';
+import { SchoolServiceV2 } from '../school/school.service.v2';
 
 @Processor(QueueEnum.CalculateExaminerCycleUdiseResult)
 export class CalculateExaminerCycleUdiseResultProcessor {
   private readonly logger = new Logger(CalculateExaminerCycleUdiseResultProcessor.name);
 
   constructor(
-    private readonly service: SchoolService,
+    private readonly service: SchoolServiceV2,
   ) {
   }
 

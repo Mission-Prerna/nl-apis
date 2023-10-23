@@ -31,6 +31,7 @@ import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
 import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
+import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -203,5 +204,16 @@ export class AdminController {
     @Body(new MaxItemsPipe(5000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictExaminerMapping })) body: CreateAssessmentCycleDistrictExaminerMapping[],
   ) {
     return this.service.createAssessmentCycleDistrictExaminerMapping(params.cycle_id, body);
+  }
+
+  @Post('assessment-cycle/:cycle_id/invalidate-examiner-assessments')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async invalidateAssessmentCycleExaminerAssessments(
+    @Param() params: CycleIdValidateDto,
+    @Body() body: InvalidateExaminerCycleAssessmentsDto,
+  ) {
+    return this.service.invalidateAssessmentCycleExaminerAssessments(params.cycle_id, body);
   }
 }

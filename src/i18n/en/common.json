@@ -4,5 +4,11 @@
   "NotAssessed": "Not Assessed",
   "Weekly": "Weekly",
   "AssessedStudents": "Assessed students",
-  "NipunStudents": "Nipun students"
+  "NipunStudents": "Nipun students",
+  "Assessed schools": "Assessed schools",
+  "Assessed students": "Assessed students",
+  "Class summary": "Class summary",
+  "Class 1 Assessed": "Class 1 Assessed",
+  "Class 2 Assessed": "Class 2 Assessed",
+  "Class 3 Assessed": "Class 3 Assessed"
 }

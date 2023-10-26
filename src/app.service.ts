@@ -40,6 +40,7 @@ import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
 const moment = require('moment');
 
@@ -53,6 +54,7 @@ export class AppService {
     protected readonly configService: ConfigService,
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
+    protected readonly i18n: I18nService,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -1032,6 +1034,7 @@ export class AppService {
   }
 
   async getExaminerHomeScreenMetric(mentor: Mentor, cycleId: number) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
     const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
       where: {
         id: cycleId,
@@ -1080,34 +1083,34 @@ export class AppService {
         insights: [
           {
             type: 'school',
-            label: 'Assessed schools',
+            label: this.i18n.t(`common.Assessed schools`, { lang: lang }),
             count: assessedSchoolsCount,
           },
           {
             type: 'student',
-            label: 'Assessed students',
+            label: this.i18n.t(`common.Assessed students`, { lang: lang }),
             count: (parseInt(grade1Count.toString()) + parseInt(grade2Count.toString()) + parseInt(grade3Count.toString())),
           },
         ],
       },
       {
         cycle_id: cycleId,
-        period: 'Class summary',
+        period: this.i18n.t(`common.Class summary`, { lang: lang }),
         updated_at: updated_at,
         insights: [
           {
             type: 'grade_1',
-            label: 'Class 1 Assessed',
+            label: this.i18n.t(`common.Class 1 Assessed`, { lang: lang }),
             count: grade1Count,
           },
           {
             type: 'grade_2',
-            label: 'Class 2 Assessed',
+            label: this.i18n.t(`common.Class 2 Assessed`, { lang: lang }),
             count: grade2Count,
           },
           {
             type: 'grade_3',
-            label: 'Class 3 Assessed',
+            label: this.i18n.t(`common.Class 3 Assessed`, { lang: lang }),
             count: grade3Count,
           },
         ],

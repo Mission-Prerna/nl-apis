@@ -472,15 +472,18 @@ export class SchoolServiceV2 extends SchoolService {
 
     // @ts-ignore prepare list of student ids
     const studentIds = [...cycleDetails[0].class_1_students, ...cycleDetails[0].class_2_students, ...cycleDetails[0].class_3_students];
+    const grade1Count = [...cycleDetails[0].class_1_students].length ?? 10;
+    const grade2Count = [...cycleDetails[0].class_2_students].length ?? 10;
+    const grade3Count = [...cycleDetails[0].class_3_students].length ?? 10;
 
     // find the grade wise nipun percentage
     const query = `
       select grade,
              (
                  case
-                     when t.grade = 1 then (count(t.student_id) * 100) / ${cycleDetails[0].class_1_nipun_percentage}
-                     when t.grade = 2 then (count(t.student_id) * 100) / ${cycleDetails[0].class_2_nipun_percentage}
-                     when t.grade = 3 then (count(t.student_id) * 100) / ${cycleDetails[0].class_3_nipun_percentage}
+                     when t.grade = 1 then (count(t.student_id) * 100) / ${grade1Count}
+                     when t.grade = 2 then (count(t.student_id) * 100) / ${grade2Count}
+                     when t.grade = 3 then (count(t.student_id) * 100) / ${grade3Count}
                      else 0
                      end
                  )::int as percentage
@@ -498,6 +501,7 @@ export class SchoolServiceV2 extends SchoolService {
       where t.is_passed = true
       group by t.grade    
     `;
+    console.log(query);
     const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
 
     // the school will be nipun if all 3 grades are nipun

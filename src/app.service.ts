@@ -40,6 +40,7 @@ import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
 const moment = require('moment');
 
@@ -53,6 +54,7 @@ export class AppService {
     protected readonly configService: ConfigService,
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
+    protected readonly i18n: I18nService,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -650,13 +652,7 @@ export class AppService {
       mentor: mentor,
       school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
-      examiner_cycle_details: {
-        id: 1,
-        name: 'Cycle XXX',
-        start_date: '2023-01-01',
-        end_date: '2023-10-01',
-        school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
-      },
+      examiner_cycle_details: await this.getExaminerCycleDetails(mentor),
     };
   }
 
@@ -978,8 +974,153 @@ export class AppService {
       },
       where: {
         mentor_id: mentorId,
-        action: action
+        action: action,
       },
     });
+  }
+
+  async getExaminerCycleDetails(mentor: Mentor) {
+    if (mentor.actor_id != ActorEnum.EXAMINER) {
+      return null;
+    }
+    const query = `
+      select *
+      from (
+         select id,
+                start_date,
+                end_date,
+                name,
+                class_1_nipun_percentage,
+                class_2_nipun_percentage,
+                class_3_nipun_percentage,
+                (
+                    select jsonb_agg(udise)
+                    from assessment_cycle_district_school_mapping
+                    where cycle_id = assessment_cycles.id
+                      and district_id in (select district_id
+                                          from assessment_cycle_district_mentor_mapping
+                                          where mentor_id = ${mentor.id}
+                                            and cycle_id = assessment_cycles.id)
+                ) as udises
+         from assessment_cycles
+         order by end_date desc
+        ) t
+      where t.udises is not null
+      limit 1
+    `;
+    const cycle: Array<Record<string, number | string | null | Array<string | object>>> | null = await this.prismaService.$queryRawUnsafe(query);
+    if (cycle?.length) {
+      cycle[0].start_date = moment(cycle[0].start_date).format('YYYY-MM-DD');
+      cycle[0].end_date = moment(cycle[0].end_date).format('YYYY-MM-DD');
+
+      // @ts-ignore
+      const udises: null | Array<string> = cycle[0].udises;
+      if (udises) {
+        cycle[0].schools_list = await this.prismaService.$queryRawUnsafe(`SELECT
+            s.id as school_id,
+            s."name" as school_name, 
+            s.udise,
+            s.district_id,
+            d.name as district_name,
+            s.block_id,
+            b.name as block_name,
+            s.nyay_panchayat_id,
+            n.name as nyay_panchayat_name,
+            s.lat,
+            s.long,
+            s.geo_fence_enabled
+          from school_list as s
+          join districts d on d.id = s.district_id
+          join blocks b on b.id = s.block_id
+          left join nyay_panchayats n on n.id = s.nyay_panchayat_id
+          where s.udise in (${udises.join(',')})`);
+      }
+    }
+    return cycle ? cycle[0] : null;
+  }
+
+  async getExaminerHomeScreenMetric(mentor: Mentor, cycleId: number) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+    const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+      where: {
+        id: cycleId,
+      },
+    });
+    const assessedSchoolsCount = await this.prismaService.assessment_cycle_school_nipun_results.count({
+      where: {
+        mentor_id: mentor.id,
+        cycle_id: cycleId,
+      },
+    });
+
+    const query = `
+      select a.grade, count(distinct a.student_id) as assessed,
+        (EXTRACT(EPOCH FROM max(a.submitted_at)) * 1000) as updated_at
+      from assessments a
+      where a.mentor_id = ${mentor.id}
+        and a.actor_id = ${ActorEnum.EXAMINER}
+        and a.student_id in (
+          select jsonb_array_elements_text(
+                         dsm.class_1_students || dsm.class_2_students || dsm.class_3_students) as student_ids
+          from assessment_cycle_district_school_mapping dsm
+          where dsm.district_id in (
+              select district_id
+              from assessment_cycle_district_mentor_mapping adsm
+              where adsm.mentor_id = ${mentor.id}
+                and adsm.cycle_id = ${cycleId})
+            and dsm.cycle_id = ${cycleId})
+        and a.submitted_at between '${moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss')}' and '${moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss')}'
+      group by a.grade;
+    `;
+    const gradeWiseAssessedCount: Array<{ grade: number, assessed: number, updated_at: number }> = await this.prismaService.$queryRawUnsafe(query);
+    const grade1Count = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.assessed ?? 0;
+    const grade1Updated = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.updated_at ?? 0;
+    const grade2Count = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.assessed ?? 0;
+    const grade2Updated = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.updated_at ?? 0;
+    const grade3Count = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.assessed ?? 0;
+    const grade3Updated = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.updated_at ?? 0;
+    const updated_at = Math.max(grade1Updated, grade2Updated, grade3Updated);
+
+    return [
+      {
+        cycle_id: cycleId,
+        period: cycle.name,
+        updated_at: updated_at,
+        insights: [
+          {
+            type: 'school',
+            label: this.i18n.t(`common.Assessed schools`, { lang: lang }),
+            count: assessedSchoolsCount,
+          },
+          {
+            type: 'student',
+            label: this.i18n.t(`common.Assessed students`, { lang: lang }),
+            count: (parseInt(grade1Count.toString()) + parseInt(grade2Count.toString()) + parseInt(grade3Count.toString())),
+          },
+        ],
+      },
+      {
+        cycle_id: cycleId,
+        period: this.i18n.t(`common.Class summary`, { lang: lang }),
+        updated_at: updated_at,
+        insights: [
+          {
+            type: 'grade_1',
+            label: this.i18n.t(`common.Class 1 Assessed`, { lang: lang }),
+            count: grade1Count,
+          },
+          {
+            type: 'grade_2',
+            label: this.i18n.t(`common.Class 2 Assessed`, { lang: lang }),
+            count: grade2Count,
+          },
+          {
+            type: 'grade_3',
+            label: this.i18n.t(`common.Class 3 Assessed`, { lang: lang }),
+            count: grade3Count,
+          },
+        ],
+      },
+    ];
   }
 }

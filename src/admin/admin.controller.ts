@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   ParseArrayPipe,
   Patch,
   Post,
@@ -26,6 +27,11 @@ import { AdminService } from './admin.service';
 import { CreateStudent } from './dto/CreateStudent';
 import { MaxItemsPipe } from '../pipes/max-items.pipe';
 import { Throttle } from '@nestjs/throttler';
+import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
+import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
+import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
+import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
+import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -38,6 +44,8 @@ export class AdminController {
     private readonly assessmentVisitResultQueue: Queue,
     @InjectQueue(QueueEnum.AssessmentSurveyResult)
     private readonly assessmentSurveyResultQueue: Queue,
+    @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
+    private readonly calculateExaminerCycleUdiseResult: Queue,
   ) {
   }
 
@@ -88,6 +96,7 @@ export class AdminController {
     await Promise.all([
       this.assessmentVisitResultQueue.pause(false),
       this.assessmentSurveyResultQueue.pause(false),
+      this.calculateExaminerCycleUdiseResult.pause(false),
     ]);
     return 'ok';
   }
@@ -100,6 +109,7 @@ export class AdminController {
     await Promise.all([
       this.assessmentVisitResultQueue.resume(false),
       this.assessmentSurveyResultQueue.resume(false),
+      this.calculateExaminerCycleUdiseResult.resume(false),
     ]);
     return 'ok';
   }
@@ -112,6 +122,7 @@ export class AdminController {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
+      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.count(),
     };
   }
 
@@ -123,6 +134,7 @@ export class AdminController {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
+      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.getFailedCount(),
     };
   }
 
@@ -162,5 +174,46 @@ export class AdminController {
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
   ) {
     return this.service.deleteStudents(body);
+  }
+
+  @Post('assessment-cycle')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createAssessmentCycle(@Body() cycleData: CreateAssessmentCycle) {
+    return this.service.createAssessmentCycle(cycleData);
+  }
+
+  @Post('assessment-cycle/:cycle_id/district-school-mapping')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createAssessmentCycleDistrictSchoolMapping(
+    @Param() params: CycleIdValidateDto,
+    @Body(new MaxItemsPipe(1000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
+  ) {
+    return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
+  }
+
+  @Post('assessment-cycle/:cycle_id/district-examiner-mapping')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createAssessmentCycleDistrictExaminerMapping(
+    @Param() params: CycleIdValidateDto,
+    @Body(new MaxItemsPipe(5000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictExaminerMapping })) body: CreateAssessmentCycleDistrictExaminerMapping[],
+  ) {
+    return this.service.createAssessmentCycleDistrictExaminerMapping(params.cycle_id, body);
+  }
+
+  @Post('assessment-cycle/:cycle_id/invalidate-examiner-assessments')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async invalidateAssessmentCycleExaminerAssessments(
+    @Param() params: CycleIdValidateDto,
+    @Body() body: InvalidateExaminerCycleAssessmentsDto,
+  ) {
+    return this.service.invalidateAssessmentCycleExaminerAssessments(params.cycle_id, body);
   }
 }

@@ -35,14 +35,22 @@ export enum StudentMonthlyAssessmentStatus {
   FAIL = 'fail',
 }
 
+export enum SchoolCycleAssessmentStatus {
+  PENDING = 'pending',
+  PASS = 'pass',
+  FAIL = 'fail',
+}
+
 export enum QueueEnum {
   AssessmentVisitResults = 'AssessmentVisitResults',
   AssessmentSurveyResult = 'AssessmentSurveyResult',
+  CalculateExaminerCycleUdiseResult = 'CalculateExaminerCycleUdiseResult',
 }
 
 export enum JobEnum {
   CreateAssessmentVisitResults = 'CreateAssessmentVisitResults',
   CreateAssessmentSurveyResult = 'CreateAssessmentSurveyResult',
+  ProcessExaminerCycleUdiseResult = 'ProcessExaminerCycleUdiseResult',
 }
 
 export enum ActorEnum {
@@ -118,15 +126,20 @@ export type MentorDailyMetrics = {
   nipun_count: number,
 }
 
-export function CacheKeyMetadata () {
+export interface CycleDistrictUdiseRow {
+  district_id: number;
+  udise: number;
+}
+
+export function CacheKeyMetadata() {
   return 'metadata';
 }
 
-export function CacheKeyMentorDetail (phoneNumber: string) {
+export function CacheKeyMentorDetail(phoneNumber: string) {
   return `mentor:detail:${phoneNumber}`;
 }
 
-export function CacheKeyMentorSchoolList (phoneNumber: string, month: number, year: number) {
+export function CacheKeyMentorSchoolList(phoneNumber: string, month: number, year: number) {
   const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   return `mentor:school-list:${phoneNumber}:${year.toString()}${monthIdentifier}`;
 }

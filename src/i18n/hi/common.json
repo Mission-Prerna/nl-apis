@@ -4,5 +4,11 @@
   "NotAssessed": "आकलन नहीं हुआ",
   "Weekly": "वर्तमान सप्ताह आकलन",
   "AssessedStudents": "विद्यार्थियों का आंकलन किया",
-  "NipunStudents": "निपुण विद्यार्थी"
+  "NipunStudents": "निपुण विद्यार्थी",
+  "Assessed schools": "विद्यालय के आकलन पुरे किये ",
+  "Assessed students": "विद्यार्थियों के आकलन पूरे किये ",
+  "Class summary": "कक्षावार सारांश",
+  "Class 1 Assessed": "कक्षा 1 के आकलन",
+  "Class 2 Assessed": "कक्षा 2 के आकलन",
+  "Class 3 Assessed": "कक्षा 3 के आकलन"
 }

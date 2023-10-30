@@ -5,6 +5,7 @@ import {
   Param,
   ParseArrayPipe,
   ParseIntPipe,
+  Post,
   Query,
   Request,
   Res,
@@ -14,13 +15,18 @@ import {
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
-import { CacheConstants, CacheKeySchoolStudents, Mentor, Role } from '../enums';
+import { CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
 import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { GetSchoolStudentsDto } from '../dto/GetSchoolStudents.dto';
 import { Response } from 'express';
 import { EtagService } from '../modules/etag/etag.service';
 import { MentorInterceptor } from '../interceptors/mentor.interceptor';
 import { SchoolServiceV2 } from './school.service.v2';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
+import { AssessmentCycleValidatorDto } from '../dto/AssessmentCycleValidator.dto';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -31,6 +37,8 @@ export class SchoolController {
     private readonly service: SchoolServiceV2,
     private readonly appService: AppService,
     private readonly etagService: EtagService,
+    @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
+    private readonly calculateExaminerCycleUdiseResultQueue: Queue,
   ) {
   }
 
@@ -59,12 +67,10 @@ export class SchoolController {
   @UseInterceptors(MentorInterceptor)
   async getSchoolStudentsResults(
     @Param('udise', ParseIntPipe) udise: number,
-    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
-    @Query('month', ParseIntPipe) month: number,
-    @Query('year', ParseIntPipe) year: number,
+    @Query() params: GetSchoolStudentsResultDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.service.getSchoolStudentsResults(mentor, udise, grades, year, month);
+    return this.service.getSchoolStudentsResultsV2(mentor, udise, params);
   }
 
   @Get(':udise/students/result/summary')
@@ -88,5 +94,45 @@ export class SchoolController {
     @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.service.getSchoolTeacherPerformance(mentor, udise);
+  }
+
+  @Get('status')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getSchoolStatus(
+    @Query() params: GetSchoolStatusDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return this.service.getSchoolStatus(mentor, params);
+  }
+
+  @Post(':udise/result/calculate')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async calculateExaminerCycleUdiseResult(
+    @Param('udise', ParseIntPipe) udise: number,
+    @Query() params: AssessmentCycleValidatorDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    await this.calculateExaminerCycleUdiseResultQueue.add(
+      JobEnum.ProcessExaminerCycleUdiseResult,
+      {
+        mentor: mentor,
+        udise: udise,
+        cycle_id: params.cycle_id,
+      },
+      {
+        attempts: 3,
+        removeOnComplete: true,
+        backoff: 60000,
+        delay: 60000, // we must process the event 1 minute later
+      },
+    );
+    return {
+      msg: 'Queued!',
+      data: null,
+    };
   }
 }

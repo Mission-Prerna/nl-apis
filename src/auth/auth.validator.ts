@@ -127,10 +127,41 @@ export class RequiredWithoutAll implements ValidatorConstraintInterface {
     }
     return allOthersAreEmpty;
   }
+
   defaultMessage(args: ValidationArguments): string {
     if (this.msg) {
       return this.msg;
     }
-    return `${args.property} must be present & not empty when non of the fields ${args.constraints.join(', ')} are empty or not present.`;
+    return `${args.property} must be present & not empty when non of the fields [${args.constraints.join(', ')}] are empty or not present.`;
+  }
+}
+
+/*
+  Inspired from https://laravel.com/docs/10.x/validation#rule-required-with-all
+  The field under validation must be present and not empty only if all of the other specified fields are present and not empty.
+ */
+@ValidatorConstraint({ name: 'RequiredWithAll', async: true })
+@Injectable()
+export class RequiredWithAll implements ValidatorConstraintInterface {
+  private msg: null | string = null;
+
+  validate(value: any, args: ValidationArguments): Promise<boolean> | boolean {
+    let allOthersAreEmpty = true;
+    const otherFields = args.constraints;
+    for (const field of otherFields) {
+      // @ts-ignore
+      if (!args.object.hasOwnProperty(field) || !args.object[field]) {
+        allOthersAreEmpty = false;
+        break;
+      }
+    }
+    return allOthersAreEmpty;
+  }
+
+  defaultMessage(args: ValidationArguments): string {
+    if (this.msg) {
+      return this.msg;
+    }
+    return `${args.property} must be present & not empty when all of the fields [${args.constraints.join(', ')}] are present & not empty.`;
   }
 }

@@ -650,6 +650,13 @@ export class AppService {
       mentor: mentor,
       school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
+      examiner_cycle_details: {
+        id: 1,
+        name: 'Cycle XXX',
+        start_date: '2023-01-01',
+        end_date: '2023-10-01',
+        school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
+      },
     };
   }
 

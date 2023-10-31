@@ -32,6 +32,7 @@ import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessme
 import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
+import { MentorClearCacheDto } from './dto/MentorInfoDto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -215,5 +216,15 @@ export class AdminController {
     @Body() body: InvalidateExaminerCycleAssessmentsDto,
   ) {
     return this.service.invalidateAssessmentCycleExaminerAssessments(params.cycle_id, body);
+  }
+
+  @Post('/mentor/clear-cache')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async clearMentorCache(
+    @Body() body: MentorClearCacheDto,
+  ) {
+    return this.service.clearMentorCache(body.phoneNumbers);
   }
 }

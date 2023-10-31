@@ -70,7 +70,10 @@ export function getAssessmentVisitResultsQuery(table: string) {
 `;
 }
 
-export function getAssessmentVisitResultsStudentsQuery(student_table: string, assessment_table: string) {
+export function getAssessmentVisitResultsStudentsQuery(
+  student_table: string,
+  assessment_table: string,
+) {
   return `
   create table ${student_table}
   (
@@ -101,7 +104,10 @@ export function getAssessmentVisitResultsStudentsQuery(student_table: string, as
   );`;
 }
 
-export function getAssessmentVisitResultStudentOdkResultsQuery(odk_table: string, student_table: string) {
+export function getAssessmentVisitResultStudentOdkResultsQuery(
+  odk_table: string,
+  student_table: string,
+) {
   return `
   create table ${odk_table}
   (

@@ -18,11 +18,7 @@ export class CreateAssessmentVisitResult {
   grade!: number;
 
   @IsInt()
-  @IsIn([
-    SubjectEnum.MATH,
-    SubjectEnum.ENGLISH,
-    SubjectEnum.HINDI,
-  ])
+  @IsIn([SubjectEnum.MATH, SubjectEnum.ENGLISH, SubjectEnum.HINDI])
   subject_id!: number;
 
   mentor_id!: number;

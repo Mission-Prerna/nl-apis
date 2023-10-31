@@ -1,7 +1,11 @@
 import {
   IsIn,
   IsInt,
-  IsOptional, IsPhoneNumber, IsString, MaxLength, Validate,
+  IsOptional,
+  IsPhoneNumber,
+  IsString,
+  MaxLength,
+  Validate,
 } from 'class-validator';
 import { IsExist } from '../auth/auth.validator';
 
@@ -28,7 +32,18 @@ export class CreateMentorOldDto {
   block_town_name!: string;
 
   @IsString()
-  @IsIn(['examiner', 'TSPL', 'S.R. G', 'Prinicipal Secretary', 'Diet Mentor', 'teacher', 'ARP', 'TEST', 'SRG', 'ARP NAGAR'])
+  @IsIn([
+    'examiner',
+    'TSPL',
+    'S.R. G',
+    'Prinicipal Secretary',
+    'Diet Mentor',
+    'teacher',
+    'ARP',
+    'TEST',
+    'SRG',
+    'ARP NAGAR',
+  ])
   designation!: string;
 
   @IsString()

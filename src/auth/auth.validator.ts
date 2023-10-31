@@ -1,4 +1,7 @@
-import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { ValidationArguments } from 'class-validator/types/validation/ValidationArguments';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
@@ -12,7 +15,11 @@ export class IsExist implements ValidatorConstraintInterface {
     const model = validationArguments.constraints[0];
     const pathToProperty = validationArguments.constraints[1];
     // @ts-ignore
-    if (typeof validationArguments.object[validationArguments.property] === 'undefined' || validationArguments.object[validationArguments.property] === null) {
+    if (
+      typeof validationArguments.object[validationArguments.property] ===
+        'undefined' ||
+      validationArguments.object[validationArguments.property] === null
+    ) {
       // if the field is null or empty, no need to run db query
       return false;
     }
@@ -132,7 +139,11 @@ export class RequiredWithoutAll implements ValidatorConstraintInterface {
     if (this.msg) {
       return this.msg;
     }
-    return `${args.property} must be present & not empty when non of the fields [${args.constraints.join(', ')}] are empty or not present.`;
+    return `${
+      args.property
+    } must be present & not empty when non of the fields [${args.constraints.join(
+      ', ',
+    )}] are empty or not present.`;
   }
 }
 
@@ -162,6 +173,10 @@ export class RequiredWithAll implements ValidatorConstraintInterface {
     if (this.msg) {
       return this.msg;
     }
-    return `${args.property} must be present & not empty when all of the fields [${args.constraints.join(', ')}] are present & not empty.`;
+    return `${
+      args.property
+    } must be present & not empty when all of the fields [${args.constraints.join(
+      ', ',
+    )}] are present & not empty.`;
   }
 }

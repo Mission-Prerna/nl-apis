@@ -8,10 +8,6 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [JwtModule, ConfigModule],
   controllers: [],
-  providers: [
-    JwtAuthGuard,
-    JwtAdminGuard,
-    JwtStrategy,
-  ],
+  providers: [JwtAuthGuard, JwtAdminGuard, JwtStrategy],
 })
 export class AuthModule {}

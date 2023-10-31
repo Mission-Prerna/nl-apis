@@ -15,7 +15,14 @@ import {
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
-import { CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
+import {
+  CacheConstants,
+  CacheKeySchoolStudents,
+  JobEnum,
+  Mentor,
+  QueueEnum,
+  Role,
+} from '../enums';
 import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { GetSchoolStudentsDto } from '../dto/GetSchoolStudents.dto';
 import { Response } from 'express';
@@ -39,8 +46,7 @@ export class SchoolController {
     private readonly etagService: EtagService,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResultQueue: Queue,
-  ) {
-  }
+  ) {}
 
   @Get(':udise/students')
   @Roles(Role.OpenRole, Role.Diet)
@@ -50,7 +56,10 @@ export class SchoolController {
     @Res({ passthrough: true }) response: Response,
     @Headers('if-none-match') etagHeader?: string,
   ) {
-    const etag = await this.etagService.getEtag(CacheKeySchoolStudents(params.udise), CacheConstants.TTL_SCHOOL_STUDENTS);
+    const etag = await this.etagService.getEtag(
+      CacheKeySchoolStudents(params.udise),
+      CacheConstants.TTL_SCHOOL_STUDENTS,
+    );
 
     // set the etag
     response.header('ETag', etag.etag);
@@ -79,7 +88,8 @@ export class SchoolController {
   @UseInterceptors(MentorInterceptor)
   async getSchoolStudentsResultsSummary(
     @Param('udise', ParseIntPipe) udise: number,
-    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' })) grades: number[],
+    @Query('grade', new ParseArrayPipe({ items: Number, separator: ',' }))
+    grades: number[],
     @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.service.getSchoolStudentsResultsSummary(mentor, udise, grades);

@@ -1,6 +1,12 @@
 import { Transform, Type } from 'class-transformer';
 import { IsExist } from '../../auth/auth.validator';
-import { ArrayNotEmpty, IsArray, IsBoolean, IsInt, Validate } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  Validate,
+} from 'class-validator';
 
 export class InvalidateExaminerCycleAssessmentsDto {
   @IsInt()

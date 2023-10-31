@@ -1,7 +1,4 @@
-import {
-  ArrayUnique,
-  IsArray,
-} from 'class-validator';
+import { ArrayUnique, IsArray } from 'class-validator';
 
 export class SchoolGeofencingBlacklistDto {
   @IsArray()

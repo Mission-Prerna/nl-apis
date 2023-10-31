@@ -10,24 +10,31 @@ export class StudentService {
   constructor(
     protected readonly prismaService: PrismaService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
-  ) {
-  }
+  ) {}
 
-  async getGradeStudentsCount(udise: number, cache: boolean = true): Promise<Array<{ grade: number, count: number }>> {
+  async getGradeStudentsCount(
+    udise: number,
+    cache: boolean = true,
+  ): Promise<Array<{ grade: number; count: number }>> {
     if (cache) {
-      const cachedData = await this.cacheService.get<Array<{ grade: number, count: number }>>(
-        CacheKeySchoolStudentsCount(udise),
-      );
+      const cachedData = await this.cacheService.get<
+        Array<{ grade: number; count: number }>
+      >(CacheKeySchoolStudentsCount(udise));
       if (cachedData) {
         return cachedData;
       }
     }
-    const results: Array<{ grade: number, count: number }> = await this.prismaService.$queryRawUnsafe(`select grade, count(*) as count from students where udise = ${udise} group by grade`);
+    const results: Array<{ grade: number; count: number }> =
+      await this.prismaService.$queryRawUnsafe(
+        `select grade, count(*) as count from students where udise = ${udise} group by grade`,
+      );
 
     // @ts-ignore
-    this.cacheService.set(CacheKeySchoolStudentsCount(udise), results, {
-      ttl: CacheConstants.TTL_SCHOOL_STUDENTS_COUNT,
-    }).then(() => true); // Adding the data to cache
+    this.cacheService
+      .set(CacheKeySchoolStudentsCount(udise), results, {
+        ttl: CacheConstants.TTL_SCHOOL_STUDENTS_COUNT,
+      })
+      .then(() => true); // Adding the data to cache
     return results;
   }
 
@@ -41,7 +48,7 @@ export class StudentService {
         unique_id: {
           notIn: ['-1', '-2', '-3'], // we don't want anonymous students
         },
-        deleted_at: null,  // query only active students
+        deleted_at: null, // query only active students
       },
       select: {
         unique_id: true,
@@ -60,7 +67,11 @@ export class StudentService {
     });
   }
 
-  async getCycleStudents(udise: number, cycleId: number, grades: Array<number>): Promise<Array<Student>> {
+  async getCycleStudents(
+    udise: number,
+    cycleId: number,
+    grades: Array<number>,
+  ): Promise<Array<Student>> {
     return this.prismaService.$queryRawUnsafe(`
       select s.unique_id as id, s.name, s.grade, s.roll_no
       from students s

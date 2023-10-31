@@ -14,8 +14,8 @@ export type Mentor = {
   district_name: string;
   block_town_name: string;
   teacher_school_list_mapping?: null | {
-    school_list: null | object
-  }
+    school_list: null | object;
+  };
 };
 
 export type Student = {
@@ -25,8 +25,8 @@ export type Student = {
   is_passed?: boolean;
 
   // for GET /api/school/:udise/students/result?grade=1,2,3&month=8&year=2023
-  status?: string;  // pass/fail/pending
-  last_assessment_date?: number | null;  // unix timestamp in milliseconds
+  status?: string; // pass/fail/pending
+  last_assessment_date?: number | null; // unix timestamp in milliseconds
 };
 
 export enum StudentMonthlyAssessmentStatus {
@@ -95,36 +95,36 @@ export type TypeAssessmentQuarterTables = {
   assessment_visit_results_v2: string;
   assessment_visit_results_students: string;
   assessment_visit_results_student_odk_results: string;
-}
+};
 
 export type TypeTeacherHomeOverview = {
-  assessments_total: number,
-  nipun_total: number,
-  assessments_today?: number,
-  nipun_today?: number,
-  updated_at?: number,
-  assessed_student_ids?: string,
-  nipun_student_ids?: string,
-}
+  assessments_total: number;
+  nipun_total: number;
+  assessments_today?: number;
+  nipun_today?: number;
+  updated_at?: number;
+  assessed_student_ids?: string;
+  nipun_student_ids?: string;
+};
 
 export type MentorMonthlyMetrics = {
-  schools_visited: number,
-  assessments_taken: number,
-  avg_time: number,
-  grade_1_assessments: number,
-  grade_2_assessments: number,
-  grade_3_assessments: number
-}
+  schools_visited: number;
+  assessments_taken: number;
+  avg_time: number;
+  grade_1_assessments: number;
+  grade_2_assessments: number;
+  grade_3_assessments: number;
+};
 
 export type MentorWeeklyMetrics = {
-  assessments_taken: number,
-  nipun_count: number,
-}
+  assessments_taken: number;
+  nipun_count: number;
+};
 
 export type MentorDailyMetrics = {
-  assessments_taken: number,
-  nipun_count: number,
-}
+  assessments_taken: number;
+  nipun_count: number;
+};
 
 export interface CycleDistrictUdiseRow {
   district_id: number;
@@ -139,28 +139,54 @@ export function CacheKeyMentorDetail(phoneNumber: string) {
   return `mentor:detail:${phoneNumber}`;
 }
 
-export function CacheKeyMentorSchoolList(phoneNumber: string, month: number, year: number) {
-  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+export function CacheKeyMentorSchoolList(
+  phoneNumber: string,
+  month: number,
+  year: number,
+) {
+  const monthIdentifier =
+    month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   return `mentor:school-list:${phoneNumber}:${year.toString()}${monthIdentifier}`;
 }
 
-export function CacheKeyMentorMonthlyVisitedSchools(mentorId: bigint, month: number, year: number) {
-  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+export function CacheKeyMentorMonthlyVisitedSchools(
+  mentorId: bigint,
+  month: number,
+  year: number,
+) {
+  const monthIdentifier =
+    month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   return `vs.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
-export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, year: number) {
-  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+export function CacheKeyMentorMonthlyMetrics(
+  mentorId: bigint,
+  month: number,
+  year: number,
+) {
+  const monthIdentifier =
+    month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   return `hm.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
-export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {
-  const weekIdentifier = week < 10 ? `0${week.toString()}` : `${week.toString()}`;
+export function CacheKeyMentorWeeklyMetrics(
+  mentorId: bigint,
+  week: number,
+  year: number,
+) {
+  const weekIdentifier =
+    week < 10 ? `0${week.toString()}` : `${week.toString()}`;
   return `hm.weekly:${year.toString()}${weekIdentifier}:mentor:${mentorId.toString()}`;
 }
 
-export function CacheKeyMentorDailyMetrics(mentorId: bigint, month: number, day: number, year: number) {
-  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+export function CacheKeyMentorDailyMetrics(
+  mentorId: bigint,
+  month: number,
+  day: number,
+  year: number,
+) {
+  const monthIdentifier =
+    month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   const dayIdentifier = day < 10 ? `0${day.toString()}` : `${day.toString()}`;
   return `hm.daily:${year.toString()}${monthIdentifier}${dayIdentifier}:mentor:${mentorId.toString()}`;
 }

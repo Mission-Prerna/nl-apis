@@ -22,10 +22,7 @@ describe('SchoolService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        CacheModule.register(),
-        ConfigModule
-      ],
+      imports: [CacheModule.register(), ConfigModule],
       providers: [
         SchoolService,
         PrismaService,
@@ -35,7 +32,7 @@ describe('SchoolService', () => {
         RedisService,
         {
           provide: RedisService,
-          useClass: MockRedisService
+          useClass: MockRedisService,
         },
         JwtService,
       ],

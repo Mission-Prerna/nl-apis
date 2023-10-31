@@ -13,9 +13,7 @@ export class FusionauthService {
   fusionauthClient: FusionAuthClient;
   protected readonly logger = new Logger(FusionauthService.name); // logger instance
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     this.fusionauthClient = new FusionAuthClient(
       configService.getOrThrow<string>('FA_API_KEY'),
       configService.getOrThrow<string>('FA_URL'),
@@ -28,14 +26,13 @@ export class FusionauthService {
     return this.fusionauthClient
       .register('', user)
       .then((response: ClientResponse<RegistrationResponse>) => {
-          return response;
-        },
-      )
+        return response;
+      })
       .catch((e) => {
         Sentry.captureException(e, {
           user: {
             username: user.user?.username,
-          }
+          },
         });
         return e;
       });

@@ -1,7 +1,11 @@
 import {
   IsIn,
   IsInt,
-  IsOptional, IsPhoneNumber, IsString, MaxLength, Validate,
+  IsOptional,
+  IsPhoneNumber,
+  IsString,
+  MaxLength,
+  Validate,
 } from 'class-validator';
 import { ActorEnum } from '../enums';
 import { IsExist } from '../auth/auth.validator';

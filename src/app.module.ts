@@ -19,7 +19,12 @@ import { RedisHelperService } from './RedisHelper.service';
 import { SchoolController } from './school/school.controller';
 import { SchoolService } from './school/school.service';
 import { EtagModule } from './modules/etag/etag.module';
-import { AcceptLanguageResolver, HeaderResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
+import {
+  AcceptLanguageResolver,
+  HeaderResolver,
+  I18nModule,
+  QueryResolver,
+} from 'nestjs-i18n';
 import * as path from 'path';
 import { AdminController } from './admin/admin.controller';
 import { AdminService } from './admin/admin.service';
@@ -80,7 +85,9 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         store: (await redisStore({
-          url: `redis://${configService.get('CACHE_HOST')}:${configService.get('CACHE_PORT')}`,
+          url: `redis://${configService.get('CACHE_HOST')}:${configService.get(
+            'CACHE_PORT',
+          )}`,
         })) as unknown as CacheStore,
       }),
       inject: [ConfigService],
@@ -102,10 +109,14 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
       ],
       inject: [ConfigService],
     }),
-    ThrottlerModule.forRoot([{
-      ttl: process.env?.RATE_LIMIT_TTL ? parseInt(process.env.RATE_LIMIT_TTL) : 60000, // in milliseconds
-      limit: process.env?.RATE_LIMIT ? parseInt(process.env.RATE_LIMIT) : 50,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: process.env?.RATE_LIMIT_TTL
+          ? parseInt(process.env.RATE_LIMIT_TTL)
+          : 60000, // in milliseconds
+        limit: process.env?.RATE_LIMIT ? parseInt(process.env.RATE_LIMIT) : 50,
+      },
+    ]),
   ],
   controllers: [AppController, SchoolController, AdminController],
   providers: [

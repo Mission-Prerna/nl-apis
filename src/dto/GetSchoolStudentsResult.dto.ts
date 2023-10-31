@@ -1,5 +1,10 @@
 import { Type } from 'class-transformer';
-import { IsExist, RequiredWithAll, RequiredWithoutAll, ValidateGrades } from '../auth/auth.validator';
+import {
+  IsExist,
+  RequiredWithAll,
+  RequiredWithoutAll,
+  ValidateGrades,
+} from '../auth/auth.validator';
 import { IsInt, IsOptional, Max, Min, Validate } from 'class-validator';
 
 export class GetSchoolStudentsResultDto {

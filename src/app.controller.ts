@@ -84,11 +84,13 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async createAssessmentVisitResults(
-    @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
-    @Request() { mentorId }: { mentorId: number},
+    @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult }))
+    body: CreateAssessmentVisitResult[],
+    @Request() { mentorId }: { mentorId: number },
   ) {
     if (this.useQueues) {
-      for (const dto of body) { // iterate over objects & push to queue
+      for (const dto of body) {
+        // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
         await this.assessmentVisitResultQueue.add(
           JobEnum.CreateAssessmentVisitResults,
@@ -106,7 +108,8 @@ export class AppController {
       };
     } else {
       const response = [];
-      for (const dto of body) { // iterate over objects & push to DB
+      for (const dto of body) {
+        // iterate over objects & push to DB
         dto.mentor_id = mentorId; // assign logged in mentor to dto
         response.push(await this.appService.createAssessmentVisitResult(dto));
       }
@@ -123,7 +126,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getMentorSchoolListIfHeHasVisited(
       mentor,
@@ -137,11 +140,13 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async createAssessmentSurveyResult(
-    @Body(new ParseArrayPipe({ items: CreateAssessmentSurveyResult })) body: CreateAssessmentSurveyResult[],
+    @Body(new ParseArrayPipe({ items: CreateAssessmentSurveyResult }))
+    body: CreateAssessmentSurveyResult[],
     @Request() { mentorId }: { mentorId: number },
   ) {
     if (this.useQueues) {
-      for (const dto of body) { // iterate over objects & push to queue
+      for (const dto of body) {
+        // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
         await this.assessmentSurveyResultQueue.add(
           JobEnum.CreateAssessmentSurveyResult,
@@ -149,13 +154,13 @@ export class AppController {
           {
             attempts: 3,
             removeOnComplete: true,
-            backoff: 60000
+            backoff: 60000,
           },
         );
       }
       return {
         msg: 'Queued!',
-        data: null
+        data: null,
       };
     } else {
       const response = [];
@@ -176,7 +181,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getHomeScreenMetric(
       mentor,
@@ -185,14 +190,13 @@ export class AppController {
     );
   }
 
-
   @Get('/api/mentor/details')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getMentorDetails(
     @Query() queryParams: GetMentorDetailsDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getMentorDetails(
       mentor,
@@ -212,7 +216,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorPin(
     @Body() body: UpdateMentorPinDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.updateMentorPin(mentor, body.pin).then(() => true);
     return mentor;
@@ -224,13 +228,15 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getActorHomeScreenMetric(
     @Param() id: number,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
         break;
       default:
-        throw new NotImplementedException('Only Teachers are allowed to access this endpoint.')
+        throw new NotImplementedException(
+          'Only Teachers are allowed to access this endpoint.',
+        );
     }
     return this.appService.getTeacherHomeScreenMetric(mentor);
   }
@@ -238,18 +244,14 @@ export class AppController {
   @Post(['/api/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
-  async createMentor(
-    @Body() body: CreateMentorDto,
-  ) {
+  async createMentor(@Body() body: CreateMentorDto) {
     return this.adminService.createMentor(body);
   }
 
   @Post(['/api/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
-  async createMentorOld(
-    @Body() body: CreateMentorOldDto,
-  ) {
+  async createMentorOld(@Body() body: CreateMentorOldDto) {
     return this.adminService.createMentorOld(body);
   }
 
@@ -259,12 +261,12 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorToken(
     @Body() body: UpsertMentorTokenDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.upsertMentorToken(mentor, body.token).then(() => true);
     return {
       msg: 'Success!',
-      data: "Token upserted successfully",
+      data: 'Token upserted successfully',
     };
   }
 
@@ -274,12 +276,12 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorBotTelemetry(
     @Body() body: CreateBotTelemetryDto[],
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.setMentorBotTelemetry(mentor.id, body);
     return {
       msg: 'Success!',
-      data: "Telemetry inserted",
+      data: 'Telemetry inserted',
     };
   }
 
@@ -291,8 +293,11 @@ export class AppController {
     @Query() query: GetMentorBotsWithActionDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.appService.getMentorBotsWithAction(mentor.id, query.action)
-      .then((response: Array<any>) => response.map(element => element.bot_id));
+    return this.appService
+      .getMentorBotsWithAction(mentor.id, query.action)
+      .then((response: Array<any>) =>
+        response.map((element) => element.bot_id),
+      );
   }
 
   @Get('/api/examiner/performance/insights')
@@ -304,7 +309,9 @@ export class AppController {
     @Request() { mentor }: { mentor: Mentor },
   ) {
     if (mentor.actor_id != ActorEnum.EXAMINER) {
-      throw new NotImplementedException('Only Examiners are allowed to access this endpoint.');
+      throw new NotImplementedException(
+        'Only Examiners are allowed to access this endpoint.',
+      );
     }
     return this.appService.getExaminerHomeScreenMetric(mentor, params.cycle_id);
   }

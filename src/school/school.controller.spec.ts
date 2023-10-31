@@ -25,12 +25,7 @@ describe('SchoolController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        CacheModule.register(),
-        EtagModule,
-        ConfigModule,
-        JwtModule,
-      ],
+      imports: [CacheModule.register(), EtagModule, ConfigModule, JwtModule],
       controllers: [SchoolController],
       providers: [
         AppService,
@@ -40,10 +35,10 @@ describe('SchoolController', () => {
         RedisService,
         {
           provide: RedisService,
-          useClass: MockRedisService
+          useClass: MockRedisService,
         },
         SchoolService,
-      ]
+      ],
     }).compile();
 
     appService = module.get<AppService>(AppService);

@@ -43,7 +43,7 @@ describe('AppController', () => {
           },
         ),
         CacheModule.register(),
-        RedisModule.forRoot({config: {}}),
+        RedisModule.forRoot({ config: {} }),
         TerminusModule,
       ],
       controllers: [AppController],

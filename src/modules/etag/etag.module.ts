@@ -2,9 +2,7 @@ import { CacheModule, Module } from '@nestjs/common';
 import { EtagService } from './etag.service';
 
 @Module({
-  imports: [
-    CacheModule.register()
-  ],
+  imports: [CacheModule.register()],
   providers: [EtagService],
   exports: [EtagService],
 })

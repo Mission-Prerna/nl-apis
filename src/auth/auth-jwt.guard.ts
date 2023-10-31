@@ -13,7 +13,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
     protected readonly configService: ConfigService,
   ) {
     super();
-    this.applicationId = this.configService.get<string>('FA_APPLICATION_ID', '');
+    this.applicationId = this.configService.get<string>(
+      'FA_APPLICATION_ID',
+      '',
+    );
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -25,7 +28,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
     let isAllowed = false;
     const request: Record<string, any> = context.switchToHttp().getRequest();
     try {
-      const tokenRoles: string[] = request['user']['apiRoles'] ?? request['user']['roles'] ?? [];
+      const tokenRoles: string[] =
+        request['user']['apiRoles'] ?? request['user']['roles'] ?? [];
       for (const role of roles) {
         if (tokenRoles?.indexOf(role) > -1) {
           isAllowed = true;
@@ -44,7 +48,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
           },
           extra: {
             applicationId: request['user']['applicationId'],
-          }
+          },
         });
       }
     } catch (error) {

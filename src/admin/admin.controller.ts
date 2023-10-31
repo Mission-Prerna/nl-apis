@@ -46,16 +46,13 @@ export class AdminController {
     private readonly assessmentSurveyResultQueue: Queue,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResult: Queue,
-  ) {
-  }
+  ) {}
 
   @Post(['/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 500, ttl: 60000 } })
-  async createMentor(
-    @Body() body: CreateMentorDto,
-  ) {
+  async createMentor(@Body() body: CreateMentorDto) {
     return this.service.createMentor(body);
   }
 
@@ -63,9 +60,7 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 500, ttl: 60000 } })
-  async createMentorOld(
-    @Body() body: CreateMentorOldDto,
-  ) {
+  async createMentorOld(@Body() body: CreateMentorOldDto) {
     return this.service.createMentorOld(body);
   }
 
@@ -73,9 +68,7 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async schoolGeofencingBlacklist(
-    @Body() body: SchoolGeofencingBlacklistDto,
-  ) {
+  async schoolGeofencingBlacklist(@Body() body: SchoolGeofencingBlacklistDto) {
     return this.service.schoolGeofencingBlacklist(body);
   }
 
@@ -122,7 +115,8 @@ export class AdminController {
     return {
       assessment_visit_results: await this.assessmentVisitResultQueue.count(),
       assessment_survey_results: await this.assessmentSurveyResultQueue.count(),
-      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.count(),
+      calculate_examiner_cycle_udise_result:
+        await this.calculateExaminerCycleUdiseResult.count(),
     };
   }
 
@@ -132,9 +126,12 @@ export class AdminController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async countFailedQueues() {
     return {
-      assessment_visit_results: await this.assessmentVisitResultQueue.getFailedCount(),
-      assessment_survey_results: await this.assessmentSurveyResultQueue.getFailedCount(),
-      calculate_examiner_cycle_udise_result: await this.calculateExaminerCycleUdiseResult.getFailedCount(),
+      assessment_visit_results:
+        await this.assessmentVisitResultQueue.getFailedCount(),
+      assessment_survey_results:
+        await this.assessmentSurveyResultQueue.getFailedCount(),
+      calculate_examiner_cycle_udise_result:
+        await this.calculateExaminerCycleUdiseResult.getFailedCount(),
     };
   }
 
@@ -143,7 +140,8 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createStudents(
-    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent }))
+    body: CreateStudent[],
   ) {
     await this.service.createStudents(body);
     return {
@@ -157,7 +155,8 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async updateStudents(
-    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent }))
+    body: UpdateStudent[],
   ) {
     await this.service.updateStudents(body);
     return {
@@ -171,7 +170,8 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async deleteStudents(
-    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
+    @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent }))
+    body: DeleteStudent[],
   ) {
     return this.service.deleteStudents(body);
   }
@@ -190,9 +190,16 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictSchoolMapping(
     @Param() params: CycleIdValidateDto,
-    @Body(new MaxItemsPipe(1000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
+    @Body(
+      new MaxItemsPipe(1000),
+      new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping }),
+    )
+    body: CreateAssessmentCycleDistrictSchoolMapping[],
   ) {
-    return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
+    return this.service.createAssessmentCycleDistrictSchoolMapping(
+      params.cycle_id,
+      body,
+    );
   }
 
   @Post('assessment-cycle/:cycle_id/district-examiner-mapping')
@@ -201,9 +208,18 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictExaminerMapping(
     @Param() params: CycleIdValidateDto,
-    @Body(new MaxItemsPipe(5000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictExaminerMapping })) body: CreateAssessmentCycleDistrictExaminerMapping[],
+    @Body(
+      new MaxItemsPipe(5000),
+      new ParseArrayPipe({
+        items: CreateAssessmentCycleDistrictExaminerMapping,
+      }),
+    )
+    body: CreateAssessmentCycleDistrictExaminerMapping[],
   ) {
-    return this.service.createAssessmentCycleDistrictExaminerMapping(params.cycle_id, body);
+    return this.service.createAssessmentCycleDistrictExaminerMapping(
+      params.cycle_id,
+      body,
+    );
   }
 
   @Post('assessment-cycle/:cycle_id/invalidate-examiner-assessments')
@@ -214,6 +230,9 @@ export class AdminController {
     @Param() params: CycleIdValidateDto,
     @Body() body: InvalidateExaminerCycleAssessmentsDto,
   ) {
-    return this.service.invalidateAssessmentCycleExaminerAssessments(params.cycle_id, body);
+    return this.service.invalidateAssessmentCycleExaminerAssessments(
+      params.cycle_id,
+      body,
+    );
   }
 }

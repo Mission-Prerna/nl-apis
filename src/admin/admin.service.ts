@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
@@ -26,20 +31,32 @@ export class AdminService {
     protected readonly configService: ConfigService,
     protected readonly faService: FusionauthService,
     protected readonly appService: AppService,
-  ) {
-  }
+  ) {}
 
   async createMentorOld(data: CreateMentorOldDto) {
     let blockId = null;
-    if (!['examiner', 'SRG', 'Diet Mentor'].includes(data.designation) && !data.block_town_name) {
-      throw new BadRequestException(['block_town_name is required when designation is not in [examiner, SRG]']);
+    if (
+      !['examiner', 'SRG', 'Diet Mentor'].includes(data.designation) &&
+      !data.block_town_name
+    ) {
+      throw new BadRequestException([
+        'block_town_name is required when designation is not in [examiner, SRG]',
+      ]);
     } else {
       if (data.block_town_name) {
-        blockId = (await this.prismaService.blocks.findFirstOrThrow({ where: { name: data.block_town_name } })).id;
+        blockId = (
+          await this.prismaService.blocks.findFirstOrThrow({
+            where: { name: data.block_town_name },
+          })
+        ).id;
       }
     }
     let actorId = ActorEnum.MENTOR;
-    const designationId = (await this.prismaService.designations.findFirstOrThrow({ where: { name: data.designation } })).id;
+    const designationId = (
+      await this.prismaService.designations.findFirstOrThrow({
+        where: { name: data.designation },
+      })
+    ).id;
     switch (data.designation) {
       case 'teacher':
         actorId = ActorEnum.TEACHER;
@@ -54,7 +71,11 @@ export class AdminService {
     const newDto: CreateMentorDto = {
       phone_no: data.phone_no,
       officer_name: data.officer_name,
-      district_id: (await this.prismaService.districts.findFirstOrThrow({ where: { name: data.district_name } })).id,
+      district_id: (
+        await this.prismaService.districts.findFirstOrThrow({
+          where: { name: data.district_name },
+        })
+      ).id,
       block_id: blockId,
       designation_id: designationId,
       actor_id: actorId,
@@ -67,14 +88,17 @@ export class AdminService {
 
   async createMentor(data: CreateMentorDto) {
     if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
-      throw new BadRequestException(['udise is needed when actor is "Teacher".']);
+      throw new BadRequestException([
+        'udise is needed when actor is "Teacher".',
+      ]);
     }
     /*
       It's a 2-step process:
       1. Create a user on Fusion auth if not already exists.
       2. Create mentor at backend.
      */
-    const applicationId = this.configService.getOrThrow<string>('FA_APPLICATION_ID');
+    const applicationId =
+      this.configService.getOrThrow<string>('FA_APPLICATION_ID');
     const response = await this.faService.createAndRegisterUser({
       user: {
         username: data.phone_no,
@@ -89,10 +113,11 @@ export class AdminService {
       },
     });
     if (
-      (
-        // @ts-ignore
-        response.statusCode == 400 && response.exception['fieldErrors']['user.username'][0]['code'] == '[duplicate]user.username'
-      ) || response.statusCode == 200
+      // @ts-ignore
+      (response.statusCode == 400 &&
+        response.exception['fieldErrors']['user.username'][0]['code'] ==
+          '[duplicate]user.username') ||
+      response.statusCode == 200
     ) {
       // if success or duplicate username error, we consider it as success
       const mentor = await this.prismaService.mentor.upsert({
@@ -149,7 +174,10 @@ export class AdminService {
     if (Number(this.configService.get('DEBUG', 1)) === 1) {
       description = JSON.stringify(response);
     }
-    throw new MentorCreationFailedException('Mentor creation failed!!', description);
+    throw new MentorCreationFailedException(
+      'Mentor creation failed!!',
+      description,
+    );
   }
 
   async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {
@@ -186,7 +214,10 @@ export class AdminService {
    * @param params
    * @param baseId = 2023040000 (default) // base identifier starting from Apr 2023, the time quarter tables came into effect
    */
-  async getAssessmentVisitResults(params: GetAssessmentVisitResultsDto, baseId = 2023040000): Promise<any> {
+  async getAssessmentVisitResults(
+    params: GetAssessmentVisitResultsDto,
+    baseId = 2023040000,
+  ): Promise<any> {
     if (params.id < baseId) {
       params.id = baseId;
     }
@@ -221,12 +252,15 @@ export class AdminService {
         },
       };
       const studentRelation: Record<string, boolean> = {};
-      studentRelation[tables.assessment_visit_results_student_odk_results] = true;
+      studentRelation[tables.assessment_visit_results_student_odk_results] =
+        true;
       relations[tables.assessment_visit_results_students] = {
         include: studentRelation,
       };
       // @ts-ignore
-      let assessmentVisitResults = await this.prismaService[tables.assessment_visit_results_v2].findMany({
+      let assessmentVisitResults = await this.prismaService[
+        tables.assessment_visit_results_v2
+      ].findMany({
         where: {
           id: {
             gt: rawId,
@@ -243,59 +277,68 @@ export class AdminService {
       for (const assessmentVisitResult of assessmentVisitResults) {
         let currentCount = 0;
         let studentResults: Array<object> = [];
-        assessmentVisitResult[tables.assessment_visit_results_students].forEach((studentResult: Record<string, any>) => {
-          currentCount++;
-          studentResults.push({
-            studentResults: {
-              // competency: '',
-              competencyId: studentResult.competency_id,
-              currentStudentCount: currentCount,
-              grade: assessmentVisitResult.grade,
-              student_session: studentResult.student_session,
-              moduleResult: {
-                achievement: studentResult.achievement,
-                appVersionCode: assessmentVisitResult.app_version_code ?? 0,
-                endTime: studentResult.end_time,
-                isPassed: studentResult.is_passed,
-                module: studentResult.module,
-                sessionCompleted: studentResult.session_completed,
-                startTime: studentResult.start_time,
-                statement: studentResult.statement,
-                successCriteria: studentResult.success_criteria,
-                totalQuestions: studentResult.total_questions,
+        assessmentVisitResult[tables.assessment_visit_results_students].forEach(
+          (studentResult: Record<string, any>) => {
+            currentCount++;
+            studentResults.push({
+              studentResults: {
+                // competency: '',
+                competencyId: studentResult.competency_id,
+                currentStudentCount: currentCount,
+                grade: assessmentVisitResult.grade,
+                student_session: studentResult.student_session,
+                moduleResult: {
+                  achievement: studentResult.achievement,
+                  appVersionCode: assessmentVisitResult.app_version_code ?? 0,
+                  endTime: studentResult.end_time,
+                  isPassed: studentResult.is_passed,
+                  module: studentResult.module,
+                  sessionCompleted: studentResult.session_completed,
+                  startTime: studentResult.start_time,
+                  statement: studentResult.statement,
+                  successCriteria: studentResult.success_criteria,
+                  totalQuestions: studentResult.total_questions,
+                },
+                odkResultsData: {
+                  results: studentResult[
+                    tables.assessment_visit_results_student_odk_results
+                  ].map((item: Record<string, any>) => {
+                    return {
+                      question: item.question,
+                      answer: item.answer,
+                    };
+                  }),
+                  totalMarks: studentResult.achievement,
+                  totalQuestions: studentResult.total_questions,
+                },
+                schoolsData: {
+                  address: 'Address',
+                  block: assessmentVisitResult.school_list.blocks.name,
+                  district: assessmentVisitResult.school_list.districts.name,
+                  nyayPanchayat:
+                    assessmentVisitResult.school_list.nyay_panchayats.name,
+                  schoolName: assessmentVisitResult.school_list.name,
+                  schoolType: assessmentVisitResult.school_list.type,
+                  udise: assessmentVisitResult.school_list.udise,
+                  visitStatus: true,
+                },
+                studentName: studentResult.student_name,
+                subject: assessmentVisitResult.subjects.name,
               },
-              odkResultsData: {
-                results: studentResult[tables.assessment_visit_results_student_odk_results].map((item: Record<string, any>) => {
-                  return {
-                    question: item.question,
-                    answer: item.answer,
-                  };
-                }),
-                totalMarks: studentResult.achievement,
-                totalQuestions: studentResult.total_questions,
-              },
-              schoolsData: {
-                address: 'Address',
-                block: assessmentVisitResult.school_list.blocks.name,
-                district: assessmentVisitResult.school_list.districts.name,
-                nyayPanchayat: assessmentVisitResult.school_list.nyay_panchayats.name,
-                schoolName: assessmentVisitResult.school_list.name,
-                schoolType: assessmentVisitResult.school_list.type,
-                udise: assessmentVisitResult.school_list.udise,
-                visitStatus: true,
-              },
-              studentName: studentResult.student_name,
-              subject: assessmentVisitResult.subjects.name,
-            },
-            viewType: studentResult.module,
-          });
-        });
+              viewType: studentResult.module,
+            });
+          },
+        );
 
         let idIdentifier;
         if (assessmentVisitResult.id < 10000) {
-          idIdentifier = BigInt(parseInt(`${yearIdentifier}${monthIdentifier}`) * 10000) + BigInt(assessmentVisitResult.id);
+          idIdentifier =
+            BigInt(parseInt(`${yearIdentifier}${monthIdentifier}`) * 10000) +
+            BigInt(assessmentVisitResult.id);
         } else {
-          idIdentifier = parseInt(`${yearIdentifier}${monthIdentifier}${assessmentVisitResult.id}`);
+          idIdentifier = parseInt(
+            `${yearIdentifier}${monthIdentifier}${assessmentVisitResult.id}`,
+          );
         }
         results.push({
           id: idIdentifier,
@@ -307,20 +350,26 @@ export class AdminService {
           // student_session: studentResult.student_session,
           subject: assessmentVisitResult.subjects.name,
           // total_time_taken: new Date(studentResult.total_time_taken * 1000).toISOString().substring(11, 19),
-          udise_code: assessmentVisitResult.udise ? (assessmentVisitResult.udise + '') : '',
+          udise_code: assessmentVisitResult.udise
+            ? assessmentVisitResult.udise + ''
+            : '',
           actor: assessmentVisitResult?.actors?.name ?? '',
-          block: assessmentVisitResult.block_id ? assessmentVisitResult.blocks.name : null,
+          block: assessmentVisitResult.block_id
+            ? assessmentVisitResult.blocks.name
+            : null,
           created_at: assessmentVisitResult.created_at,
-          district: assessmentVisitResult.block_id ? assessmentVisitResult.blocks.districts.name : null,
+          district: assessmentVisitResult.block_id
+            ? assessmentVisitResult.blocks.districts.name
+            : null,
         });
       }
       if (results.length == 0) {
         const today = new Date();
         let newIdentifier = parseInt(`${yearIdentifier}${monthIdentifier}`);
-        if (today.getFullYear() == year && (month < today.getMonth() + 1)) {
+        if (today.getFullYear() == year && month < today.getMonth() + 1) {
           // we'll call the same function recursively with next quarter's month identifier
-          month = month + 3;  // as we want to go to next quarter's table
-          monthIdentifier = (month < 10) ? `0${month}` : `${month}`;
+          month = month + 3; // as we want to go to next quarter's table
+          monthIdentifier = month < 10 ? `0${month}` : `${month}`;
           newIdentifier = parseInt(`${yearIdentifier}${monthIdentifier}0000`);
 
           // we must automatically send the results for the next quarter table
@@ -348,7 +397,7 @@ export class AdminService {
     // @ts-ignore
     return this.prismaService.students.createMany({
       // @ts-ignore
-      data: students.map(student => {
+      data: students.map((student) => {
         return {
           name: student.name,
           gender: student.gender,
@@ -357,7 +406,10 @@ export class AdminService {
           grade: student.grade,
           udise: student.udise,
           dob: (student?.dob ? new Date(student.dob) : null) ?? null,
-          admission_date: (student?.admission_date ? new Date(student.admission_date) : null) ?? null,
+          admission_date:
+            (student?.admission_date
+              ? new Date(student.admission_date)
+              : null) ?? null,
           father_name: student.father_name ?? '',
           mother_name: student.mother_name ?? '',
           section: student.section ?? '',
@@ -376,10 +428,11 @@ export class AdminService {
         if (student.admission_date) {
           student.admission_date = new Date(student.admission_date);
         }
-        student.deleted_at = null;  // whenever there is an update, we'll restore the student
+        student.deleted_at = null; // whenever there is an update, we'll restore the student
         return this.prismaService.students.update({
           // @ts-ignore
-          where: { unique_id: student.unique_id }, data: student,
+          where: { unique_id: student.unique_id },
+          data: student,
         });
       }),
     );
@@ -392,7 +445,7 @@ export class AdminService {
       },
       where: {
         unique_id: {
-          in: students.map(student => student.unique_id),
+          in: students.map((student) => student.unique_id),
         },
       },
     });
@@ -402,18 +455,24 @@ export class AdminService {
     const startDate = new Date(cycleData.start_date);
     const endDate = new Date(cycleData.end_date);
     if (endDate < startDate) {
-      throw new UnprocessableEntityException('Start Date must be less than End Date.');
-    } else if (await this.prismaService.assessment_cycles.count({
-      where: {
-        start_date: {
-          lte: endDate,
+      throw new UnprocessableEntityException(
+        'Start Date must be less than End Date.',
+      );
+    } else if (
+      await this.prismaService.assessment_cycles.count({
+        where: {
+          start_date: {
+            lte: endDate,
+          },
+          end_date: {
+            gte: startDate,
+          },
         },
-        end_date: {
-          gte: startDate,
-        },
-      },
-    })) {
-      throw new UnprocessableEntityException('There already exists a date range falling between the current start/end dates.');
+      })
+    ) {
+      throw new UnprocessableEntityException(
+        'There already exists a date range falling between the current start/end dates.',
+      );
     }
     return this.prismaService.assessment_cycles.create({
       data: {
@@ -430,28 +489,35 @@ export class AdminService {
     });
   }
 
-  async createAssessmentCycleDistrictSchoolMapping(cycleId: number, data: Array<CreateAssessmentCycleDistrictSchoolMapping>) {
-    const cycle: Record<string, number> = await this.prismaService.assessment_cycles.findUniqueOrThrow({
-      where: {
-        id: cycleId,
-      },
-      select: {
-        class_1_students_count: true,
-        class_2_students_count: true,
-        class_3_students_count: true,
-      },
-    });
-    const schoolWiseRandomStudents = await this.getRandomStudentsForUdise(cycle, data.map(item => item.udise));
+  async createAssessmentCycleDistrictSchoolMapping(
+    cycleId: number,
+    data: Array<CreateAssessmentCycleDistrictSchoolMapping>,
+  ) {
+    const cycle: Record<string, number> =
+      await this.prismaService.assessment_cycles.findUniqueOrThrow({
+        where: {
+          id: cycleId,
+        },
+        select: {
+          class_1_students_count: true,
+          class_2_students_count: true,
+          class_3_students_count: true,
+        },
+      });
+    const schoolWiseRandomStudents = await this.getRandomStudentsForUdise(
+      cycle,
+      data.map((item) => item.udise),
+    );
 
     const records: Array<{
-      cycle_id: number,
-      district_id: number,
-      udise: number,
-      class_1_students: Array<string>,
-      class_2_students: Array<string>,
-      class_3_students: Array<string>
+      cycle_id: number;
+      district_id: number;
+      udise: number;
+      class_1_students: Array<string>;
+      class_2_students: Array<string>;
+      class_3_students: Array<string>;
     }> = [];
-    data.forEach(item => {
+    data.forEach((item) => {
       records.push({
         cycle_id: cycleId,
         district_id: item.district_id,
@@ -461,20 +527,31 @@ export class AdminService {
         class_3_students: schoolWiseRandomStudents[item.udise]['grade3'] ?? [],
       });
     });
-    return this.prismaService.assessment_cycle_district_school_mapping.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
+    return this.prismaService.assessment_cycle_district_school_mapping.createMany(
+      {
+        data: records,
+        skipDuplicates: true,
+      },
+    );
   }
 
-  private async getRandomStudentsForUdise(cycle: Record<string, number>, udises: Array<number>) {
-    let response: Record<number, { grade1: Array<string>, grade2: Array<string>, grade3: Array<string> }> = {};
-    const grade1Count = cycle.class_1_students_count > 0 ? cycle.class_1_students_count : 100;
-    const grade2Count = cycle.class_2_students_count > 0 ? cycle.class_2_students_count : 100;
-    const grade3Count = cycle.class_3_students_count > 0 ? cycle.class_3_students_count : 100;
+  private async getRandomStudentsForUdise(
+    cycle: Record<string, number>,
+    udises: Array<number>,
+  ) {
+    let response: Record<
+      number,
+      { grade1: Array<string>; grade2: Array<string>; grade3: Array<string> }
+    > = {};
+    const grade1Count =
+      cycle.class_1_students_count > 0 ? cycle.class_1_students_count : 100;
+    const grade2Count =
+      cycle.class_2_students_count > 0 ? cycle.class_2_students_count : 100;
+    const grade3Count =
+      cycle.class_3_students_count > 0 ? cycle.class_3_students_count : 100;
     const rankConditions: Array<string> = [];
     rankConditions.push('case');
-    udises.forEach(udise => {
+    udises.forEach((udise) => {
       // populate response with all udises with grade keys
       response[udise] = {
         grade1: [],
@@ -483,9 +560,15 @@ export class AdminService {
       };
 
       // populating rand conditions
-      rankConditions.push(`when udise = ${udise} and grade = 1 then ${grade1Count} `);
-      rankConditions.push(`when udise = ${udise} and grade = 2 then ${grade2Count} `);
-      rankConditions.push(`when udise = ${udise} and grade = 3 then ${grade3Count} `);
+      rankConditions.push(
+        `when udise = ${udise} and grade = 1 then ${grade1Count} `,
+      );
+      rankConditions.push(
+        `when udise = ${udise} and grade = 2 then ${grade2Count} `,
+      );
+      rankConditions.push(
+        `when udise = ${udise} and grade = 3 then ${grade3Count} `,
+      );
     });
     rankConditions.push('else 100 end');
     const query = `
@@ -511,9 +594,10 @@ export class AdminService {
       FROM random_unique_ids
       GROUP BY udise, grade;
     `;
-    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
+    const records: Array<Record<string, any>> =
+      await this.prismaService.$queryRawUnsafe(query);
 
-    records.forEach(record => {
+    records.forEach((record) => {
       switch (record.grade) {
         case 1:
           response[record.udise]['grade1'] = record.random_unique_ids;
@@ -529,26 +613,34 @@ export class AdminService {
     return response;
   }
 
-  async createAssessmentCycleDistrictExaminerMapping(cycleId: number, data: Array<CreateAssessmentCycleDistrictExaminerMapping>) {
+  async createAssessmentCycleDistrictExaminerMapping(
+    cycleId: number,
+    data: Array<CreateAssessmentCycleDistrictExaminerMapping>,
+  ) {
     const records: Array<{
-      cycle_id: number,
-      district_id: number,
-      mentor_id: number,
+      cycle_id: number;
+      district_id: number;
+      mentor_id: number;
     }> = [];
-    data.forEach(item => {
+    data.forEach((item) => {
       records.push({
         cycle_id: cycleId,
         district_id: item.district_id,
         mentor_id: item.mentor_id,
       });
     });
-    return this.prismaService.assessment_cycle_district_mentor_mapping.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
+    return this.prismaService.assessment_cycle_district_mentor_mapping.createMany(
+      {
+        data: records,
+        skipDuplicates: true,
+      },
+    );
   }
 
-  async invalidateAssessmentCycleExaminerAssessments(cycleId: number, data: InvalidateExaminerCycleAssessmentsDto) {
+  async invalidateAssessmentCycleExaminerAssessments(
+    cycleId: number,
+    data: InvalidateExaminerCycleAssessmentsDto,
+  ) {
     const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
       where: {
         id: cycleId,
@@ -575,23 +667,27 @@ export class AdminService {
     ];
     if (data.delete_all) {
       // delete school nipun results
-      promises.push(this.prismaService.assessment_cycle_school_nipun_results.deleteMany({
-        where: {
-          udise: {
-            in: data.udises,
+      promises.push(
+        this.prismaService.assessment_cycle_school_nipun_results.deleteMany({
+          where: {
+            udise: {
+              in: data.udises,
+            },
+            mentor_id: data.mentor_id,
+            cycle_id: cycleId,
           },
-          mentor_id: data.mentor_id,
-          cycle_id: cycleId,
-        },
-      }));
+        }),
+      );
 
       // delete cycle mentor mapping
-      promises.push(this.prismaService.assessment_cycle_district_mentor_mapping.deleteMany({
-        where: {
-          mentor_id: data.mentor_id,
-          cycle_id: cycleId,
-        },
-      }));
+      promises.push(
+        this.prismaService.assessment_cycle_district_mentor_mapping.deleteMany({
+          where: {
+            mentor_id: data.mentor_id,
+            cycle_id: cycleId,
+          },
+        }),
+      );
     }
 
     return Promise.all(promises);

@@ -15,6 +15,9 @@ export class JwtAdminGuard extends JwtAuthGuard implements IAuthGuard {
     super(reflector, configService);
 
     // override the application ID
-    this.applicationId = this.configService.get<string>('FA_ADMIN_APPLICATION_ID', '');
+    this.applicationId = this.configService.get<string>(
+      'FA_ADMIN_APPLICATION_ID',
+      '',
+    );
   }
 }

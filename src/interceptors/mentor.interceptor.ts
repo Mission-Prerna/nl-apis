@@ -1,14 +1,21 @@
-import { BadRequestException, CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  BadRequestException,
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { AppService } from '../app.service';
 
 @Injectable()
 export class MentorInterceptor implements NestInterceptor {
-  constructor(
-    private readonly service: AppService,
-  ) {}
+  constructor(private readonly service: AppService) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
     const req = context.switchToHttp().getRequest();
     const mentor = await this.service.findMentorByPhoneNumber(req.user.id);
     if (!mentor) {

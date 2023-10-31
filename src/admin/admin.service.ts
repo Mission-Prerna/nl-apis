@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, CACHE_MANAGER, Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum } from '../enums';
+import { ActorEnum, CacheKeyMentorSchoolList, CacheKeyMentorDetail, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -16,6 +16,7 @@ import { CreateAssessmentCycle } from './dto/CreateAssessmentCycle';
 import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessmentCycleDistrictSchoolMapping';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AdminService {
@@ -26,6 +27,7 @@ export class AdminService {
     protected readonly configService: ConfigService,
     protected readonly faService: FusionauthService,
     protected readonly appService: AppService,
+    @Inject(CACHE_MANAGER) private cacheService: Cache,
   ) {
   }
 
@@ -595,5 +597,25 @@ export class AdminService {
     }
 
     return Promise.all(promises);
+  }
+
+  async clearMentorCache(phoneNumbers: string[]) {
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
+    const mentorSchoolListPromises = phoneNumbers.map(phoneNumber => {
+      return this.cacheService.del(CacheKeyMentorSchoolList(phoneNumber, month, year))
+    });
+
+    const mentorDetailPromises = phoneNumbers.map(phoneNumber => {
+      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber))
+    });
+
+    try {
+      await Promise.all([...mentorDetailPromises, ...mentorSchoolListPromises, this.cacheService.del(CacheKeyMetadata())]);
+    } catch (e) {
+      this.logger.error(e);
+      return { status: 'Cache Clearing Failed', error: e }
+    }
+    return { status: 'Cache Cleared Successfully' };
   }
 }

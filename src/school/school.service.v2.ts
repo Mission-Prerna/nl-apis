@@ -434,8 +434,9 @@ export class SchoolServiceV2 extends SchoolService {
         from assessment_cycle_district_school_mapping dsm
                  left join assessment_cycle_school_nipun_results snr
                            on dsm.udise = snr.udise and snr.mentor_id = ${mentor.id} and snr.cycle_id = ${params.cycle_id}
+                  left join school_list sl on dsm.udise = sl.udise
         where dsm.cycle_id = ${params.cycle_id}
-          and district_id in (select district_id
+          and sl.district_id in (select district_id
                               from assessment_cycle_district_mentor_mapping
                               where mentor_id = ${mentor.id}
                                 and cycle_id = ${params.cycle_id})

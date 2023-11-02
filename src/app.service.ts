@@ -979,6 +979,25 @@ export class AppService {
     });
   }
 
+  async getMentorBots(mentorId: bigint) {
+    return this.prismaService.mentor_segmentation.findMany({
+      select: {
+        segments: {
+          select: {
+            segment_bots: {
+              select: {
+                bot_id: true,
+              }
+            }
+          },
+        },
+      },
+      where: {
+        mentor_id: mentorId,
+      }
+    });
+  }
+
   async getExaminerCycleDetails(mentor: Mentor) {
     if (mentor.actor_id != ActorEnum.EXAMINER) {
       return null;

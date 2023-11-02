@@ -302,8 +302,7 @@ export class AppController {
   async getMentorBots(
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.appService.getMentorBots(mentor.id)
-      .then((response: Array<any>) => response.map(element => element.bot_id));
+    return this.appService.getMentorBots(mentor.id);
   }
 
 

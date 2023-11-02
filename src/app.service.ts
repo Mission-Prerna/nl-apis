@@ -980,7 +980,7 @@ export class AppService {
   }
 
   async getMentorBots(mentorId: bigint) {
-    return this.prismaService.mentor_segmentation.findMany({
+    const res = await this.prismaService.mentor_segmentation.findMany({
       select: {
         segments: {
           select: {
@@ -996,6 +996,15 @@ export class AppService {
         mentor_id: mentorId,
       }
     });
+
+    const botIds = [];
+
+    for (const item of res) {
+        for (const bot of item.segments.segment_bots) {
+            botIds.push(bot.bot_id);
+        }
+      }
+    return botIds;
   }
 
   async getExaminerCycleDetails(mentor: Mentor) {

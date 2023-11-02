@@ -296,7 +296,7 @@ export class AppController {
   }
 
   @Get('/api/mentor/bot')
-  //@Roles(Role.OpenRole, Role.Diet)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getMentorBots(

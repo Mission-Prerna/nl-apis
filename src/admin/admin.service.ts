@@ -447,7 +447,6 @@ export class AdminService {
 
     const records: Array<{
       cycle_id: number,
-      district_id: number,
       udise: number,
       class_1_students: Array<string>,
       class_2_students: Array<string>,
@@ -456,7 +455,6 @@ export class AdminService {
     data.forEach(item => {
       records.push({
         cycle_id: cycleId,
-        district_id: item.district_id,
         udise: item.udise,
         class_1_students: schoolWiseRandomStudents[item.udise]['grade1'] ?? [],
         class_2_students: schoolWiseRandomStudents[item.udise]['grade2'] ?? [],

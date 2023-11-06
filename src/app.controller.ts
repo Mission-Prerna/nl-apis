@@ -41,6 +41,7 @@ import { JwtAdminGuard } from './auth/admin-jwt.guard';
 import { MentorInterceptor } from './interceptors/mentor.interceptor';
 import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
+import { elementAt } from 'rxjs';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -296,14 +297,13 @@ export class AppController {
   }
 
   @Get('/api/mentor/bot')
-  //@Roles(Role.OpenRole, Role.Diet)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getMentorBots(
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.appService.getMentorBots(mentor.id)
-      .then((response: Array<any>) => response.map(element => element.bot_id));
+    return this.appService.getMentorBots(mentor.id);
   }
 
 

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, segment_bots } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import {
   ActorEnum,
@@ -41,6 +41,7 @@ import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { response } from 'express';
 
 const moment = require('moment');
 
@@ -977,6 +978,14 @@ export class AppService {
         action: action,
       },
     });
+  }
+
+  async getMentorBots(mentorId: bigint) {
+    return this.prismaService.$queryRaw<segment_bots[]>`SELECT segment_bots.* 
+    FROM segment_bots, mentor_segmentation 
+    where segment_bots.segment_id = mentor_segmentation.segment_id 
+    and mentor_segmentation.mentor_id = ${mentorId}`
+      .then((response: Array<segment_bots>) => response.map(element => element.bot_id))
   }
 
   async getExaminerCycleDetails(mentor: Mentor) {

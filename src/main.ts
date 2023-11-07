@@ -14,8 +14,10 @@ BigInt.prototype['toJSON'] = function () {
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    // Payload upto 20mib
+    new FastifyAdapter({ bodyLimit: 1024 * 1024 * 20})
   );
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   Sentry.init({

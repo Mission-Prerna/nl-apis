@@ -500,10 +500,6 @@ export class AdminService {
 
     const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
     records.forEach(record => {
-      if(!response[record.udise]) {
-      console.log(record)
-      console.log(response)
-    }
       switch (record.grade) {
         case 1:
           response[record.udise]['grade1'] = record.random_unique_ids.slice(0, Math.min(record.random_unique_ids.length, grade1Count));

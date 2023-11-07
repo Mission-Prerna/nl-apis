@@ -191,7 +191,7 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictSchoolMapping(
     @Param() params: CycleIdValidateDto,
-    @Body(new MaxItemsPipe(1000), new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
+    @Body(new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
   ) {
     return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
   }

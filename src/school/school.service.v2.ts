@@ -456,9 +456,9 @@ export class SchoolServiceV2 extends SchoolService {
         c.class_1_nipun_percentage,
         c.class_2_nipun_percentage,
         c.class_3_nipun_percentage,
-        string_agg(dsm.class_1_students::text, ',')::jsonb as class_1_students,
-        string_agg(dsm.class_2_students::text, ',')::jsonb as class_2_students,
-        string_agg(dsm.class_3_students::text, ',')::jsonb as class_3_students
+        json_agg(dsm.class_1_students) as class_1_students,
+        json_agg(dsm.class_2_students) as class_2_students,
+        json_agg(dsm.class_3_students) as class_3_students
       from assessment_cycles c
                join assessment_cycle_district_school_mapping dsm
                     on c.id = dsm.cycle_id and dsm.udise = ${udise} and dsm.cycle_id = ${cycleId}

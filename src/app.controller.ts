@@ -41,7 +41,7 @@ import { JwtAdminGuard } from './auth/admin-jwt.guard';
 import { MentorInterceptor } from './interceptors/mentor.interceptor';
 import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
-import { elementAt } from 'rxjs';
+import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -243,6 +243,15 @@ export class AppController {
     @Body() body: CreateMentorDto,
   ) {
     return this.adminService.createMentor(body);
+  }
+
+  @Post(['/api/mentor/segment'])
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  async createMentorSegment(
+    @Body() body: CreateMentorSegmentRequest,
+  ) {
+    return this.adminService.createMentorSegment(body);
   }
 
   @Post(['/api/mentor/old'])

@@ -184,12 +184,12 @@ export class AdminService {
       },
     });
 
-    const valid_phones: string[] = []
+    const valid_phones = new Set<String>()
 
     //Insert mentors into segmentation table
     const result = await this.prismaService.mentor_segmentation.createMany({
       data: mentors.map((mentor) => {
-        valid_phones.push(mentor.phone_no)
+        valid_phones.add(mentor.phone_no)
         return {
           mentor_id: mentor.id,
           segment_id: segmentId
@@ -198,7 +198,7 @@ export class AdminService {
       skipDuplicates: true,
     });
 
-    const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.includes(number))
+    const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.has(number))
 
     return { "insertions": result.count, valid_phones, invalid_phones }
   }

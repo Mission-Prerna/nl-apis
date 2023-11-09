@@ -1,4 +1,5 @@
-import { BadRequestException, CACHE_MANAGER, Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
+import { elementAt } from 'rxjs';
+import { BadRequestException, CACHE_MANAGER, Inject, Injectable, Logger, UnprocessableEntityException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
@@ -17,6 +18,8 @@ import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessme
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { Cache } from 'cache-manager';
+import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
+import { mentor_segmentation, Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -152,6 +155,52 @@ export class AdminService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  }
+
+  async createMentorSegment(data: CreateMentorSegmentRequest) {
+    const segmentId = data.segment_id
+    //Check if a valid segment exists.
+    const segment = await this.prismaService.segments.findFirst({
+      where: {
+        id: segmentId
+      }
+    });
+
+    //If not a valid segment, throw away.
+    if (segment == null) {
+      throw new BadRequestException("Segment not found. Please create segment first.")
+    }
+
+    //Get all mentors
+    const mentors = await this.prismaService.mentor.findMany({
+      select: {
+        id: true,
+        phone_no: true
+      },
+      where: {
+        phone_no: {
+          in: data.phone_numbers
+        },
+      },
+    });
+
+    const valid_phones = new Set<String>()
+
+    //Insert mentors into segmentation table
+    const result = await this.prismaService.mentor_segmentation.createMany({
+      data: mentors.map((mentor) => {
+        valid_phones.add(mentor.phone_no)
+        return {
+          mentor_id: mentor.id,
+          segment_id: segmentId
+        }
+      }),
+      skipDuplicates: true,
+    });
+
+    const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.has(number))
+
+    return { "insertions": result.count, valid_phones, invalid_phones }
   }
 
   async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {

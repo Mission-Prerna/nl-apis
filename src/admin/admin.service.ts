@@ -199,8 +199,11 @@ export class AdminService {
     });
 
     const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.has(number))
-
-    return { "insertions": result.count, valid_phones, invalid_phones }
+    return {
+      "insertions": result.count,
+      valid_phones: Array.from(valid_phones),
+      invalid_phones
+    }
   }
 
   async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {

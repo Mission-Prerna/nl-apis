@@ -189,6 +189,7 @@ export class AdminService {
     //Insert mentors into segmentation table
     const result = await this.prismaService.mentor_segmentation.createMany({
       data: mentors.map((mentor) => {
+        console.log(mentor)
         valid_phones.add(mentor.phone_no)
         return {
           mentor_id: mentor.id,
@@ -198,9 +199,14 @@ export class AdminService {
       skipDuplicates: true,
     });
 
+    console.log(valid_phones)
     const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.has(number))
-
-    return { "insertions": result.count, valid_phones, invalid_phones }
+    console.log(valid_phones)
+    return {
+      "insertions": result.count,
+      valid_phones: Array.from(valid_phones),
+      invalid_phones
+    }
   }
 
   async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {

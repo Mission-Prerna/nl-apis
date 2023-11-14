@@ -472,10 +472,13 @@ export class SchoolServiceV2 extends SchoolService {
     }
 
     // @ts-ignore prepare list of student ids
-    const studentIds = [...cycleDetails[0].class_1_students, ...cycleDetails[0].class_2_students, ...cycleDetails[0].class_3_students];
-    const grade1Count = [...cycleDetails[0].class_1_students].length ?? 10;
-    const grade2Count = [...cycleDetails[0].class_2_students].length ?? 10;
-    const grade3Count = [...cycleDetails[0].class_3_students].length ?? 10;
+    const studentIds = [...cycleDetails[0].class_1_students[0], ...cycleDetails[0].class_2_students[0], ...cycleDetails[0].class_3_students[0]];
+    // @ts-ignore
+    const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 10;
 
     // find the grade wise nipun percentage
     const query = `

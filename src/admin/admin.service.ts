@@ -1,10 +1,16 @@
-import { elementAt } from 'rxjs';
-import { BadRequestException, CACHE_MANAGER, Inject, Injectable, Logger, UnprocessableEntityException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorSchoolList, CacheKeyMentorDetail, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorSchoolList, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -19,7 +25,6 @@ import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssess
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { Cache } from 'cache-manager';
 import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
-import { mentor_segmentation, Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -518,6 +523,7 @@ export class AdminService {
       });
     });
     return this.prismaService.assessment_cycle_district_school_mapping.createMany({
+      // @ts-ignore
       data: records,
       skipDuplicates: true,
     });

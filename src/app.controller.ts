@@ -41,6 +41,7 @@ import { JwtAdminGuard } from './auth/admin-jwt.guard';
 import { MentorInterceptor } from './interceptors/mentor.interceptor';
 import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
+import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -85,7 +86,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async createAssessmentVisitResults(
     @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
-    @Request() { mentorId }: { mentorId: number},
+    @Request() { mentorId }: { mentorId: number },
   ) {
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
@@ -123,7 +124,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getMentorSchoolListIfHeHasVisited(
       mentor,
@@ -176,7 +177,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getHomeScreenMetric(
       mentor,
@@ -192,7 +193,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getMentorDetails(
     @Query() queryParams: GetMentorDetailsDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     return this.appService.getMentorDetails(
       mentor,
@@ -212,7 +213,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorPin(
     @Body() body: UpdateMentorPinDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.updateMentorPin(mentor, body.pin).then(() => true);
     return mentor;
@@ -224,7 +225,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async getActorHomeScreenMetric(
     @Param() id: number,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
@@ -244,6 +245,15 @@ export class AppController {
     return this.adminService.createMentor(body);
   }
 
+  @Post(['/api/mentor/segment'])
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  async createMentorSegment(
+    @Body() body: CreateMentorSegmentRequest,
+  ) {
+    return this.adminService.createMentorSegment(body);
+  }
+
   @Post(['/api/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
@@ -259,7 +269,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorToken(
     @Body() body: UpsertMentorTokenDto,
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.upsertMentorToken(mentor, body.token).then(() => true);
     return {
@@ -274,7 +284,7 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async setMentorBotTelemetry(
     @Body() body: CreateBotTelemetryDto[],
-    @Request() { mentor }: { mentor: Mentor},
+    @Request() { mentor }: { mentor: Mentor },
   ) {
     this.appService.setMentorBotTelemetry(mentor.id, body);
     return {
@@ -294,6 +304,17 @@ export class AppController {
     return this.appService.getMentorBotsWithAction(mentor.id, query.action)
       .then((response: Array<any>) => response.map(element => element.bot_id));
   }
+
+  @Get('/api/mentor/bot')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getMentorBots(
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return this.appService.getMentorBots(mentor.id);
+  }
+
 
   @Get('/api/examiner/performance/insights')
   @Roles(Role.OpenRole, Role.Diet)

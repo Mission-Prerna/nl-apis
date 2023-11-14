@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, segment_bots } from '@prisma/client';
 import { CreateAssessmentSurveyResult } from './dto/CreateAssessmentSurveyResult.dto';
 import {
   ActorEnum,
@@ -41,6 +41,7 @@ import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { response } from 'express';
 
 const moment = require('moment');
 
@@ -979,6 +980,14 @@ export class AppService {
     });
   }
 
+  async getMentorBots(mentorId: bigint) {
+    return this.prismaService.$queryRaw<segment_bots[]>`SELECT segment_bots.* 
+    FROM segment_bots, mentor_segmentation 
+    where segment_bots.segment_id = mentor_segmentation.segment_id 
+    and mentor_segmentation.mentor_id = ${mentorId}`
+      .then((response: Array<segment_bots>) => response.map(element => element.bot_id))
+  }
+
   async getExaminerCycleDetails(mentor: Mentor) {
     if (mentor.actor_id != ActorEnum.EXAMINER) {
       return null;
@@ -994,10 +1003,11 @@ export class AppService {
                 class_2_nipun_percentage,
                 class_3_nipun_percentage,
                 (
-                    select jsonb_agg(udise)
-                    from assessment_cycle_district_school_mapping
+                    select jsonb_agg(dsm.udise)
+                    from assessment_cycle_district_school_mapping dsm
+                    left join school_list sl on dsm.udise = sl.udise
                     where cycle_id = assessment_cycles.id
-                      and district_id in (select district_id
+                      and sl.district_id in (select district_id
                                           from assessment_cycle_district_mentor_mapping
                                           where mentor_id = ${mentor.id}
                                             and cycle_id = assessment_cycles.id)
@@ -1052,7 +1062,7 @@ export class AppService {
         cycle_id: cycleId,
       },
     });
-
+    
     const query = `
       select a.grade, count(distinct a.student_id) as assessed,
         (EXTRACT(EPOCH FROM max(a.submitted_at)) * 1000) as updated_at
@@ -1063,7 +1073,8 @@ export class AppService {
           select jsonb_array_elements_text(
                          dsm.class_1_students || dsm.class_2_students || dsm.class_3_students) as student_ids
           from assessment_cycle_district_school_mapping dsm
-          where dsm.district_id in (
+          left join school_list sl on dsm.udise = sl.udise
+          where sl.district_id in (
               select district_id
               from assessment_cycle_district_mentor_mapping adsm
               where adsm.mentor_id = ${mentor.id}

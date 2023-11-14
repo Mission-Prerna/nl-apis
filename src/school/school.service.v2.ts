@@ -434,8 +434,9 @@ export class SchoolServiceV2 extends SchoolService {
         from assessment_cycle_district_school_mapping dsm
                  left join assessment_cycle_school_nipun_results snr
                            on dsm.udise = snr.udise and snr.mentor_id = ${mentor.id} and snr.cycle_id = ${params.cycle_id}
+                  left join school_list sl on dsm.udise = sl.udise
         where dsm.cycle_id = ${params.cycle_id}
-          and district_id in (select district_id
+          and sl.district_id in (select district_id
                               from assessment_cycle_district_mentor_mapping
                               where mentor_id = ${mentor.id}
                                 and cycle_id = ${params.cycle_id})
@@ -455,9 +456,9 @@ export class SchoolServiceV2 extends SchoolService {
         c.class_1_nipun_percentage,
         c.class_2_nipun_percentage,
         c.class_3_nipun_percentage,
-        string_agg(dsm.class_1_students::text, ',')::jsonb as class_1_students,
-        string_agg(dsm.class_2_students::text, ',')::jsonb as class_2_students,
-        string_agg(dsm.class_3_students::text, ',')::jsonb as class_3_students
+        json_agg(dsm.class_1_students) as class_1_students,
+        json_agg(dsm.class_2_students) as class_2_students,
+        json_agg(dsm.class_3_students) as class_3_students
       from assessment_cycles c
                join assessment_cycle_district_school_mapping dsm
                     on c.id = dsm.cycle_id and dsm.udise = ${udise} and dsm.cycle_id = ${cycleId}
@@ -471,10 +472,13 @@ export class SchoolServiceV2 extends SchoolService {
     }
 
     // @ts-ignore prepare list of student ids
-    const studentIds = [...cycleDetails[0].class_1_students, ...cycleDetails[0].class_2_students, ...cycleDetails[0].class_3_students];
-    const grade1Count = [...cycleDetails[0].class_1_students].length ?? 10;
-    const grade2Count = [...cycleDetails[0].class_2_students].length ?? 10;
-    const grade3Count = [...cycleDetails[0].class_3_students].length ?? 10;
+    const studentIds = [...cycleDetails[0].class_1_students[0], ...cycleDetails[0].class_2_students[0], ...cycleDetails[0].class_3_students[0]];
+    // @ts-ignore
+    const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 10;
 
     // find the grade wise nipun percentage
     const query = `

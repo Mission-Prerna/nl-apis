@@ -1,9 +1,16 @@
-import { BadRequestException, CACHE_MANAGER, Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorSchoolList, CacheKeyMentorDetail, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorSchoolList, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -17,6 +24,7 @@ import { CreateAssessmentCycleDistrictSchoolMapping } from './dto/CreateAssessme
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { Cache } from 'cache-manager';
+import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
 
 @Injectable()
 export class AdminService {
@@ -152,6 +160,55 @@ export class AdminService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  }
+
+  async createMentorSegment(data: CreateMentorSegmentRequest) {
+    const segmentId = data.segment_id
+    //Check if a valid segment exists.
+    const segment = await this.prismaService.segments.findFirst({
+      where: {
+        id: segmentId
+      }
+    });
+
+    //If not a valid segment, throw away.
+    if (segment == null) {
+      throw new BadRequestException("Segment not found. Please create segment first.")
+    }
+
+    //Get all mentors
+    const mentors = await this.prismaService.mentor.findMany({
+      select: {
+        id: true,
+        phone_no: true
+      },
+      where: {
+        phone_no: {
+          in: data.phone_numbers
+        },
+      },
+    });
+
+    const valid_phones = new Set<String>()
+
+    //Insert mentors into segmentation table
+    const result = await this.prismaService.mentor_segmentation.createMany({
+      data: mentors.map((mentor) => {
+        valid_phones.add(mentor.phone_no)
+        return {
+          mentor_id: mentor.id,
+          segment_id: segmentId
+        }
+      }),
+      skipDuplicates: true,
+    });
+
+    const invalid_phones = data.phone_numbers.filter((number) => !valid_phones.has(number))
+    return {
+      "insertions": result.count,
+      valid_phones: Array.from(valid_phones),
+      invalid_phones
+    }
   }
 
   async schoolGeofencingBlacklist(data: SchoolGeofencingBlacklistDto) {
@@ -447,23 +504,26 @@ export class AdminService {
 
     const records: Array<{
       cycle_id: number,
-      district_id: number,
       udise: number,
       class_1_students: Array<string>,
       class_2_students: Array<string>,
       class_3_students: Array<string>
     }> = [];
     data.forEach(item => {
+      const grade1Students = schoolWiseRandomStudents[item.udise]['grade1'];
+      const grade2Students = schoolWiseRandomStudents[item.udise]['grade2'];
+      const grade3Students = schoolWiseRandomStudents[item.udise]['grade3'];
       records.push({
         cycle_id: cycleId,
-        district_id: item.district_id,
         udise: item.udise,
-        class_1_students: schoolWiseRandomStudents[item.udise]['grade1'] ?? [],
-        class_2_students: schoolWiseRandomStudents[item.udise]['grade2'] ?? [],
-        class_3_students: schoolWiseRandomStudents[item.udise]['grade3'] ?? [],
+        // DB can also return [null], check for that as well
+        class_1_students: (grade1Students && grade1Students[0] !== null) ? grade1Students : [],
+        class_2_students: (grade2Students && grade2Students[0] !== null) ? grade2Students : [],
+        class_3_students: (grade3Students && grade3Students[0] !== null) ? grade3Students : [],
       });
     });
     return this.prismaService.assessment_cycle_district_school_mapping.createMany({
+      // @ts-ignore
       data: records,
       skipDuplicates: true,
     });
@@ -474,8 +534,7 @@ export class AdminService {
     const grade1Count = cycle.class_1_students_count > 0 ? cycle.class_1_students_count : 100;
     const grade2Count = cycle.class_2_students_count > 0 ? cycle.class_2_students_count : 100;
     const grade3Count = cycle.class_3_students_count > 0 ? cycle.class_3_students_count : 100;
-    const rankConditions: Array<string> = [];
-    rankConditions.push('case');
+
     udises.forEach(udise => {
       // populate response with all udises with grade keys
       response[udise] = {
@@ -483,48 +542,31 @@ export class AdminService {
         grade2: [],
         grade3: [],
       };
-
-      // populating rand conditions
-      rankConditions.push(`when udise = ${udise} and grade = 1 then ${grade1Count} `);
-      rankConditions.push(`when udise = ${udise} and grade = 2 then ${grade2Count} `);
-      rankConditions.push(`when udise = ${udise} and grade = 3 then ${grade3Count} `);
     });
-    rankConditions.push('else 100 end');
-    const query = `
-      WITH random_unique_ids AS (
-        SELECT udise,
-               grade,
-               unique_id
-        FROM (
-           SELECT udise,
-                  grade,
-                  unique_id,
-                  ROW_NUMBER() OVER (PARTITION BY udise, grade ORDER BY RANDOM()) AS rn
-           FROM students
-           WHERE deleted_at IS NULL
-             and grade in (1,2,3)
-             and udise in (${udises.join(',')})
-             ) subquery
-        WHERE rn <= (${rankConditions.join('\n')})
-      )
-      SELECT udise,
-             grade,
-             json_agg(unique_id) AS random_unique_ids
-      FROM random_unique_ids
-      GROUP BY udise, grade;
-    `;
-    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
 
+    const query = `
+    SELECT udise, grade, json_agg(unique_id) AS random_unique_ids
+    FROM (
+        SELECT udise, grade, unique_id,
+              ROW_NUMBER() OVER (PARTITION BY udise, grade ORDER BY random()) AS rn
+        FROM students
+        WHERE udise in (${udises.join(',')}) and
+        grade in (1, 2, 3)
+    ) AS ranked
+    WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
+    GROUP BY udise, grade;`
+
+    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
     records.forEach(record => {
       switch (record.grade) {
         case 1:
-          response[record.udise]['grade1'] = record.random_unique_ids;
+          response[record.udise]['grade1'] = record.random_unique_ids.slice(0, Math.min(record.random_unique_ids.length, grade1Count));
           break;
         case 2:
-          response[record.udise]['grade2'] = record.random_unique_ids;
+          response[record.udise]['grade2'] = record.random_unique_ids.slice(0, Math.min(record.random_unique_ids.length, grade2Count));
           break;
         case 3:
-          response[record.udise]['grade3'] = record.random_unique_ids;
+          response[record.udise]['grade3'] = record.random_unique_ids.slice(0, Math.min(record.random_unique_ids.length, grade3Count));
           break;
       }
     });

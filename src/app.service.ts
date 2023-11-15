@@ -41,7 +41,6 @@ import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { response } from 'express';
 
 const moment = require('moment');
 
@@ -649,11 +648,13 @@ export class AppService {
       month = new Date().getMonth() + 1;  // since getMonth() gives index
     }
 
+    const examinerCycleDetails = await this.getExaminerCycleDetails(mentor);
+    const schoolsList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
     return {
       mentor: mentor,
-      school_list: await this.getMentorSchoolListIfHeHasVisited(mentor, month, year),
+      school_list: schoolsList.length ? schoolsList : (examinerCycleDetails ? examinerCycleDetails?.schools_list : []),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
-      examiner_cycle_details: await this.getExaminerCycleDetails(mentor),
+      examiner_cycle_details: examinerCycleDetails,
     };
   }
 

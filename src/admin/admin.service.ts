@@ -157,7 +157,7 @@ export class AdminService {
       if (data.actor_id == ActorEnum.EXAMINER) {
         await this.prismaService.assessment_cycle_district_mentor_mapping.create({
           data: {
-            cycle_id: 5,
+            cycle_id: this.configService.getOrThrow<string>('DEFAULT_EXAMINER_CYCLE_ID');,
             district_id: mentor.district_id,
             mentor_id: mentor.id,
           },

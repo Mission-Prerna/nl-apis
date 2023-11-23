@@ -153,6 +153,17 @@ export class AdminService {
         });
       }
 
+      //TODO: Remove this. Temporary fix.
+      if (data.actor_id == ActorEnum.EXAMINER) {
+        await this.prismaService.assessment_cycle_district_mentor_mapping.create({
+          data: {
+            cycle_id: 5,
+            district_id: mentor.district_id,
+            mentor_id: mentor.id,
+          },
+        });
+      }
+
       return mentor;
     }
     let description = '';

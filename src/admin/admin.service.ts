@@ -161,6 +161,7 @@ export class AdminService {
             district_id: mentor.district_id,
             mentor_id: mentor.id,
           },
+          skipDuplicates: true,
         });
       }
 

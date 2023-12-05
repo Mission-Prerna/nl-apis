@@ -246,7 +246,7 @@ export class SchoolServiceV2 extends SchoolService {
           .replace('%table_v2%', tables.assessment_visit_results_v2)
           .replace('%mentor_id%', mentor.id.toString())
           .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
-          .replace('%end_time%', (moment().month(item.month + 1).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%end_time%', (moment().month(item.month + 1).year(item.year + (item.month + 1 == 12 ? 1 : 0)).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
           .replace('%grades%', grades.join(',')),
       );
       for (const row of result) {

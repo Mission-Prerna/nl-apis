@@ -1,4 +1,4 @@
-import {Injectable, Logger, UnauthorizedException, UnprocessableEntityException} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import {
     ActorEnum,
     AssessmentTypeEnum,
@@ -8,14 +8,14 @@ import {
     StudentMonthlyAssessmentStatus,
     TypeTeacherHomeOverview,
 } from '../enums';
-import {AppService} from '../app.service';
-import {PrismaService} from '../prisma.service';
-import {I18nContext, I18nService} from 'nestjs-i18n';
-import {StudentService} from './student.service';
-import {SchoolService} from './school.service';
-import {GetSchoolStudentsResultDto} from '../dto/GetSchoolStudentsResult.dto';
+import { AppService } from '../app.service';
+import { PrismaService } from '../prisma.service';
+import { I18nContext, I18nService } from 'nestjs-i18n';
+import { StudentService } from './student.service';
+import { SchoolService } from './school.service';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import * as Sentry from '@sentry/minimal';
-import {GetSchoolStatusDto} from '../dto/GetSchoolStatus.dto';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
 
 const moment = require('moment');
 
@@ -38,6 +38,7 @@ export class SchoolServiceV2 extends SchoolService {
         const month = params.month;
         const grades = params.grade.split(',').map(grade => parseInt(grade.trim()));
         const cycleId = params.cycle_id;
+
         let firstDayTimestamp = '';
         let lastDayTimestamp = '';
         let studentsList: Array<Student> = [];
@@ -48,7 +49,7 @@ export class SchoolServiceV2 extends SchoolService {
                     throw new UnprocessableEntityException('Missing [month,year] params.');
                 }
                 firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
-                lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').add(1, 'months').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
+                lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
                 studentsList = await this.studentService.getSchoolStudents(udise);
                 break;
             case ActorEnum.EXAMINER:
@@ -57,7 +58,7 @@ export class SchoolServiceV2 extends SchoolService {
                     throw new UnprocessableEntityException('Missing [cycle_id] param.');
                 }
                 const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
-                    where: {id: cycleId},
+                    where: { id: cycleId },
                 });
                 firstDayTimestamp = moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss');
                 lastDayTimestamp = moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss');
@@ -107,7 +108,7 @@ export class SchoolServiceV2 extends SchoolService {
 
         // Grade summary
         const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
-        studentsList.forEach(({grade, id}: Student) => {
+        studentsList.forEach(({ grade, id }: Student) => {
             grade = grade ?? 0; // just a ts check
             const assessedStudent = studentWiseResults[id.toString()] ?? null;
             if (!gradeStudents.hasOwnProperty(grade)) {
@@ -137,23 +138,23 @@ export class SchoolServiceV2 extends SchoolService {
         const lang: string = I18nContext?.current()?.lang ?? 'en';
         for (const grade of grades) {
             response.push({
-                grade: this.i18n.t(`grades.${grade}`, {lang: lang}),
-                period: month ? this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, {lang: lang}) : '',
+                grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
+                period: month ? this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, { lang: lang }) : '',
                 summary: [
                     {
-                        label: this.i18n.t(`common.Nipun`, {lang: lang}),
+                        label: this.i18n.t(`common.Nipun`, { lang: lang }),
                         colour: '#72BA86',
                         count: gradeStudents[grade.toString()]?.nipun ?? 0,
                         identifier: StudentMonthlyAssessmentStatus.PASS,
                     },
                     {
-                        label: this.i18n.t(`common.NotNipun`, {lang: lang}),
+                        label: this.i18n.t(`common.NotNipun`, { lang: lang }),
                         colour: '#C98A7A',
                         count: gradeStudents[grade.toString()]?.not_nipun ?? 0,
                         identifier: StudentMonthlyAssessmentStatus.FAIL,
                     },
                     {
-                        label: this.i18n.t(`common.NotAssessed`, {lang: lang}),
+                        label: this.i18n.t(`common.NotAssessed`, { lang: lang }),
                         colour: '#E2E2E2',
                         count: (gradeStudents[grade.toString()]?.students.length - gradeStudents[grade.toString()]?.nipun ?? 0 - gradeStudents[grade.toString()]?.not_nipun ?? 0),
                         identifier: StudentMonthlyAssessmentStatus.PENDING,
@@ -176,7 +177,7 @@ export class SchoolServiceV2 extends SchoolService {
         while (startDate < now) {
             if (startDate >= globalStartDate) {
                 // this is the month we shall consider
-                monthsForQuery.push({year: startDate.year(), month: startDate.month()});
+                monthsForQuery.push({ year: startDate.year(), month: startDate.month() });
             }
             if (startDate > now) {
                 break;
@@ -214,7 +215,7 @@ export class SchoolServiceV2 extends SchoolService {
             summaries[monthName] = {
                 year: item.year,
                 month: item.month + 1,  // as item.month is index of the month
-                period: this.i18n.t(`months.${monthName}`, {lang: lang}),
+                period: this.i18n.t(`months.${monthName}`, { lang: lang }),
                 total: 0,
                 assessed: 0,
                 successful: 0,
@@ -234,21 +235,19 @@ export class SchoolServiceV2 extends SchoolService {
                 summary[key[0]].total = gradeTotal[0]?.count ?? 0;
             });
             gradeWiseSummary[grade.toString()] = {
-                grade: this.i18n.t(`grades.${grade}`, {lang: lang}),
+                grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
                 summary: summary,
             };
         }
         for (const item of monthsForQuery) {
             const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
-            const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
-            const endTime = moment(startTime).add(1, 'months')
             const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
                 query
                     .replace('%table_student%', tables.assessment_visit_results_students)
                     .replace('%table_v2%', tables.assessment_visit_results_v2)
                     .replace('%mentor_id%', mentor.id.toString())
-                    .replace('%start_time%', startTime.format('YYYY-MM-DD HH:mm:ss'))
-                    .replace('%end_time%', endTime.format('YYYY-MM-DD HH:mm:ss'))
+                    .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+                    .replace('%end_time%', (moment().month(item.month + 1).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
                     .replace('%grades%', grades.join(',')),
             );
             for (const row of result) {
@@ -360,16 +359,16 @@ export class SchoolServiceV2 extends SchoolService {
                 type: 'week',
                 year: currentYear,
                 month: currentMonth,
-                period: this.i18n.t(`common.Weekly`, {lang: lang}),
+                period: this.i18n.t(`common.Weekly`, { lang: lang }),
                 insights: [
                     {
-                        label: this.i18n.t(`common.AssessedStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
                         count: weekly?.assessments_total ?? 0,
                         identifier: 'assessed',
                         student_ids: weekly?.assessed_student_ids?.split(',') ?? [],
                     },
                     {
-                        label: this.i18n.t(`common.NipunStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
                         count: weekly?.nipun_total ?? 0,
                         identifier: 'pass',
                         student_ids: weekly?.nipun_student_ids?.split(',') ?? [],
@@ -381,16 +380,16 @@ export class SchoolServiceV2 extends SchoolService {
                 type: 'month',
                 year: currentYear,
                 month: currentMonth,
-                period: this.i18n.t(`months.${currentMonthName}Month`, {lang: lang}),
+                period: this.i18n.t(`months.${currentMonthName}Month`, { lang: lang }),
                 insights: [
                     {
-                        label: this.i18n.t(`common.AssessedStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
                         count: currentMonthStats?.assessments_total ?? 0,
                         identifier: 'assessed',
                         student_ids: currentMonthStats?.assessed_student_ids?.split(',') ?? [],
                     },
                     {
-                        label: this.i18n.t(`common.NipunStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
                         count: currentMonthStats?.nipun_total ?? 0,
                         identifier: 'pass',
                         student_ids: currentMonthStats?.nipun_student_ids?.split(',') ?? [],
@@ -402,16 +401,16 @@ export class SchoolServiceV2 extends SchoolService {
                 type: 'month',
                 year: lastYear,
                 month: lastMonth,
-                period: this.i18n.t(`months.${lastMonthName}Month`, {lang: lang}),
+                period: this.i18n.t(`months.${lastMonthName}Month`, { lang: lang }),
                 insights: [
                     {
-                        label: this.i18n.t(`common.AssessedStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
                         count: lastMonthStats?.assessments_total ?? 0,
                         identifier: 'assessed',
                         student_ids: lastMonthStats?.assessed_student_ids?.split(',') ?? [],
                     },
                     {
-                        label: this.i18n.t(`common.NipunStudents`, {lang: lang}),
+                        label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
                         count: lastMonthStats?.nipun_total ?? 0,
                         identifier: 'pass',
                         student_ids: lastMonthStats?.nipun_student_ids?.split(',') ?? [],
@@ -473,13 +472,10 @@ export class SchoolServiceV2 extends SchoolService {
         }
 
         // @ts-ignore prepare list of student ids
-        const studentIds = [...cycleDetails[0].class_1_students[0], ...cycleDetails[0].class_2_students[0], ...cycleDetails[0].class_3_students[0]];
-        // @ts-ignore
-        const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 10;
-        // @ts-ignore
-        const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 10;
-        // @ts-ignore
-        const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 10;
+        const studentIds = [...cycleDetails[0].class_1_students, ...cycleDetails[0].class_2_students, ...cycleDetails[0].class_3_students];
+        const grade1Count = [...cycleDetails[0].class_1_students].length ?? 10;
+        const grade2Count = [...cycleDetails[0].class_2_students].length ?? 10;
+        const grade3Count = [...cycleDetails[0].class_3_students].length ?? 10;
 
         // find the grade wise nipun percentage
         const query = `
@@ -507,10 +503,7 @@ export class SchoolServiceV2 extends SchoolService {
       group by t.grade    
     `;
         console.log(query);
-        const gradeWisePercentage: Array<{
-            grade: number,
-            percentage: number
-        }> = await this.prismaService.$queryRawUnsafe(query);
+        const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
 
         // the school will be nipun if all 3 grades are nipun
         let isNipun = true;

@@ -48,7 +48,7 @@ export class SchoolServiceV2 extends SchoolService {
           throw new UnprocessableEntityException('Missing [month,year] params.');
         }
         firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
-        lastDayTimestamp = (moment().month(month).year(month === 12 ? year + 1 : year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
+        lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').add(1, 'months').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
         studentsList = await this.studentService.getSchoolStudents(udise);
         break;
       case ActorEnum.EXAMINER:
@@ -240,13 +240,15 @@ export class SchoolServiceV2 extends SchoolService {
     }
     for (const item of monthsForQuery) {
       const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
+      const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
+      const endTime = moment(startTime).add(1, 'months')
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
         query
           .replace('%table_student%', tables.assessment_visit_results_students)
           .replace('%table_v2%', tables.assessment_visit_results_v2)
           .replace('%mentor_id%', mentor.id.toString())
-          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
-          .replace('%end_time%', (moment().month(item.month + 1).year(item.year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss')))
+          .replace('%start_time%', startTime.format('YYYY-MM-DD HH:mm:ss'))
+          .replace('%end_time%', endTime.format('YYYY-MM-DD HH:mm:ss'))
           .replace('%grades%', grades.join(',')),
       );
       for (const row of result) {

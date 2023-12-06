@@ -177,7 +177,10 @@ export class AppService {
                 }
             }
 
-            //TODO for examiner, update school results
+            if (createAssessmentVisitResultData.actor_id === ActorEnum.EXAMINER) {
+                await this.checkExaminerSchoolResultCalculation(createAssessmentVisitResultData)
+            }
+
             return response;
         } catch (e) {
             this.logger.error(`Error occurred: ${e}`);
@@ -388,6 +391,46 @@ export class AppService {
                 data: nonOdkModuleStudents,
                 skipDuplicates: true,
             });
+        }
+    }
+
+    private async checkExaminerSchoolResultCalculation(
+        createAssessmentVisitResultData: CreateAssessmentVisitResult
+    ) {
+
+        const schoolDist = await this.prismaService.school_list.findFirst({
+            select: {
+                district_id: true
+            },
+            where: {
+                udise: createAssessmentVisitResultData.udise
+            }
+        });
+
+        if (schoolDist == null) return;
+
+        const mentorMapping = await this.prismaService.assessment_cycle_district_mentor_mapping.findFirst({
+            select: {
+                cycle_id: true
+            },
+            where: {
+                mentor_id: createAssessmentVisitResultData.mentor_id,
+                district_id: schoolDist.district_id
+            }
+        });
+
+        if (mentorMapping == null) return;
+
+        const schoolResult = await this.prismaService.assessment_cycle_school_nipun_results.findFirst({
+            where: {
+                mentor_id: createAssessmentVisitResultData.mentor_id,
+                udise: createAssessmentVisitResultData.udise,
+                cycle_id: mentorMapping.cycle_id
+            }
+        })
+
+        if (schoolResult) {
+            //TODO recalculate the school's nipun result
         }
     }
 

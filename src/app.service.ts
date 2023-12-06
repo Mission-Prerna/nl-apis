@@ -41,6 +41,7 @@ import {RedisHelperService} from './RedisHelper.service';
 import {DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager} from './cache.manager';
 import {CreateBotTelemetryDto} from './dto/CreateBotTelemetry.dto';
 import {I18nContext, I18nService} from 'nestjs-i18n';
+import {SchoolServiceV2} from './school/school.service.v2';
 
 const moment = require('moment');
 
@@ -55,6 +56,7 @@ export class AppService {
         protected readonly redisHelper: RedisHelperService,
         @Inject(CACHE_MANAGER) private cacheService: Cache,
         protected readonly i18n: I18nService,
+        protected readonly schoolServiceV2: SchoolServiceV2,
     ) {
         this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -178,7 +180,7 @@ export class AppService {
             }
 
             if (createAssessmentVisitResultData.actor_id === ActorEnum.EXAMINER) {
-                await this.checkExaminerSchoolResultCalculation(createAssessmentVisitResultData)
+                await this.checkExaminerSchoolResultReCalculation(createAssessmentVisitResultData)
             }
 
             return response;
@@ -394,7 +396,7 @@ export class AppService {
         }
     }
 
-    private async checkExaminerSchoolResultCalculation(
+    private async checkExaminerSchoolResultReCalculation(
         createAssessmentVisitResultData: CreateAssessmentVisitResult
     ) {
 
@@ -416,6 +418,9 @@ export class AppService {
             where: {
                 mentor_id: createAssessmentVisitResultData.mentor_id,
                 district_id: schoolDist.district_id
+            },
+            orderBy: {
+                cycle_id: 'desc'
             }
         });
 
@@ -430,7 +435,11 @@ export class AppService {
         })
 
         if (schoolResult) {
-            //TODO recalculate the school's nipun result
+            await this.schoolServiceV2.calculateExaminerCycleUdiseResult(
+                createAssessmentVisitResultData.mentor_id,
+                mentorMapping.cycle_id,
+                createAssessmentVisitResultData.udise
+            );
         }
     }
 

@@ -48,7 +48,7 @@ export class SchoolServiceV2 extends SchoolService {
           throw new UnprocessableEntityException('Missing [month,year] params.');
         }
         firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
-        lastDayTimestamp = (moment().month(month).year(year).date(1).startOf('day').add(1, 'months').format('YYYY-MM-DD HH:mm:ss')); // 1st day of next month
+        lastDayTimestamp = moment(firstDayTimestamp).add(1, 'months').format('YYYY-MM-DD HH:mm:ss'); // 1st day of next month
         studentsList = await this.studentService.getSchoolStudents(udise);
         break;
       case ActorEnum.EXAMINER:

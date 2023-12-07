@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  UnauthorizedException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -22,7 +17,7 @@ import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import * as Sentry from '@sentry/minimal';
 import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
 
-import * as moment from 'moment';
+const moment = require('moment');
 
 @Injectable()
 export class SchoolServiceV2 extends SchoolService {
@@ -37,19 +32,12 @@ export class SchoolServiceV2 extends SchoolService {
     super(prismaService, appService, i18n);
   }
 
-  async getSchoolStudentsResultsV2(
-    mentor: Mentor,
-    udise: number,
-    params: GetSchoolStudentsResultDto,
-  ) {
+  async getSchoolStudentsResultsV2(mentor: Mentor, udise: number, params: GetSchoolStudentsResultDto) {
     // @TODO: to be redone using Continuous Aggregates
     const year = params.year;
     const month = params.month;
-    const grades = params.grade
-      .split(',')
-      .map((grade) => parseInt(grade.trim()));
+    const grades = params.grade.split(',').map(grade => parseInt(grade.trim()));
     const cycleId = params.cycle_id;
-
     let firstDayTimestamp = '';
     let lastDayTimestamp = '';
     let studentsList: Array<Student> = [];
@@ -57,22 +45,10 @@ export class SchoolServiceV2 extends SchoolService {
       case ActorEnum.TEACHER:
         // for teacher
         if (!month || !year) {
-          throw new UnprocessableEntityException(
-            'Missing [month,year] params.',
-          );
+          throw new UnprocessableEntityException('Missing [month,year] params.');
         }
-        firstDayTimestamp = moment()
-          .month(month - 1)
-          .year(year)
-          .date(1)
-          .startOf('day')
-          .format('YYYY-MM-DD HH:mm:ss'); // first day of current month
-        lastDayTimestamp = moment()
-          .month(month)
-          .year(year)
-          .date(1)
-          .startOf('day')
-          .format('YYYY-MM-DD HH:mm:ss'); // 1st day of next month
+        firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
+        lastDayTimestamp = moment(firstDayTimestamp).add(1, 'months').format('YYYY-MM-DD HH:mm:ss'); // 1st day of next month
         studentsList = await this.studentService.getSchoolStudents(udise);
         break;
       case ActorEnum.EXAMINER:
@@ -80,19 +56,12 @@ export class SchoolServiceV2 extends SchoolService {
         if (!cycleId) {
           throw new UnprocessableEntityException('Missing [cycle_id] param.');
         }
-        const cycle =
-          await this.prismaService.assessment_cycles.findUniqueOrThrow({
-            where: { id: cycleId },
-          });
-        firstDayTimestamp = moment(cycle.start_date).format(
-          'YYYY-MM-DD HH:mm:ss',
-        );
+        const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
+          where: { id: cycleId },
+        });
+        firstDayTimestamp = moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss');
         lastDayTimestamp = moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss');
-        studentsList = await this.studentService.getCycleStudents(
-          udise,
-          cycleId,
-          grades,
-        );
+        studentsList = await this.studentService.getCycleStudents(udise, cycleId, grades);
         break;
       default:
         Sentry.captureMessage('Un-supported Actor found.', {
@@ -107,9 +76,7 @@ export class SchoolServiceV2 extends SchoolService {
             month: month,
           },
         });
-        throw new UnauthorizedException(
-          'You are not allowed to perform this action.',
-        );
+        throw new UnauthorizedException('You are not allowed to perform this action.');
     }
 
     const query = `
@@ -132,19 +99,14 @@ export class SchoolServiceV2 extends SchoolService {
       ) ss
       WHERE rank = 1`;
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
-      query,
-    );
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
     });
 
     // Grade summary
-    const gradeStudents: Record<
-      string,
-      { students: Array<Student>; nipun: number; not_nipun: number }
-    > = {};
+    const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
     studentsList.forEach(({ grade, id }: Student) => {
       grade = grade ?? 0; // just a ts check
       const assessedStudent = studentWiseResults[id.toString()] ?? null;
@@ -156,16 +118,11 @@ export class SchoolServiceV2 extends SchoolService {
         };
       }
       if (assessedStudent) {
-        assessedStudent.is_passed
-          ? gradeStudents[grade].nipun++
-          : gradeStudents[grade].not_nipun++;
+        assessedStudent.is_passed ? gradeStudents[grade].nipun++ : gradeStudents[grade].not_nipun++;
         gradeStudents[grade].students.push({
           id: id,
-          status: assessedStudent.is_passed
-            ? StudentMonthlyAssessmentStatus.PASS
-            : StudentMonthlyAssessmentStatus.FAIL,
-          last_assessment_date:
-            moment(assessedStudent.last_assessment_date).unix() * 1000,
+          status: assessedStudent.is_passed ? StudentMonthlyAssessmentStatus.PASS : StudentMonthlyAssessmentStatus.FAIL,
+          last_assessment_date: moment(assessedStudent.last_assessment_date).unix() * 1000,
         });
       } else {
         gradeStudents[grade].students.push({
@@ -176,16 +133,12 @@ export class SchoolServiceV2 extends SchoolService {
       }
     });
 
-    const response: Array<Record<string, any>> = [];
+    let response: Array<Record<string, any>> = [];
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     for (const grade of grades) {
       response.push({
         grade: this.i18n.t(`grades.${grade}`, { lang: lang }),
-        period: month
-          ? this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, {
-              lang: lang,
-            })
-          : '',
+        period: month ? this.i18n.t(`months.${moment(month, 'M').format('MMMM')}Month`, { lang: lang }) : '',
         summary: [
           {
             label: this.i18n.t(`common.Nipun`, { lang: lang }),
@@ -202,11 +155,7 @@ export class SchoolServiceV2 extends SchoolService {
           {
             label: this.i18n.t(`common.NotAssessed`, { lang: lang }),
             colour: '#E2E2E2',
-            count:
-              gradeStudents[grade.toString()]?.students.length -
-                gradeStudents[grade.toString()]?.nipun ??
-              0 - gradeStudents[grade.toString()]?.not_nipun ??
-              0,
+            count: (gradeStudents[grade.toString()]?.students.length - gradeStudents[grade.toString()]?.nipun ?? 0 - gradeStudents[grade.toString()]?.not_nipun ?? 0),
             identifier: StudentMonthlyAssessmentStatus.PENDING,
           },
         ],
@@ -217,27 +166,17 @@ export class SchoolServiceV2 extends SchoolService {
     return response;
   }
 
-  async getSchoolStudentsResultsSummary(
-    mentor: Mentor,
-    udise: number,
-    grades: Array<number>,
-    xMonths = 12,
-  ) {
+  async getSchoolStudentsResultsSummary(mentor: Mentor, udise: number, grades: Array<Number>, xMonths: number = 12) {
     // @TODO: to be redone using Continuous Aggregates
     // find out all the months for which we wanted to fetch summary data for
-    const globalStartDate = moment('2023-09-01'); // the date post which this feature was made live
-    let startDate = moment(globalStartDate)
-      .subtract(xMonths, 'months')
-      .startOf('month');
+    const globalStartDate = moment('2023-09-01');  // the date post which this feature was made live
+    let startDate = moment(globalStartDate).subtract(xMonths, 'months').startOf('month');
     const now = moment();
-    const monthsForQuery: Array<{ year: number; month: number }> = [];
+    const monthsForQuery: Array<{ year: number, month: number }> = [];
     while (startDate < now) {
       if (startDate >= globalStartDate) {
         // this is the month we shall consider
-        monthsForQuery.push({
-          year: startDate.year(),
-          month: startDate.month(),
-        });
+        monthsForQuery.push({ year: startDate.year(), month: startDate.month() });
       }
       if (startDate > now) {
         break;
@@ -268,17 +207,13 @@ export class SchoolServiceV2 extends SchoolService {
       group by grade`;
 
     const gradeWiseSummary: Record<string, any> = {};
-    const summaries: Record<string, object> = {};
+    let summaries: Record<string, object> = {};
     const lang: string = I18nContext?.current()?.lang ?? 'en';
-    monthsForQuery.forEach((item) => {
-      const monthName = moment()
-        .month(item.month)
-        .year(item.year)
-        .date(1)
-        .format('MMMM');
+    monthsForQuery.forEach(item => {
+      const monthName = moment().month(item.month).year(item.year).date(1).format('MMMM');
       summaries[monthName] = {
         year: item.year,
-        month: item.month + 1, // as item.month is index of the month
+        month: item.month + 1,  // as item.month is index of the month
         period: this.i18n.t(`months.${monthName}`, { lang: lang }),
         total: 0,
         assessed: 0,
@@ -288,14 +223,14 @@ export class SchoolServiceV2 extends SchoolService {
     });
 
     const gradesTotal = await this.studentService.getGradeStudentsCount(udise);
-    for (const grade of grades) {
-      const summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
+    for (let grade of grades) {
+      let summary = JSON.parse(JSON.stringify(summaries)); // we needed deep copy of `summaries` object
       const gradeTotal = gradesTotal.filter((item) => {
         return item.grade == grade;
       });
 
       // set total for each summary object
-      Object.entries(summary).forEach((key) => {
+      Object.entries(summary).forEach(key => {
         summary[key[0]].total = gradeTotal[0]?.count ?? 0;
       });
       gradeWiseSummary[grade.toString()] = {
@@ -304,54 +239,27 @@ export class SchoolServiceV2 extends SchoolService {
       };
     }
     for (const item of monthsForQuery) {
-      const tables = this.appService.getAssessmentVisitResultsTables(
-        item.year,
-        item.month + 1,
+      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
+      const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
+      const endTime = moment(startTime).add(1, 'months')
+      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
+        query
+          .replace('%table_student%', tables.assessment_visit_results_students)
+          .replace('%table_v2%', tables.assessment_visit_results_v2)
+          .replace('%mentor_id%', mentor.id.toString())
+          .replace('%start_time%', startTime.format('YYYY-MM-DD HH:mm:ss'))
+          .replace('%end_time%', endTime.format('YYYY-MM-DD HH:mm:ss'))
+          .replace('%grades%', grades.join(',')),
       );
-      const result: Array<Record<string, number>> =
-        await this.prismaService.$queryRawUnsafe(
-          query
-            .replace(
-              '%table_student%',
-              tables.assessment_visit_results_students,
-            )
-            .replace('%table_v2%', tables.assessment_visit_results_v2)
-            .replace('%mentor_id%', mentor.id.toString())
-            .replace(
-              '%start_time%',
-              moment()
-                .month(item.month)
-                .year(item.year)
-                .date(1)
-                .startOf('day')
-                .format('YYYY-MM-DD HH:mm:ss'),
-            )
-            .replace(
-              '%end_time%',
-              moment()
-                .month(item.month + 1)
-                .year(item.year)
-                .date(1)
-                .startOf('day')
-                .format('YYYY-MM-DD HH:mm:ss'),
-            )
-            .replace('%grades%', grades.join(',')),
-        );
       for (const row of result) {
-        gradeWiseSummary[row.grade.toString()].summary[
-          moment().month(item.month).year(item.year).date(1).format('MMMM')
-        ].assessed = row.assessed;
-        gradeWiseSummary[row.grade.toString()].summary[
-          moment().month(item.month).year(item.year).date(1).format('MMMM')
-        ].successful = row.nipun;
-        gradeWiseSummary[row.grade.toString()].summary[
-          moment().month(item.month).year(item.year).date(1).format('MMMM')
-        ].updated_at = row.updated_at;
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;
+        gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].updated_at = row.updated_at;
       }
     }
 
-    const response = Object.values(gradeWiseSummary); // remove grade keys from `gradeWiseSummary` object
-    for (const item of response) {
+    let response = Object.values(gradeWiseSummary); // remove grade keys from `gradeWiseSummary` object
+    for (let item of response) {
       item.summary = Object.values(item.summary); // remove month name keys from summary objects
     }
     return response;
@@ -361,8 +269,7 @@ export class SchoolServiceV2 extends SchoolService {
     mentor: Mentor,
     udise: number,
     firstDayTimestamp: number,
-    lastDayTimestamp: number,
-  ): Promise<TypeTeacherHomeOverview | null> {
+    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
     try {
       const query = `
         select count(distinct student_id)                                               as assessments_total,
@@ -381,21 +288,14 @@ export class SchoolServiceV2 extends SchoolService {
             and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
             and a.student_id is not null
             and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-            and a.submitted_at between '${moment
-              .unix(firstDayTimestamp / 1000)
-              .format('YYYY-MM-DD HH:mm:ss')}' and '${moment
-        .unix(lastDayTimestamp / 1000)
-        .format('YYYY-MM-DD HH:mm:ss')}'
+            and a.submitted_at between '${moment.unix(firstDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}' and '${moment.unix(lastDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}'
           order by student_id, submitted_at DESC
         ) t`;
-      const result: Array<TypeTeacherHomeOverview> =
-        await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
       return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,
-        updated_at: result[0].updated_at
-          ? moment(result[0].updated_at).unix() * 1000
-          : 0,
+        updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,
         assessed_student_ids: result[0].assessed_student_ids,
         nipun_student_ids: result[0].nipun_student_ids,
       };
@@ -408,66 +308,52 @@ export class SchoolServiceV2 extends SchoolService {
 
   async getSchoolTeacherPerformance(mentor: Mentor, udise: number) {
     // @TODO: to be redone using Continuous Aggregates
-    const lastDate = new Date(); // it's now() basically
+    const lastDate = new Date();  // it's now() basically
     const temp = new Date();
-    const day = lastDate.getDay(),
-      diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
     const firstDate = new Date(temp.setDate(diff));
 
-    const firstDayTimestamp = Date.UTC(
-      firstDate.getFullYear(),
-      firstDate.getMonth(),
-      firstDate.getDate(),
-      0,
-      0,
-      0,
-    );
+    const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
     const lastDayTimestamp = lastDate.getTime();
 
-    const responseFirstTable: TypeTeacherHomeOverview | null =
-      await this.getTeacherStudentsSummaryResultForPeriodV2(
-        mentor,
-        udise,
-        firstDayTimestamp,
-        lastDayTimestamp,
-      );
+    let responseFirstTable: TypeTeacherHomeOverview | null = await this.getTeacherStudentsSummaryResultForPeriodV2(
+      mentor,
+      udise,
+      firstDayTimestamp,
+      lastDayTimestamp,
+    );
 
     const weekly = {
-      assessments_total: responseFirstTable?.assessments_total || 0,
-      nipun_total: responseFirstTable?.nipun_total || 0,
-      updated_at: responseFirstTable?.updated_at || 0,
-      assessed_student_ids: responseFirstTable?.assessed_student_ids || '',
-      nipun_student_ids: responseFirstTable?.nipun_student_ids || '',
+      assessments_total: (responseFirstTable?.assessments_total || 0),
+      nipun_total: (responseFirstTable?.nipun_total || 0),
+      updated_at: (responseFirstTable?.updated_at || 0),
+      assessed_student_ids: (responseFirstTable?.assessed_student_ids || ''),
+      nipun_student_ids: (responseFirstTable?.nipun_student_ids || ''),
     };
 
     const currentMonthName = moment().utc().format('MMMM');
     const currentMonth = moment().utc().month() + 1;
     const currentYear = moment().utc().year();
-    const currentMonthStartTimestamp =
-      moment().utc().startOf('month').unix() * 1000; // in milliseconds
-    const currentMonthEndTimestamp = moment().utc().unix() * 1000; // in milliseconds
-    const currentMonthStats =
-      await this.getTeacherStudentsSummaryResultForPeriodV2(
-        mentor,
-        udise,
-        currentMonthStartTimestamp,
-        currentMonthEndTimestamp,
-      );
+    const currentMonthStartTimestamp = moment().utc().startOf('month').unix() * 1000; // in milliseconds
+    const currentMonthEndTimestamp = moment().utc().unix() * 1000;  // in milliseconds
+    const currentMonthStats = await this.getTeacherStudentsSummaryResultForPeriodV2(
+      mentor,
+      udise,
+      currentMonthStartTimestamp,
+      currentMonthEndTimestamp,
+    );
 
     const lastMonthName = moment().utc().subtract(1, 'month').format('MMMM');
-    const lastMonth = currentMonth == 1 ? 12 : currentMonth - 1;
-    const lastYear = currentMonth == 1 ? currentYear - 1 : currentYear;
-    const lastMonthStartTimestamp =
-      moment().utc().subtract(1, 'month').startOf('month').unix() * 1000; // in milliseconds
-    const lastMonthEndTimestamp =
-      moment().utc().subtract(1, 'month').endOf('month').unix() * 1000; // in milliseconds
-    const lastMonthStats =
-      await this.getTeacherStudentsSummaryResultForPeriodV2(
-        mentor,
-        udise,
-        lastMonthStartTimestamp,
-        lastMonthEndTimestamp,
-      );
+    const lastMonth = (currentMonth == 1) ? 12 : (currentMonth - 1);
+    const lastYear = (currentMonth == 1) ? (currentYear - 1) : currentYear;
+    const lastMonthStartTimestamp = moment().utc().subtract(1, 'month').startOf('month').unix() * 1000; // in milliseconds
+    const lastMonthEndTimestamp = moment().utc().subtract(1, 'month').endOf('month').unix() * 1000; // in milliseconds
+    const lastMonthStats = await this.getTeacherStudentsSummaryResultForPeriodV2(
+      mentor,
+      udise,
+      lastMonthStartTimestamp,
+      lastMonthEndTimestamp,
+    );
     const lang: string = I18nContext?.current()?.lang ?? 'en';
     return [
       {
@@ -501,8 +387,7 @@ export class SchoolServiceV2 extends SchoolService {
             label: this.i18n.t(`common.AssessedStudents`, { lang: lang }),
             count: currentMonthStats?.assessments_total ?? 0,
             identifier: 'assessed',
-            student_ids:
-              currentMonthStats?.assessed_student_ids?.split(',') ?? [],
+            student_ids: currentMonthStats?.assessed_student_ids?.split(',') ?? [],
           },
           {
             label: this.i18n.t(`common.NipunStudents`, { lang: lang }),
@@ -562,13 +447,9 @@ export class SchoolServiceV2 extends SchoolService {
     return null;
   }
 
-  async calculateExaminerCycleUdiseResult(
-    mentorId: number,
-    cycleId: number,
-    udise: number,
-  ) {
+  async calculateExaminerCycleUdiseResult(mentor: Mentor, cycleId: number, udise: number) {
     // find out cycle details, students list & nipun percentage for the udise
-    const cycleDetails: Array<any> = await this.prismaService.$queryRawUnsafe(`
+    const cycleDetails: Array<Record<string, number | string | Array<string>>> = await this.prismaService.$queryRawUnsafe(`
       select 
         c.id,
         c.start_date,
@@ -587,20 +468,18 @@ export class SchoolServiceV2 extends SchoolService {
       limit 1`);
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
-      this.logger.warn(
-        `This udise (${udise}) is not mapped to any cycle for this examiner (${mentorId})`,
-      );
-      return true; // returning true so that the queue job just terminate gracefully
+      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentor.id})`);
+      return true;  // returning true so that the queue job just terminate gracefully
     }
 
-    const studentIds = [
-      ...cycleDetails[0].class_1_students,
-      ...cycleDetails[0].class_2_students,
-      ...cycleDetails[0].class_3_students,
-    ];
-    const grade1Count = [...cycleDetails[0].class_1_students].length ?? 10;
-    const grade2Count = [...cycleDetails[0].class_2_students].length ?? 10;
-    const grade3Count = [...cycleDetails[0].class_3_students].length ?? 10;
+    // @ts-ignore prepare list of student ids
+    const studentIds = [...cycleDetails[0].class_1_students[0], ...cycleDetails[0].class_2_students[0], ...cycleDetails[0].class_3_students[0]];
+    // @ts-ignore
+    const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 10;
+    // @ts-ignore
+    const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 10;
 
     // find the grade wise nipun percentage
     const query = `
@@ -618,56 +497,36 @@ export class SchoolServiceV2 extends SchoolService {
                                               a.grade
             from assessments a
             where a.student_id in (
-                                   ${"'" + studentIds.join("','") + "'"}
+                                   ${'\''+studentIds.join('\',\'')+'\''}
                 )
               and udise = ${udise}
               and grade in (1,2,3)
-              and mentor_id = ${mentorId}
-              and a.submitted_at between '${moment(
-                cycleDetails[0].start_date,
-              ).format('YYYY-MM-DD')}' and '${moment(
-      cycleDetails[0].end_date,
-    ).format('YYYY-MM-DD')}') t
+              and mentor_id = ${mentor.id}
+              and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}') t
       where t.is_passed = true
       group by t.grade    
     `;
     console.log(query);
-    const gradeWisePercentage: Array<{ grade: number; percentage: number }> =
-      await this.prismaService.$queryRawUnsafe(query);
+    const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
 
     // the school will be nipun if all 3 grades are nipun
     let isNipun = true;
     if (gradeWisePercentage.length != 3) {
       // i.e. not all class assessments has been done (OR) no Nipun student percentage - the school is NOT_NIPUN
       isNipun = false;
-    } else if (
-      gradeWisePercentage.filter((item) => {
-        return (
-          item.grade == 1 &&
-          item.percentage < cycleDetails[0].class_1_nipun_percentage
-        );
-      }).length
-    ) {
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 1 && item.percentage < cycleDetails[0].class_1_nipun_percentage;
+    }).length) {
       // i.e. grade 1 % < cycle defined percentage
       isNipun = false;
-    } else if (
-      gradeWisePercentage.filter((item) => {
-        return (
-          item.grade == 2 &&
-          item.percentage < cycleDetails[0].class_2_nipun_percentage
-        );
-      }).length
-    ) {
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 2 && item.percentage < cycleDetails[0].class_2_nipun_percentage;
+    }).length) {
       // i.e. grade 2 % < cycle defined percentage
       isNipun = false;
-    } else if (
-      gradeWisePercentage.filter((item) => {
-        return (
-          item.grade == 3 &&
-          item.percentage < cycleDetails[0].class_3_nipun_percentage
-        );
-      }).length
-    ) {
+    } else if (gradeWisePercentage.filter(item => {
+      return item.grade == 3 && item.percentage < cycleDetails[0].class_3_nipun_percentage;
+    }).length) {
       // i.e. grade 3 % < cycle defined percentage
       isNipun = false;
     }
@@ -678,16 +537,15 @@ export class SchoolServiceV2 extends SchoolService {
         cycle_id_udise_mentor_id: {
           cycle_id: cycleId,
           udise: udise,
-          mentor_id: mentorId,
+          mentor_id: mentor.id,
         },
       },
       create: {
         cycle_id: cycleId,
         udise: udise,
-        mentor_id: mentorId,
+        mentor_id: mentor.id,
         is_nipun: isNipun,
-      },
-      update: {
+      }, update: {
         is_nipun: isNipun,
       },
     });

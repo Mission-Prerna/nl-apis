@@ -38,11 +38,15 @@ import {
 import { DbTableNotFoundException } from './exceptions/db-table-not-found.exception';
 import * as Sentry from '@sentry/minimal';
 import { RedisHelperService } from './RedisHelper.service';
-import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
+import {
+  DailyCacheManager,
+  MonthlyCacheManager,
+  WeeklyCacheManager,
+} from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 
-const moment = require('moment');
+import * as moment from 'moment';
 
 @Injectable()
 export class AppService {
@@ -56,21 +60,27 @@ export class AppService {
     @Inject(CACHE_MANAGER) private cacheService: Cache,
     protected readonly i18n: I18nService,
   ) {
-    this.prismaService.$queryRawUnsafe(`
+    this.prismaService
+      .$queryRawUnsafe(
+        `
       SELECT table_name
         FROM information_schema.tables
        WHERE table_schema='public'
          AND table_type='BASE TABLE';    
-    `).then((response) => {
-      // @ts-ignore
-      for (const table of response) {
-        this.allTables[table.table_name] = true;  // push to object map
-      }
-      this.logger.log('Tables list loaded...');
-    }).catch(error => this.logger.error('Unable to fetch tables list from DB!!!', error));
+    `,
+      )
+      .then((response: any) => {
+        for (const table of response) {
+          this.allTables[table.table_name] = true; // push to object map
+        }
+        this.logger.log('Tables list loaded...');
+      })
+      .catch((error) =>
+        this.logger.error('Unable to fetch tables list from DB!!!', error),
+      );
   }
 
-  private monthQuarterMap = {
+  private monthQuarterMap: Record<string, string> = {
     '1': 'jan_mar',
     '2': 'jan_mar',
     '3': 'jan_mar',
@@ -85,15 +95,17 @@ export class AppService {
     '12': 'oct_dec',
   };
 
-  public getAssessmentVisitResultsTables(year: null | number = null, month: null | number = null): TypeAssessmentQuarterTables {
+  public getAssessmentVisitResultsTables(
+    year: null | number = null,
+    month: null | number = null,
+  ): TypeAssessmentQuarterTables {
     if (year === null) {
       year = new Date().getFullYear();
     }
     if (month === null) {
-      month = new Date().getMonth() + 1;  // since getMonth() gives index
+      month = new Date().getMonth() + 1; // since getMonth() gives index
     }
 
-    // @ts-ignore
     const quarter: string = this.monthQuarterMap[month.toString()];
     const assessmentVisitResultsTable = `assessment_visit_results_v2_${year.toString()}_${quarter}`;
     const assessmentVisitResultsStudentsTable = `assessment_visit_results_students_${year.toString()}_${quarter}`;
@@ -101,19 +113,27 @@ export class AppService {
 
     if (!this.allTables[assessmentVisitResultsTable]) {
       const error = `Missing quarter table ${assessmentVisitResultsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsQuery(assessmentVisitResultsTable)}`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsQuery(
+        assessmentVisitResultsTable,
+      )}`;
       this.logger.error(error);
       this.logger.debug(description);
       throw new DbTableNotFoundException(error, description);
     } else if (!this.allTables[assessmentVisitResultsStudentsTable]) {
       const error = `Missing quarter table ${assessmentVisitResultsStudentsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsStudentsQuery(assessmentVisitResultsStudentsTable, assessmentVisitResultsTable)}`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsStudentsQuery(
+        assessmentVisitResultsStudentsTable,
+        assessmentVisitResultsTable,
+      )}`;
       this.logger.error(error);
       this.logger.debug(description);
       throw new DbTableNotFoundException(error, description);
     } else if (!this.allTables[assessmentVisitResultStudentOdkResultsTable]) {
       const error = `Missing quarter table ${assessmentVisitResultStudentOdkResultsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultStudentOdkResultsQuery(assessmentVisitResultStudentOdkResultsTable, assessmentVisitResultsStudentsTable)}`;
+      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultStudentOdkResultsQuery(
+        assessmentVisitResultStudentOdkResultsTable,
+        assessmentVisitResultsStudentsTable,
+      )}`;
       this.logger.error(error);
       this.logger.debug(description);
       throw new DbTableNotFoundException(error, description);
@@ -122,21 +142,180 @@ export class AppService {
     return {
       assessment_visit_results_v2: assessmentVisitResultsTable,
       assessment_visit_results_students: assessmentVisitResultsStudentsTable,
-      assessment_visit_results_student_odk_results: assessmentVisitResultStudentOdkResultsTable,
+      assessment_visit_results_student_odk_results:
+        assessmentVisitResultStudentOdkResultsTable,
     };
+  }
+
+  async createAssessmentVisitResultV2(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+  ) {
+    return await tx[tables.assessment_visit_results_v2].create({
+      select: {
+        id: true,
+      },
+      data: {
+        submission_timestamp:
+          createAssessmentVisitResultData.submission_timestamp,
+        grade: createAssessmentVisitResultData.grade,
+        subject_id: createAssessmentVisitResultData.subject_id,
+        mentor_id: createAssessmentVisitResultData.mentor_id,
+        actor_id: createAssessmentVisitResultData.actor_id,
+        block_id: createAssessmentVisitResultData.block_id,
+        assessment_type_id: createAssessmentVisitResultData.assessment_type_id,
+        udise: createAssessmentVisitResultData.udise,
+        no_of_student: createAssessmentVisitResultData.no_of_student,
+        app_version_code: createAssessmentVisitResultData.app_version_code,
+        module_result: {}, // populating it default
+      },
+    });
+  }
+
+  async createAssessmentVisitResultsStudnetsAndODKResultsStudents(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+    assessmentVisitResultId: number,
+    uniqueStudents: Record<string, number>,
+  ) {
+    let totalTimeTaken = 0;
+
+    // filtering student whose module is 'odk'
+    const assessmentVisitResultStudents =
+      createAssessmentVisitResultData.results.filter(
+        (result) => result.module === AssessmentVisitResultsStudentModule.ODK,
+      );
+
+    for (const student of assessmentVisitResultStudents) {
+      // Create student submission
+      const assessmentVisitResultStudent = await tx[
+        tables.assessment_visit_results_students
+      ].create({
+        data: {
+          student_name: student.student_name,
+          competency_id: student.competency_id,
+          module: student.module,
+          end_time: student.end_time,
+          is_passed: student.is_passed,
+          start_time: student.start_time,
+          statement: student.statement,
+          achievement: student.achievement,
+          total_questions: student.total_questions,
+          success_criteria: student.success_criteria,
+          session_completed: student.session_completed,
+          is_network_active: student.is_network_active,
+          workflow_ref_id: student.workflow_ref_id,
+          total_time_taken: student.total_time_taken,
+          student_session: student.student_session,
+          assessment_visit_results_v2_id: assessmentVisitResultId,
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          grade: createAssessmentVisitResultData.grade,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          student_id: student.student_id ?? null,
+        },
+      });
+      uniqueStudents[student.student_session] = student.is_passed ? 1 : 0; // @TODO fix NIPUN logic
+      if (!uniqueStudents.hasOwnProperty(student.student_session)) {
+        // since the total time taken is same for a single student for all competencies, we'll consider one entry
+        totalTimeTaken += student?.total_time_taken ?? 0;
+      }
+
+      const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
+
+      // creating multiple Assessment visit results student odk results
+      // noinspection TypeScriptValidateJSTypes
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await tx[tables.assessment_visit_results_student_odk_results].createMany({
+        data: student.odk_results.map((odkResult) => {
+          return {
+            question: odkResult.question,
+            answer: odkResult.answer,
+            assessment_visit_results_students_id:
+              assessmentVisitResultStudentId,
+          };
+        }),
+        skipDuplicates: true,
+      });
+    }
+    return totalTimeTaken;
+  }
+
+  async createAssessmentVisitResultsNonODK(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+    assessmentVisitResultId: number,
+    uniqueStudents: Record<string, number>,
+  ) {
+    // filtering student whose module is not 'odk'
+    let totalTimeTaken = 0;
+    const nonOdkModuleStudents = createAssessmentVisitResultData.results
+      .filter(
+        (result) => result.module !== AssessmentVisitResultsStudentModule.ODK,
+      )
+      .map((result) => {
+        if (!uniqueStudents.hasOwnProperty(result.student_session)) {
+          // since the total time taken is same for a single student for all competencies, we'll consider one entry
+          totalTimeTaken += result?.total_time_taken ?? 0;
+        }
+        uniqueStudents[result.student_session] = result.is_passed ? 1 : 0; // @TODO fix NIPUN logic
+        return {
+          student_name: result.student_name,
+          competency_id: result.competency_id,
+          module: result.module,
+          end_time: result.end_time,
+          is_passed: result.is_passed,
+          start_time: result.start_time,
+          statement: result.statement,
+          achievement: result.achievement,
+          total_questions: result.total_questions,
+          success_criteria: result.success_criteria,
+          session_completed: result.session_completed,
+          is_network_active: result.is_network_active,
+          workflow_ref_id: result.workflow_ref_id,
+          total_time_taken: result.total_time_taken,
+          student_session: result.student_session,
+          assessment_visit_results_v2_id: assessmentVisitResultId,
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          grade: createAssessmentVisitResultData.grade,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          student_id: result.student_id ?? null,
+        };
+      });
+
+    if (nonOdkModuleStudents.length) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await tx[tables.assessment_visit_results_students].createMany({
+        data: nonOdkModuleStudents,
+        skipDuplicates: true,
+      });
+    }
+    return totalTimeTaken;
   }
 
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    let totalTimeTaken: number = 0;
-    const submissionDate = new Date();  // we'll dump all records in the current quarter's table
     let uniqueStudents: Record<string, number> = {};
-    const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
+    let totalTimeTaken = 0;
+    const submissionDate = new Date(); // we'll dump all records in the current quarter's table
+    const tables = this.getAssessmentVisitResultsTables(
+      submissionDate.getFullYear(),
+      submissionDate.getMonth() + 1,
+    ); // since getMonth() gives month's index
     try {
       // Checking if Assessment visit result already exist; if not we'll create it
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      let assessmentVisitResult = await this.prismaService[tables.assessment_visit_results_v2].findFirst({
+      let assessmentVisitResult = await this.prismaService[
+        tables.assessment_visit_results_v2
+      ].findFirst({
         select: {
           id: true,
         },
@@ -163,166 +342,89 @@ export class AppService {
             grade: createAssessmentVisitResultData.grade,
             subject_id: createAssessmentVisitResultData.subject_id,
             udise: createAssessmentVisitResultData.udise,
-          }
+          },
         });
         this.logger.log('Duplicate found. Ignoring..');
         return assessmentVisitResult; // we'll not process any further because it's a duplicate
       }
 
-      // filtering student whose module is 'odk'
-      const assessmentVisitResultStudents =
-        createAssessmentVisitResultData.results.filter(
-          (result) =>
-            result.module === AssessmentVisitResultsStudentModule.ODK,
-        );
+      const response = await this.prismaService.$transaction(
+        async (tx) => {
+          assessmentVisitResult = await this.createAssessmentVisitResultV2(
+            tx,
+            tables,
+            createAssessmentVisitResultData,
+          );
 
-      const response = await this.prismaService.$transaction(async (tx) => {
-        // @ts-ignore
-        assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
-          select: {
-            id: true,
-          },
-          data: {
-            submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-            grade: createAssessmentVisitResultData.grade,
-            subject_id: createAssessmentVisitResultData.subject_id,
-            mentor_id: createAssessmentVisitResultData.mentor_id,
-            actor_id: createAssessmentVisitResultData.actor_id,
-            block_id: createAssessmentVisitResultData.block_id,
-            assessment_type_id:
-              createAssessmentVisitResultData.assessment_type_id,
-            udise: createAssessmentVisitResultData.udise,
-            no_of_student: createAssessmentVisitResultData.no_of_student,
-            app_version_code:
-              createAssessmentVisitResultData.app_version_code,
-            module_result: {}, // populating it default
-          },
-        });
+          totalTimeTaken +=
+            await this.createAssessmentVisitResultsStudnetsAndODKResultsStudents(
+              tx,
+              tables,
+              createAssessmentVisitResultData,
+              assessmentVisitResult.id,
+              uniqueStudents,
+            );
 
-        const assessmentVisitResultId = assessmentVisitResult.id;
+          totalTimeTaken += await this.createAssessmentVisitResultsNonODK(
+            tx,
+            tables,
+            createAssessmentVisitResultData,
+            assessmentVisitResult.id,
+            uniqueStudents,
+          );
 
-        for (const student of assessmentVisitResultStudents) {
-          // Create student submission
-          // @ts-ignore
-          const assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
-            data: {
-              student_name: student.student_name,
-              competency_id: student.competency_id,
-              module: student.module,
-              end_time: student.end_time,
-              is_passed: student.is_passed,
-              start_time: student.start_time,
-              statement: student.statement,
-              achievement: student.achievement,
-              total_questions: student.total_questions,
-              success_criteria: student.success_criteria,
-              session_completed: student.session_completed,
-              is_network_active: student.is_network_active,
-              workflow_ref_id: student.workflow_ref_id,
-              total_time_taken: student.total_time_taken,
-              student_session: student.student_session,
-              assessment_visit_results_v2_id: assessmentVisitResult.id,
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              student_id: student.student_id ?? null,
-            },
-          });
-          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
-          if (!uniqueStudents.hasOwnProperty(student.student_session)) {
-            // since the total time taken is same for a single student for all competencies, we'll consider one entry
-            totalTimeTaken += student?.total_time_taken ?? 0;
-          }
-
-          const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
-
-          // creating multiple Assessment visit results student odk results
-          // noinspection TypeScriptValidateJSTypes
-          // @ts-ignore
-          await tx[tables.assessment_visit_results_student_odk_results].createMany({
-            data: student.odk_results.map((odkResult) => {
-              return {
-                question: odkResult.question,
-                answer: odkResult.answer,
-                assessment_visit_results_students_id:
-                  assessmentVisitResultStudentId,
-              };
-            }),
-            skipDuplicates: true,
-          });
-        }
-
-        // filtering student whose module is not 'odk'
-        const nonOdkModuleStudents = createAssessmentVisitResultData.results
-          .filter(
-            (result) =>
-              result.module !== AssessmentVisitResultsStudentModule.ODK,
-          )
-          .map((result) => {
-            if (!uniqueStudents.hasOwnProperty(result.student_session)) {
-              // since the total time taken is same for a single student for all competencies, we'll consider one entry
-              totalTimeTaken += result?.total_time_taken ?? 0;
-            }
-            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;    // @TODO fix NIPUN logic
-            return {
-              student_name: result.student_name,
-              competency_id: result.competency_id,
-              module: result.module,
-              end_time: result.end_time,
-              is_passed: result.is_passed,
-              start_time: result.start_time,
-              statement: result.statement,
-              achievement: result.achievement,
-              total_questions: result.total_questions,
-              success_criteria: result.success_criteria,
-              session_completed: result.session_completed,
-              is_network_active: result.is_network_active,
-              workflow_ref_id: result.workflow_ref_id,
-              total_time_taken: result.total_time_taken,
-              student_session: result.student_session,
-              assessment_visit_results_v2_id: assessmentVisitResultId,
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              student_id: result.student_id ?? null,
-            };
-          });
-
-        if (nonOdkModuleStudents.length) {
-          // @ts-ignore
-          await tx[tables.assessment_visit_results_students].createMany({
-            data: nonOdkModuleStudents,
-            skipDuplicates: true,
-          });
-        }
-
-        await this.dumpAssessmentsInHypertable(createAssessmentVisitResultData);  // dump into hypertable
-        return assessmentVisitResult;
-      }, {
-        timeout: 15000,
-      });
+          await this.dumpAssessmentsInHypertable(
+            createAssessmentVisitResultData,
+          ); // dump into hypertable
+          return assessmentVisitResult;
+        },
+        {
+          timeout: 15000,
+        },
+      );
 
       // update metrics in cache
       const cacheHomeScreen = new MonthlyCacheManager(
         BigInt(createAssessmentVisitResultData.mentor_id),
         submissionDate.getFullYear(),
         submissionDate.getMonth() + 1,
-        this.redisHelper
+        this.redisHelper,
       );
 
-      const hydrated: boolean = await cacheHomeScreen.hydrate(createAssessmentVisitResultData.udise, createAssessmentVisitResultData.grade, totalTimeTaken, uniqueStudents)
-      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER && createAssessmentVisitResultData.assessment_type_id == AssessmentTypeEnum.NIPUN_ABHYAS) {
+      const hydrated: boolean = await cacheHomeScreen.hydrate(
+        createAssessmentVisitResultData.udise,
+        createAssessmentVisitResultData.grade,
+        totalTimeTaken,
+        uniqueStudents,
+      );
+      if (
+        hydrated &&
+        createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER &&
+        createAssessmentVisitResultData.assessment_type_id ==
+          AssessmentTypeEnum.NIPUN_ABHYAS
+      ) {
         // Let's now update teacher's metrics cache
         const assessmentsCount = Object.keys(uniqueStudents).length;
-        const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);
-        const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
-          submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
+        const nipunCount = Object.values(uniqueStudents).reduce(
+          (partialSum, a) => partialSum + a,
+          0,
+        );
+        const cacheDaily = new DailyCacheManager(
+          BigInt(createAssessmentVisitResultData.mentor_id),
+          submissionDate.getFullYear(),
+          submissionDate.getMonth() + 1,
+          submissionDate.getDate(),
+          this.redisHelper,
+        );
         if (await cacheDaily.hydrate(assessmentsCount, nipunCount)) {
           // sync weekly metrics too because we synced daily as well
-          const cacheWeekly = new WeeklyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
-            submissionDate.getFullYear(), moment().isoWeek(), this.redisHelper);
-          await cacheWeekly.hydrate(assessmentsCount, nipunCount)
+          const cacheWeekly = new WeeklyCacheManager(
+            BigInt(createAssessmentVisitResultData.mentor_id),
+            submissionDate.getFullYear(),
+            moment().isoWeek(),
+            this.redisHelper,
+          );
+          await cacheWeekly.hydrate(assessmentsCount, nipunCount);
         }
       }
       return response;
@@ -347,7 +449,7 @@ export class AppService {
 
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0); // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // first day of next month
     try {
       const response = await this.prismaService.$queryRawUnsafe(`SELECT 
@@ -360,7 +462,9 @@ export class AppService {
         b.name as block_name,
         s.nyay_panchayat_id,
         n.name as nyay_panchayat_name,
-        (case when EXISTS(SELECT avr2.id from ${tables.assessment_visit_results_v2} as avr2 
+        (case when EXISTS(SELECT avr2.id from ${
+          tables.assessment_visit_results_v2
+        } as avr2 
             where avr2.udise = 	s.udise 
             and avr2.mentor_id = ${mentorId}
             and avr2.submission_timestamp > ${firstDayTimestamp} 
@@ -377,8 +481,11 @@ export class AppService {
       left join nyay_panchayats n on n.id = s.nyay_panchayat_id
       where s.district_id = ${mentor.district_id}
       ${mentor.block_id ? `and s.block_id = ${mentor.block_id}` : ''}`);
-      // @ts-ignore
-      await this.cacheService.set(CacheKeyMentorSchoolList(mentor.phone_no, month, year), response, { ttl: CacheConstants.TTL_MENTOR_SCHOOL_LIST }); // Adding the data to cache
+      await this.cacheService.set(
+        CacheKeyMentorSchoolList(mentor.phone_no, month, year),
+        response,
+        CacheConstants.TTL_MENTOR_SCHOOL_LIST,
+      ); // Adding the data to cache
       return response;
     } catch (e) {
       this.logger.error(`Error occurred: ${e}`);
@@ -444,7 +551,12 @@ export class AppService {
    * @param year
    * @private
    */
-  private async transformHomeScreenMetricCache(cachedData: MentorMonthlyMetrics | Record<string, any>, mentor: Mentor, month: number, year: number) {
+  private async transformHomeScreenMetricCache(
+    cachedData: MentorMonthlyMetrics | Record<string, any>,
+    mentor: Mentor,
+    month: number,
+    year: number,
+  ) {
     const response: Record<string, any> = {
       visited_schools: parseInt(cachedData.schools_visited),
       total_assessments: parseInt(cachedData.assessments_taken),
@@ -452,30 +564,38 @@ export class AppService {
       grades: [
         {
           grade: 1,
-          total_assessments: parseInt(cachedData.grade_1_assessments)
+          total_assessments: parseInt(cachedData.grade_1_assessments),
         },
         {
           grade: 2,
-          total_assessments: parseInt(cachedData.grade_2_assessments)
+          total_assessments: parseInt(cachedData.grade_2_assessments),
         },
         {
           grade: 3,
-          total_assessments: parseInt(cachedData.grade_3_assessments)
-        }
+          total_assessments: parseInt(cachedData.grade_3_assessments),
+        },
       ],
     };
     if (mentor.actor_id == ActorEnum.TEACHER) {
-      const dailyData: MentorDailyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorDailyMetrics(mentor.id, month, moment().date(), year));
+      const dailyData: MentorDailyMetrics | Record<string, any> =
+        await this.redisHelper.getHash(
+          CacheKeyMentorDailyMetrics(mentor.id, month, moment().date(), year),
+        );
       if (Object.keys(dailyData).length === 0) {
-        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(
+          mentor,
+        );
       } else {
-        const weeklyData: MentorWeeklyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), year));
+        const weeklyData: MentorWeeklyMetrics | Record<string, any> =
+          await this.redisHelper.getHash(
+            CacheKeyMentorWeeklyMetrics(mentor.id, moment().isoWeek(), year),
+          );
         response.teacher_overview = {
           assessments_total: parseInt(weeklyData.assessments_taken),
           nipun_total: parseInt(weeklyData.nipun_count),
           assessments_today: parseInt(dailyData.assessments_taken),
-          nipun_today: parseInt(dailyData.nipun_count)
-        }
+          nipun_today: parseInt(dailyData.nipun_count),
+        };
       }
     }
     return response;
@@ -483,13 +603,21 @@ export class AppService {
 
   async getHomeScreenMetric(mentor: Mentor, month: number, year: number) {
     // We'll check if there is data in the cache
-    const cachedData: MentorMonthlyMetrics | Record<string, any> = await this.redisHelper.getHash(CacheKeyMentorMonthlyMetrics(mentor.id, month, year));
+    const cachedData: MentorMonthlyMetrics | Record<string, any> =
+      await this.redisHelper.getHash(
+        CacheKeyMentorMonthlyMetrics(mentor.id, month, year),
+      );
     if (Object.keys(cachedData).length !== 0) {
-      return this.transformHomeScreenMetricCache(cachedData, mentor, month, year);
+      return this.transformHomeScreenMetricCache(
+        cachedData,
+        mentor,
+        month,
+        year,
+      );
     }
 
     const tables = this.getAssessmentVisitResultsTables(year, month);
-    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0); // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     try {
@@ -511,7 +639,8 @@ export class AppService {
             AND avrs.submission_timestamp > ${firstDayTimestamp}
             AND avrs.submission_timestamp < ${lastDayTimestamp}`;
 
-      const result: Record<string, any> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Record<string, any> =
+        await this.prismaService.$queryRawUnsafe(query);
 
       const response: Record<string, any> = {
         visited_schools: result[0]['schools_visited'],
@@ -534,7 +663,8 @@ export class AppService {
       };
 
       // find list of visited schools
-      const visitedSchoolsResult: Array<{ udise: bigint }> = await this.prismaService.$queryRawUnsafe(`
+      const visitedSchoolsResult: Array<{ udise: bigint }> = await this
+        .prismaService.$queryRawUnsafe(`
         select
           DISTINCT udise as udise
         from
@@ -550,14 +680,21 @@ export class AppService {
         return item.udise.toString();
       });
 
-      const cache = new MonthlyCacheManager(BigInt(mentor.id), year, month, this.redisHelper);
-      await cache.create(visitedSchools, result[0]);  // create the hashmap in redis
+      const cache = new MonthlyCacheManager(
+        BigInt(mentor.id),
+        year,
+        month,
+        this.redisHelper,
+      );
+      await cache.create(visitedSchools, result[0]); // create the hashmap in redis
 
       // creating DB table entry for the very first time
       await this.upsertCacheMentorMetrics(mentor, year, month, result[0]);
 
       if (mentor.actor_id == ActorEnum.TEACHER) {
-        response.teacher_overview = await this.getTeacherHomeScreenMetric(mentor);
+        response.teacher_overview = await this.getTeacherHomeScreenMetric(
+          mentor,
+        );
       }
       return response;
     } catch (e) {
@@ -612,18 +749,24 @@ export class AppService {
       },
     });
 
-    let temp: any = mentor;
+    const temp: any = mentor;
     if (mentor) {
       temp.district_name = mentor?.districts?.name ?? '';
       temp.block_town_name = mentor?.blocks?.name ?? '';
 
-      const teacher_school_list_mapping: any = mentor?.teacher_school_list_mapping[0] ?? null;
+      const teacher_school_list_mapping: any =
+        mentor?.teacher_school_list_mapping[0] ?? null;
       if (teacher_school_list_mapping) {
-        teacher_school_list_mapping.school_list.school_id = teacher_school_list_mapping?.school_list?.id ?? '';
-        teacher_school_list_mapping.school_list.school_name = teacher_school_list_mapping?.school_list?.name ?? '';
-        teacher_school_list_mapping.school_list.district_name = teacher_school_list_mapping?.school_list?.districts?.name ?? '';
-        teacher_school_list_mapping.school_list.block_name = teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
-        teacher_school_list_mapping.school_list.nyay_panchayat_name = teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
+        teacher_school_list_mapping.school_list.school_id =
+          teacher_school_list_mapping?.school_list?.id ?? '';
+        teacher_school_list_mapping.school_list.school_name =
+          teacher_school_list_mapping?.school_list?.name ?? '';
+        teacher_school_list_mapping.school_list.district_name =
+          teacher_school_list_mapping?.school_list?.districts?.name ?? '';
+        teacher_school_list_mapping.school_list.block_name =
+          teacher_school_list_mapping?.school_list?.blocks?.name ?? '';
+        teacher_school_list_mapping.school_list.nyay_panchayat_name =
+          teacher_school_list_mapping?.school_list?.nyay_panchayats?.name ?? '';
 
         delete teacher_school_list_mapping.school_list.districts;
         delete teacher_school_list_mapping.school_list.blocks;
@@ -635,24 +778,39 @@ export class AppService {
       delete temp.districts;
       delete temp.blocks;
     }
-    // @ts-ignore
-    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
+    await this.cacheService.set(
+      CacheKeyMentorDetail(phoneNumber),
+      temp,
+      CacheConstants.TTL_MENTOR_FROM_TOKEN,
+    ); // Adding the mentor to cache
     return temp;
   }
 
-  async getMentorDetails(mentor: Mentor, month: null | number = null, year: null | number = null) {
+  async getMentorDetails(
+    mentor: Mentor,
+    month: null | number = null,
+    year: null | number = null,
+  ) {
     if (year === null) {
       year = new Date().getFullYear();
     }
     if (month === null) {
-      month = new Date().getMonth() + 1;  // since getMonth() gives index
+      month = new Date().getMonth() + 1; // since getMonth() gives index
     }
 
     const examinerCycleDetails = await this.getExaminerCycleDetails(mentor);
-    const schoolsList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
+    const schoolsList = await this.getMentorSchoolListIfHeHasVisited(
+      mentor,
+      month,
+      year,
+    );
     return {
       mentor: mentor,
-      school_list: schoolsList.length ? schoolsList : (examinerCycleDetails ? examinerCycleDetails?.schools_list : []),
+      school_list: schoolsList.length
+        ? schoolsList
+        : examinerCycleDetails
+        ? examinerCycleDetails?.schools_list
+        : [],
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
       examiner_cycle_details: examinerCycleDetails,
     };
@@ -689,23 +847,27 @@ export class AppService {
           learning_outcome: 'asc',
         },
       }),
-      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
-        select: {
-          competency_id: true,
-          grade: true,
-          is_active: true,
-          ref_ids: true,
-          subject_id: true,
-          type: true,
-          assessment_type_id: true,
-        },
-        where: {
-          is_active: true,
-        },
-      }),
+      workflow_ref_ids:
+        await this.prismaService.workflow_refids_mapping.findMany({
+          select: {
+            competency_id: true,
+            grade: true,
+            is_active: true,
+            ref_ids: true,
+            subject_id: true,
+            type: true,
+            assessment_type_id: true,
+          },
+          where: {
+            is_active: true,
+          },
+        }),
     };
-    // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    await this.cacheService.set(
+      CacheKeyMetadata(),
+      resp,
+      CacheConstants.TTL_METADATA,
+    );
     return resp;
   }
 
@@ -728,7 +890,8 @@ export class AppService {
     mentor: Mentor,
     firstDayTimestamp: number,
     todayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
+    lastDayTimestamp: number,
+  ): Promise<TypeTeacherHomeOverview | null> {
     try {
       const query = `
           select weekly.assessments_total, weekly.nipun_total, daily.assessments_today, daily.nipun_today
@@ -756,7 +919,8 @@ export class AppService {
                      and avrs.submission_timestamp < ${lastDayTimestamp}
                ) as daily;
       `;
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> =
+        await this.prismaService.$queryRawUnsafe(query);
 
       return {
         assessments_total: result[0].assessments_total,
@@ -772,20 +936,44 @@ export class AppService {
   }
 
   async getTeacherHomeScreenMetric(mentor: Mentor) {
-    const lastDate = new Date();  // it's now() basically
+    const lastDate = new Date(); // it's now() basically
     const temp = new Date();
-    const day = lastDate.getDay(), diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+    const day = lastDate.getDay(),
+      diff = lastDate.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
     const firstDate = new Date(temp.setDate(diff));
 
-    const tablesForFirstDate = this.getAssessmentVisitResultsTables(firstDate.getFullYear(), firstDate.getMonth() + 1);
-    const tablesForLastDate = this.getAssessmentVisitResultsTables(lastDate.getFullYear(), lastDate.getMonth() + 1);
+    const tablesForFirstDate = this.getAssessmentVisitResultsTables(
+      firstDate.getFullYear(),
+      firstDate.getMonth() + 1,
+    );
+    const tablesForLastDate = this.getAssessmentVisitResultsTables(
+      lastDate.getFullYear(),
+      lastDate.getMonth() + 1,
+    );
 
     let responseFirstTable: TypeTeacherHomeOverview | null;
     let responseSecondTable = null;
-    if (tablesForFirstDate.assessment_visit_results_v2 === tablesForLastDate.assessment_visit_results_v2) {
+    if (
+      tablesForFirstDate.assessment_visit_results_v2 ===
+      tablesForLastDate.assessment_visit_results_v2
+    ) {
       // both tables are same
-      const firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
-      const todayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 0, 0, 0);
+      const firstDayTimestamp = Date.UTC(
+        firstDate.getFullYear(),
+        firstDate.getMonth(),
+        firstDate.getDate(),
+        0,
+        0,
+        0,
+      );
+      const todayTimestamp = Date.UTC(
+        lastDate.getFullYear(),
+        lastDate.getMonth(),
+        lastDate.getDate(),
+        0,
+        0,
+        0,
+      );
       const lastDayTimestamp = lastDate.getTime();
 
       responseFirstTable = await this.getActorHomeScreenRawQueryResult(
@@ -793,22 +981,50 @@ export class AppService {
         mentor,
         firstDayTimestamp,
         todayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
     } else {
       // if the data needs to queried from two tables, we'll query for both separately
-      let firstDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
-      const todayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 0, 0, 0);
-      let lastDayTimestamp = Date.UTC(firstDate.getFullYear(), firstDate.getMonth() + 1, 1, 0, 0, 0); // next month's first date
+      let firstDayTimestamp = Date.UTC(
+        firstDate.getFullYear(),
+        firstDate.getMonth(),
+        firstDate.getDate(),
+        0,
+        0,
+        0,
+      );
+      const todayTimestamp = Date.UTC(
+        lastDate.getFullYear(),
+        lastDate.getMonth(),
+        lastDate.getDate(),
+        0,
+        0,
+        0,
+      );
+      let lastDayTimestamp = Date.UTC(
+        firstDate.getFullYear(),
+        firstDate.getMonth() + 1,
+        1,
+        0,
+        0,
+        0,
+      ); // next month's first date
       responseFirstTable = await this.getActorHomeScreenRawQueryResult(
         tablesForFirstDate,
         mentor,
         firstDayTimestamp,
         todayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
 
-      firstDayTimestamp = Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), 1, 0, 0, 0);  // first day of current month
+      firstDayTimestamp = Date.UTC(
+        lastDate.getFullYear(),
+        lastDate.getMonth(),
+        1,
+        0,
+        0,
+        0,
+      ); // first day of current month
       lastDayTimestamp = lastDate.getTime();
 
       responseSecondTable = await this.getActorHomeScreenRawQueryResult(
@@ -816,33 +1032,51 @@ export class AppService {
         mentor,
         firstDayTimestamp,
         todayTimestamp,
-        lastDayTimestamp
+        lastDayTimestamp,
       );
     }
     let response = responseFirstTable;
     if (responseSecondTable) {
       // we need to merge both table's response
       response = {
-        assessments_total: (responseFirstTable?.assessments_total || 0) + (responseSecondTable?.assessments_total || 0),
-        nipun_total: (responseFirstTable?.nipun_total || 0) + (responseSecondTable?.nipun_total || 0),
-        assessments_today: (responseFirstTable?.assessments_today || 0) + (responseSecondTable?.assessments_today || 0),
-        nipun_today: (responseFirstTable?.nipun_today || 0) + (responseSecondTable?.nipun_today || 0)
-      }
+        assessments_total:
+          (responseFirstTable?.assessments_total || 0) +
+          (responseSecondTable?.assessments_total || 0),
+        nipun_total:
+          (responseFirstTable?.nipun_total || 0) +
+          (responseSecondTable?.nipun_total || 0),
+        assessments_today:
+          (responseFirstTable?.assessments_today || 0) +
+          (responseSecondTable?.assessments_today || 0),
+        nipun_today:
+          (responseFirstTable?.nipun_today || 0) +
+          (responseSecondTable?.nipun_today || 0),
+      };
     }
 
-    const cacheWeekly = new WeeklyCacheManager(mentor.id, lastDate.getFullYear(), moment().isoWeek(), this.redisHelper);
-    const cacheDaily = new DailyCacheManager(mentor.id, lastDate.getFullYear(), lastDate.getMonth() + 1,
-      lastDate.getDate(), this.redisHelper);
+    const cacheWeekly = new WeeklyCacheManager(
+      mentor.id,
+      lastDate.getFullYear(),
+      moment().isoWeek(),
+      this.redisHelper,
+    );
+    const cacheDaily = new DailyCacheManager(
+      mentor.id,
+      lastDate.getFullYear(),
+      lastDate.getMonth() + 1,
+      lastDate.getDate(),
+      this.redisHelper,
+    );
     await Promise.all([
       cacheWeekly.create({
-        'assessments_taken': response?.assessments_total ?? 0,
-        'nipun_count': response?.nipun_total ?? 0,
-      }),   // set weekly stats in redis
+        assessments_taken: response?.assessments_total ?? 0,
+        nipun_count: response?.nipun_total ?? 0,
+      }), // set weekly stats in redis
       cacheDaily.create({
-        'assessments_taken': response?.assessments_today ?? 0,
-        'nipun_count': response?.nipun_today ?? 0,
-      }),   // set daily stats in redis
-    ])
+        assessments_taken: response?.assessments_today ?? 0,
+        nipun_count: response?.nipun_today ?? 0,
+      }), // set daily stats in redis
+    ]);
     return response;
   }
 
@@ -874,20 +1108,28 @@ export class AppService {
       },
       create: {
         mentor_id: mentor.id,
-        token: token
+        token: token,
       },
     });
   }
 
-  private async upsertCacheMentorMetrics(mentor: Mentor, year: number, month: number, result: MentorMonthlyMetrics) {
+  private async upsertCacheMentorMetrics(
+    mentor: Mentor,
+    year: number,
+    month: number,
+    result: MentorMonthlyMetrics,
+  ) {
     // creating DB table entry
-    const monthIdentifier = parseInt(year.toString() + (month < 10 ? `0${month.toString()}` : `${month.toString()}`));
+    const monthIdentifier = parseInt(
+      year.toString() +
+        (month < 10 ? `0${month.toString()}` : `${month.toString()}`),
+    );
     return this.prismaService.cache_mentor_metrics_monthly.upsert({
       where: {
         mentor_id_month: {
           mentor_id: mentor.id,
-          month: monthIdentifier
-        }
+          month: monthIdentifier,
+        },
       },
       create: {
         mentor_id: mentor.id,
@@ -911,8 +1153,8 @@ export class AppService {
   }
 
   async dumpAssessmentsInHypertable(assessment: CreateAssessmentVisitResult) {
-    console.log('here');
-    let assessments = [];
+    const assessments: Prisma.Enumerable<Prisma.assessmentsCreateManyInput> =
+      [];
     for (const result of assessment.results) {
       assessments.push({
         subject_id: assessment.subject_id,
@@ -922,7 +1164,7 @@ export class AppService {
         assessment_type_id: assessment.assessment_type_id,
         udise: assessment.udise,
         submission_timestamp: assessment.submission_timestamp,
-        submitted_at: (new Date(assessment.submission_timestamp)),
+        submitted_at: new Date(assessment.submission_timestamp),
         app_version_code: assessment.app_version_code,
         student_name: result.student_name,
         competency_id: result.competency_id,
@@ -942,26 +1184,28 @@ export class AppService {
         grade: assessment.grade,
         old_assessment_id: 0,
         old_student_id: 0,
-        results_json: result.odk_results,
+        results_json: result.odk_results as unknown as Prisma.InputJsonValue,
         student_id: result.student_id ?? null,
       });
     }
 
     return this.prismaService.assessments.createMany({
-      // @ts-ignore
       data: assessments,
       skipDuplicates: true,
     });
   }
 
-  async setMentorBotTelemetry(mentorId: bigint, telemetryObjects: CreateBotTelemetryDto[]) {
+  async setMentorBotTelemetry(
+    mentorId: bigint,
+    telemetryObjects: CreateBotTelemetryDto[],
+  ) {
     const insertionObjects = [];
     for (const botTelemetry of telemetryObjects) {
       insertionObjects.push({
         mentor_id: mentorId,
         bot_id: botTelemetry.botId,
-        action: botTelemetry.action
-      })
+        action: botTelemetry.action,
+      });
     }
     return this.prismaService.mentor_bot_telemetry.createMany({
       data: insertionObjects,
@@ -985,8 +1229,10 @@ export class AppService {
     return this.prismaService.$queryRaw<segment_bots[]>`SELECT segment_bots.* 
     FROM segment_bots, mentor_segmentation 
     where segment_bots.segment_id = mentor_segmentation.segment_id 
-    and mentor_segmentation.mentor_id = ${mentorId}`
-      .then((response: Array<segment_bots>) => response.map(element => element.bot_id))
+    and mentor_segmentation.mentor_id = ${mentorId}`.then(
+      (response: Array<segment_bots>) =>
+        response.map((element) => element.bot_id),
+    );
   }
 
   async getExaminerCycleDetails(mentor: Mentor) {
@@ -1019,13 +1265,16 @@ export class AppService {
       where t.udises is not null
       limit 1
     `;
-    const cycle: Array<Record<string, number | string | null | Array<string | object>>> | null = await this.prismaService.$queryRawUnsafe(query);
+    const cycle: Array<any> = await this.prismaService.$queryRawUnsafe(query);
     if (cycle?.length) {
-      cycle[0].start_date = moment(cycle[0].start_date).format('YYYY-MM-DD');
-      cycle[0].end_date = moment(cycle[0].end_date).format('YYYY-MM-DD');
+      cycle[0].start_date = moment(cycle[0].start_date as string).format(
+        'YYYY-MM-DD',
+      );
+      cycle[0].end_date = moment(cycle[0].end_date as string).format(
+        'YYYY-MM-DD',
+      );
 
-      // @ts-ignore
-      const udises: null | Array<string> = cycle[0].udises;
+      const udises: Array<string> = cycle[0].udises;
       if (udises) {
         cycle[0].schools_list = await this.prismaService.$queryRawUnsafe(`SELECT
             s.id as school_id,
@@ -1057,13 +1306,14 @@ export class AppService {
         id: cycleId,
       },
     });
-    const assessedSchoolsCount = await this.prismaService.assessment_cycle_school_nipun_results.count({
-      where: {
-        mentor_id: mentor.id,
-        cycle_id: cycleId,
-      },
-    });
-    
+    const assessedSchoolsCount =
+      await this.prismaService.assessment_cycle_school_nipun_results.count({
+        where: {
+          mentor_id: mentor.id,
+          cycle_id: cycleId,
+        },
+      });
+
     const query = `
       select a.grade, count(distinct a.student_id) as assessed,
         (EXTRACT(EPOCH FROM max(a.submitted_at)) * 1000) as updated_at
@@ -1081,16 +1331,34 @@ export class AppService {
               where adsm.mentor_id = ${mentor.id}
                 and adsm.cycle_id = ${cycleId})
             and dsm.cycle_id = ${cycleId})
-        and a.submitted_at between '${moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss')}' and '${moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss')}'
+        and a.submitted_at between '${moment(cycle.start_date).format(
+          'YYYY-MM-DD HH:mm:ss',
+        )}' and '${moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss')}'
       group by a.grade;
     `;
-    const gradeWiseAssessedCount: Array<{ grade: number, assessed: number, updated_at: number }> = await this.prismaService.$queryRawUnsafe(query);
-    const grade1Count = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.assessed ?? 0;
-    const grade1Updated = gradeWiseAssessedCount.filter(item => item.grade == 1)[0]?.updated_at ?? 0;
-    const grade2Count = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.assessed ?? 0;
-    const grade2Updated = gradeWiseAssessedCount.filter(item => item.grade == 2)[0]?.updated_at ?? 0;
-    const grade3Count = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.assessed ?? 0;
-    const grade3Updated = gradeWiseAssessedCount.filter(item => item.grade == 3)[0]?.updated_at ?? 0;
+    const gradeWiseAssessedCount: Array<{
+      grade: number;
+      assessed: number;
+      updated_at: number;
+    }> = await this.prismaService.$queryRawUnsafe(query);
+    const grade1Count =
+      gradeWiseAssessedCount.filter((item) => item.grade == 1)[0]?.assessed ??
+      0;
+    const grade1Updated =
+      gradeWiseAssessedCount.filter((item) => item.grade == 1)[0]?.updated_at ??
+      0;
+    const grade2Count =
+      gradeWiseAssessedCount.filter((item) => item.grade == 2)[0]?.assessed ??
+      0;
+    const grade2Updated =
+      gradeWiseAssessedCount.filter((item) => item.grade == 2)[0]?.updated_at ??
+      0;
+    const grade3Count =
+      gradeWiseAssessedCount.filter((item) => item.grade == 3)[0]?.assessed ??
+      0;
+    const grade3Updated =
+      gradeWiseAssessedCount.filter((item) => item.grade == 3)[0]?.updated_at ??
+      0;
     const updated_at = Math.max(grade1Updated, grade2Updated, grade3Updated);
 
     return [
@@ -1107,7 +1375,10 @@ export class AppService {
           {
             type: 'student',
             label: this.i18n.t(`common.Assessed students`, { lang: lang }),
-            count: (parseInt(grade1Count.toString()) + parseInt(grade2Count.toString()) + parseInt(grade3Count.toString())),
+            count:
+              parseInt(grade1Count.toString()) +
+              parseInt(grade2Count.toString()) +
+              parseInt(grade3Count.toString()),
           },
         ],
       },

@@ -126,58 +126,6 @@ export class AppService {
     };
   }
 
-  public getAssessmentVisitResultsTables(
-    year: null | number = null,
-    month: null | number = null,
-  ): TypeAssessmentQuarterTables {
-    if (year === null) {
-      year = new Date().getFullYear();
-    }
-    if (month === null) {
-      month = new Date().getMonth() + 1; // since getMonth() gives index
-    }
-
-    const quarter: string = this.monthQuarterMap[month.toString()];
-    const assessmentVisitResultsTable = `assessment_visit_results_v2_${year.toString()}_${quarter}`;
-    const assessmentVisitResultsStudentsTable = `assessment_visit_results_students_${year.toString()}_${quarter}`;
-    const assessmentVisitResultStudentOdkResultsTable = `assessment_visit_results_student_odk_results_${year.toString()}_${quarter}`;
-
-    if (!this.allTables[assessmentVisitResultsTable]) {
-      const error = `Missing quarter table ${assessmentVisitResultsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsQuery(
-        assessmentVisitResultsTable,
-      )}`;
-      this.logger.error(error);
-      this.logger.debug(description);
-      throw new DbTableNotFoundException(error, description);
-    } else if (!this.allTables[assessmentVisitResultsStudentsTable]) {
-      const error = `Missing quarter table ${assessmentVisitResultsStudentsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultsStudentsQuery(
-        assessmentVisitResultsStudentsTable,
-        assessmentVisitResultsTable,
-      )}`;
-      this.logger.error(error);
-      this.logger.debug(description);
-      throw new DbTableNotFoundException(error, description);
-    } else if (!this.allTables[assessmentVisitResultStudentOdkResultsTable]) {
-      const error = `Missing quarter table ${assessmentVisitResultStudentOdkResultsTable}.`;
-      const description = `To fix, execute the below query on DB console: \n${getAssessmentVisitResultStudentOdkResultsQuery(
-        assessmentVisitResultStudentOdkResultsTable,
-        assessmentVisitResultsStudentsTable,
-      )}`;
-      this.logger.error(error);
-      this.logger.debug(description);
-      throw new DbTableNotFoundException(error, description);
-    }
-
-    return {
-      assessment_visit_results_v2: assessmentVisitResultsTable,
-      assessment_visit_results_students: assessmentVisitResultsStudentsTable,
-      assessment_visit_results_student_odk_results:
-        assessmentVisitResultStudentOdkResultsTable,
-    };
-  }
-
   async createAssessmentVisitResultV2(
     tx: any,
     tables: any,

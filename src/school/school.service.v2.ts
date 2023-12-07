@@ -547,6 +547,7 @@ export class SchoolServiceV2 extends SchoolService {
         is_nipun: isNipun,
       }, update: {
         is_nipun: isNipun,
+        updated_at: new Date()
       },
     });
   }

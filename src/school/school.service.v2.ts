@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException, UnprocessableEntityException, forwardRef } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -25,6 +25,8 @@ export class SchoolServiceV2 extends SchoolService {
 
   constructor(
     protected readonly prismaService: PrismaService,
+    // Circular dependency to App Service
+    @Inject(forwardRef(() => AppService))
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
     protected readonly studentService: StudentService,
@@ -447,7 +449,7 @@ export class SchoolServiceV2 extends SchoolService {
     return null;
   }
 
-  async calculateExaminerCycleUdiseResult(mentor: Mentor, cycleId: number, udise: number) {
+  async calculateExaminerCycleUdiseResult(mentorID: number, cycleId: number, udise: number) {
     // find out cycle details, students list & nipun percentage for the udise
     const cycleDetails: Array<Record<string, number | string | Array<string>>> = await this.prismaService.$queryRawUnsafe(`
       select 
@@ -468,7 +470,7 @@ export class SchoolServiceV2 extends SchoolService {
       limit 1`);
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
-      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentor.id})`);
+      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentorID})`);
       return true;  // returning true so that the queue job just terminate gracefully
     }
 
@@ -501,7 +503,7 @@ export class SchoolServiceV2 extends SchoolService {
                 )
               and udise = ${udise}
               and grade in (1,2,3)
-              and mentor_id = ${mentor.id}
+              and mentor_id = ${mentorID}
               and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}') t
       where t.is_passed = true
       group by t.grade    
@@ -537,16 +539,17 @@ export class SchoolServiceV2 extends SchoolService {
         cycle_id_udise_mentor_id: {
           cycle_id: cycleId,
           udise: udise,
-          mentor_id: mentor.id,
+          mentor_id: mentorID,
         },
       },
       create: {
         cycle_id: cycleId,
         udise: udise,
-        mentor_id: mentor.id,
+        mentor_id: mentorID,
         is_nipun: isNipun,
       }, update: {
         is_nipun: isNipun,
+        updated_at: new Date()
       },
     });
   }

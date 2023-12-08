@@ -16,7 +16,7 @@ export class CalculateExaminerCycleUdiseResultProcessor {
 
   @Process(JobEnum.ProcessExaminerCycleUdiseResult)
   async calculate(job: Job) {
-    return await this.service.calculateExaminerCycleUdiseResult(job.data.mentor, job.data.cycle_id, job.data.udise);
+    return await this.service.calculateExaminerCycleUdiseResult(job.data.mentor.id, job.data.cycle_id, job.data.udise);
   }
 
   @OnQueueActive()

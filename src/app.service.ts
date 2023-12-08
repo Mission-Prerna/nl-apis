@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
@@ -41,6 +42,7 @@ import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
+import { SchoolServiceV2 } from './school/school.service.v2';
 
 const moment = require('moment');
 
@@ -55,6 +57,9 @@ export class AppService {
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
     protected readonly i18n: I18nService,
+    // Circular dependency to SchoolService
+    @Inject(forwardRef(() => SchoolServiceV2))
+    protected readonly schoolService: SchoolServiceV2,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -278,6 +283,42 @@ export class AppService {
     return totalTimeTaken;
   }
 
+  async recalculateNipunResultsIfPresent(createAssessmentVisitResultData: CreateAssessmentVisitResult) {
+    const cycle_id = await this.prismaService.assessment_cycles.findFirst({
+      orderBy: {
+        id: 'desc'
+      }
+    });
+    if(!cycle_id) {
+      throw new BadRequestException("No cycle ID found");
+    }
+    const nipunResultCalculated = await this.prismaService.assessment_cycle_school_nipun_results.findFirst({
+      where: {
+        udise: createAssessmentVisitResultData.udise,
+        mentor_id: createAssessmentVisitResultData.mentor_id,
+        cycle_id: cycle_id.id
+      }
+    });
+    if(nipunResultCalculated) {
+      await this.schoolService.calculateExaminerCycleUdiseResult(createAssessmentVisitResultData.mentor_id, cycle_id.id, createAssessmentVisitResultData.udise)
+      this.logger.debug("Recalculating Nipun Results")
+      Sentry.captureMessage('Delayed Assessments Recieved', {
+        user: {
+          id: createAssessmentVisitResultData.mentor_id + '',
+        },
+        extra: {
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          grade: createAssessmentVisitResultData.grade,
+          subject_id: createAssessmentVisitResultData.subject_id,
+          udise: createAssessmentVisitResultData.udise,
+          cycle_id: cycle_id.id
+        },
+      });
+    }
+  }
+
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
@@ -405,6 +446,12 @@ export class AppService {
           );
           await cacheWeekly.hydrate(assessmentsCount, nipunCount);
         }
+      }
+      if(createAssessmentVisitResultData.actor_id == ActorEnum.EXAMINER)
+      {
+        // Re-calculate Nipun Results due to Bug 
+        // https://github.com/Mission-Prerna/prerna-lakshya-app/issues/346
+        await this.recalculateNipunResultsIfPresent(createAssessmentVisitResultData);
       }
       return response;
     } catch (e) {
@@ -992,7 +1039,6 @@ export class AppService {
   }
 
   async dumpAssessmentsInHypertable(assessment: CreateAssessmentVisitResult) {
-    console.log('here');
     let assessments = [];
     for (const result of assessment.results) {
       assessments.push({

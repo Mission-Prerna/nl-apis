@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException, UnprocessableEntityException, forwardRef } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -25,6 +25,8 @@ export class SchoolServiceV2 extends SchoolService {
 
   constructor(
     protected readonly prismaService: PrismaService,
+    // Circular dependency to App Service
+    @Inject(forwardRef(() => AppService))
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
     protected readonly studentService: StudentService,

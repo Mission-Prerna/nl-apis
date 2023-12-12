@@ -96,21 +96,32 @@ describe('SchoolServiceV2', () => {
     // randomly select students and create passed assessments until class is nipun
     for (let i = 0; i < GRADES.length; i++) {
       const grade = GRADES[i];
+
       // @ts-ignore
       const numberOfStudentsThatShouldPass = Math.ceil(cycleDetails[`class_${grade}_nipun_percentage` as unknown as assessment_cycles] * cycleDetails[`class_${grade}_students_count`] / 100);
       // @ts-ignore
       const randomstudentIDstoPass = studentCycleGradeMapping[`class_${grade}_students`]?.toLocaleString().split(',').sort(() => Math.random() - Math.random()).slice(0, numberOfStudentsThatShouldPass);
+      
       for(let s = 0; s < randomstudentIDstoPass.length; s++) {
         const studentId = randomstudentIDstoPass[s];
+
         const result = await schoolServicev2.calculateExaminerCycleUdiseResult(MENTOR.id, CYCLE_ID, UDISE) as assessment_cycle_school_nipun_results
-        await addMockStudentAssessmentData(prismaService, grade, UDISE, MENTOR.id, EXAMINER_ID, true, BLOCK_ID, studentId)
+        // school should not be nipun till the last student is assessed
         expect(result.is_nipun).toBe(false)
+
+        await addMockStudentAssessmentData(prismaService, grade, UDISE, MENTOR.id, EXAMINER_ID, true, BLOCK_ID, studentId)
       }
+
     }
 
+    // all students assessed, now calculate nipun
     const result = await schoolServicev2.calculateExaminerCycleUdiseResult(MENTOR.id, CYCLE_ID, UDISE) as assessment_cycle_school_nipun_results
+    
     // THEN school should be NIPUN
     expect(result.is_nipun).toBe(true)
+
+    // Rollback transaction, but queries using `queryRaw` ONLY ROLLS BACK
+    // TODO: Move to test containers
     await prismaService.$queryRaw`ROLLBACK`
   }, 10000);
 });

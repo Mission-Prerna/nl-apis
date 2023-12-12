@@ -1,0 +1,70 @@
+import { Prisma } from "@sentry/node/types/tracing/integrations"
+import { BlockList } from "net"
+import { PrismaService } from "src/prisma.service"
+
+export const addMockStudentAssessmentData = async (
+    prismaService : PrismaService, 
+    grade: number, 
+    udise: number, 
+    mentor_id: number, 
+    actor_id: number, 
+    is_passed : boolean, 
+    block_id: number,
+    student_id: string
+    ) => {
+    const assessment = await prismaService.$executeRaw`INSERT INTO assessments (
+        created_at,
+        subject_id,
+        mentor_id,
+        actor_id,
+        block_id,
+        assessment_type_id,
+        udise,
+        submission_timestamp,
+        submitted_at,
+        app_version_code,
+        student_name,
+        competency_id,
+        module,
+        end_time,
+        is_passed,
+        start_time,
+        achievement,
+        total_questions,
+        success_criteria,
+        session_completed,
+        is_network_active,
+        workflow_ref_id,
+        grade,
+        old_assessment_id,
+        old_student_id,
+        student_id
+    ) VALUES (
+        ${new Date()},
+        1,
+        ${mentor_id},
+        ${actor_id},
+        ${block_id},
+        1,
+        ${udise},
+        ${new Date().getTime()},
+        ${new Date()},
+        202010,
+        'RANDOM TEST NAME - will not match actual name',
+        338,
+        'odk',
+        ${new Date().getTime() + 1},
+        ${is_passed},
+        ${new Date().getTime()},
+        104,
+        4,
+        60,
+        true,
+        true,
+        'upp_g3h_nv7',
+        ${grade},
+        0,
+        0,
+        ${student_id}
+    )`;
+}

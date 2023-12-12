@@ -30,7 +30,6 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule,
         AuthModule,
         JwtModule,
         BullModule.forRoot({}),

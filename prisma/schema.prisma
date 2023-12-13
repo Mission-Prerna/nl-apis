@@ -1740,6 +1740,8 @@ model students {
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 model assessments {
   id                   Int          @default(autoincrement())
   created_at           DateTime     @default(now()) @db.Timestamptz(6)
@@ -1830,8 +1832,9 @@ model assessment_cycle_district_school_mapping {
   assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id])
   school_list       school_list       @relation(fields: [udise], references: [udise])
 
+  @@unique([cycle_id, udise])
   @@index([cycle_id])
-  @@index([udise, cycle_id], map: "assessment_cycle_district_school_mapping_cycle_id_udise_idx")
+  @@index([udise])
 }
 
 model assessment_cycle_school_nipun_results {
@@ -1872,6 +1875,26 @@ model assessment_cycles {
 
   @@index([end_date], map: "assessment_cycles_end_date")
   @@index([start_date], map: "assessment_cycles_start_date")
+}
+
+model android_actions {
+  id          Int           @id @default(autoincrement())
+  domain      String        @db.VarChar
+  action      String
+  app_actions app_actions[]
+}
+
+model app_actions {
+  id                 Int             @id @default(autoincrement())
+  android_actions_id Int
+  mentor_id          Int
+  actor_id           Int
+  created_at         DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime        @default(now()) @db.Timestamptz(6)
+  android_actions    android_actions @relation(fields: [android_actions_id], references: [id], onUpdate: Restrict)
+
+  @@index([actor_id])
+  @@index([mentor_id])
 }
 
 enum genders_enum {

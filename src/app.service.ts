@@ -412,7 +412,7 @@ export class AppService {
     return appActionsData.map((appData) => {
       return {
           "action" : appData.android_actions.action,
-          "domain" : appData.android_actions.domain,
+          "domain" : appData.android_actions.domain, 
           "requested_at" : appData.created_at
         }
     })

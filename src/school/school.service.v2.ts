@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException, UnprocessableEntityException, forwardRef } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -17,6 +17,7 @@ import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import * as Sentry from '@sentry/minimal';
 import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
 
+
 const moment = require('moment');
 
 @Injectable()
@@ -25,6 +26,8 @@ export class SchoolServiceV2 extends SchoolService {
 
   constructor(
     protected readonly prismaService: PrismaService,
+    // Circular dependency to App Service
+    @Inject(forwardRef(() => AppService))
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
     protected readonly studentService: StudentService,
@@ -447,7 +450,7 @@ export class SchoolServiceV2 extends SchoolService {
     return null;
   }
 
-  async calculateExaminerCycleUdiseResult(mentor: Mentor, cycleId: number, udise: number) {
+  async calculateExaminerCycleUdiseResult(mentorID: number, cycleId: number, udise: number) {
     // find out cycle details, students list & nipun percentage for the udise
     const cycleDetails: Array<Record<string, number | string | Array<string>>> = await this.prismaService.$queryRawUnsafe(`
       select 
@@ -468,7 +471,7 @@ export class SchoolServiceV2 extends SchoolService {
       limit 1`);
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
-      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentor.id})`);
+      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentorID})`);
       return true;  // returning true so that the queue job just terminate gracefully
     }
 
@@ -492,23 +495,27 @@ export class SchoolServiceV2 extends SchoolService {
                      else 0
                      end
                  )::int as percentage
-      from (select distinct on (a.student_id) student_id,
-                                              a.is_passed,
-                                              a.grade
-            from assessments a
-            where a.student_id in (
-                                   ${'\''+studentIds.join('\',\'')+'\''}
+      from (     
+              select                             
+              a.student_id,
+              a.grade,
+              bool_and(a.is_passed) is_passed
+              from assessments a
+              where a.student_id in (
+                                    ${'\''+studentIds.join('\',\'')+'\''}
                 )
               and udise = ${udise}
               and grade in (1,2,3)
-              and mentor_id = ${mentor.id}
-              and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}') t
+              and mentor_id = ${mentorID}
+              and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}'
+              group by a.student_id, a.grade 
+            ) t
       where t.is_passed = true
       group by t.grade    
     `;
-    console.log(query);
+    this.logger.debug(query)
     const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
-
+    this.logger.debug("Gradewise percentage for students", gradeWisePercentage)
     // the school will be nipun if all 3 grades are nipun
     let isNipun = true;
     if (gradeWisePercentage.length != 3) {
@@ -537,16 +544,17 @@ export class SchoolServiceV2 extends SchoolService {
         cycle_id_udise_mentor_id: {
           cycle_id: cycleId,
           udise: udise,
-          mentor_id: mentor.id,
+          mentor_id: mentorID,
         },
       },
       create: {
         cycle_id: cycleId,
         udise: udise,
-        mentor_id: mentor.id,
+        mentor_id: mentorID,
         is_nipun: isNipun,
       }, update: {
         is_nipun: isNipun,
+        updated_at: new Date()
       },
     });
   }

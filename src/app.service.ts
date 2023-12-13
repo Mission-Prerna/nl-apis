@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateAssessmentVisitResult } from './dto/CreateAssessmentVisitResult.dto';
@@ -41,7 +42,7 @@ import { RedisHelperService } from './RedisHelper.service';
 import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './cache.manager';
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { response } from 'express';
+import { SchoolServiceV2 } from './school/school.service.v2';
 
 const moment = require('moment');
 
@@ -56,6 +57,9 @@ export class AppService {
     protected readonly redisHelper: RedisHelperService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
     protected readonly i18n: I18nService,
+    // Circular dependency to SchoolService
+    @Inject(forwardRef(() => SchoolServiceV2))
+    protected readonly schoolService: SchoolServiceV2,
   ) {
     this.prismaService.$queryRawUnsafe(`
       SELECT table_name
@@ -127,17 +131,211 @@ export class AppService {
     };
   }
 
+  async createAssessmentVisitResultV2(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+  ) {
+    return await tx[tables.assessment_visit_results_v2].create({
+      select: {
+        id: true,
+      },
+      data: {
+        submission_timestamp:
+          createAssessmentVisitResultData.submission_timestamp,
+        grade: createAssessmentVisitResultData.grade,
+        subject_id: createAssessmentVisitResultData.subject_id,
+        mentor_id: createAssessmentVisitResultData.mentor_id,
+        actor_id: createAssessmentVisitResultData.actor_id,
+        block_id: createAssessmentVisitResultData.block_id,
+        assessment_type_id: createAssessmentVisitResultData.assessment_type_id,
+        udise: createAssessmentVisitResultData.udise,
+        no_of_student: createAssessmentVisitResultData.no_of_student,
+        app_version_code: createAssessmentVisitResultData.app_version_code,
+        module_result: {}, // populating it default
+      },
+    });
+  }
+
+  async createAssessmentVisitResultsStudnetsAndODKResultsStudents(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+    assessmentVisitResultId: number,
+    uniqueStudents: Record<string, number>,
+  ) {
+    let totalTimeTaken = 0;
+
+    // filtering student whose module is 'odk'
+    const assessmentVisitResultStudents =
+      createAssessmentVisitResultData.results.filter(
+        (result) => result.module === AssessmentVisitResultsStudentModule.ODK,
+      );
+
+    for (const student of assessmentVisitResultStudents) {
+      // Create student submission
+      const assessmentVisitResultStudent = await tx[
+        tables.assessment_visit_results_students
+      ].create({
+        data: {
+          student_name: student.student_name,
+          competency_id: student.competency_id,
+          module: student.module,
+          end_time: student.end_time,
+          is_passed: student.is_passed,
+          start_time: student.start_time,
+          statement: student.statement,
+          achievement: student.achievement,
+          total_questions: student.total_questions,
+          success_criteria: student.success_criteria,
+          session_completed: student.session_completed,
+          is_network_active: student.is_network_active,
+          workflow_ref_id: student.workflow_ref_id,
+          total_time_taken: student.total_time_taken,
+          student_session: student.student_session,
+          assessment_visit_results_v2_id: assessmentVisitResultId,
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          grade: createAssessmentVisitResultData.grade,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          student_id: student.student_id ?? null,
+        },
+      });
+      uniqueStudents[student.student_session] = student.is_passed ? 1 : 0; // @TODO fix NIPUN logic
+      if (!uniqueStudents.hasOwnProperty(student.student_session)) {
+        // since the total time taken is same for a single student for all competencies, we'll consider one entry
+        totalTimeTaken += student?.total_time_taken ?? 0;
+      }
+
+      const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
+
+      // creating multiple Assessment visit results student odk results
+      // noinspection TypeScriptValidateJSTypes
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await tx[tables.assessment_visit_results_student_odk_results].createMany({
+        data: student.odk_results.map((odkResult) => {
+          return {
+            question: odkResult.question,
+            answer: odkResult.answer,
+            assessment_visit_results_students_id:
+              assessmentVisitResultStudentId,
+          };
+        }),
+        skipDuplicates: true,
+      });
+    }
+    return totalTimeTaken;
+  }
+
+  async createAssessmentVisitResultsNonODK(
+    tx: any,
+    tables: any,
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+    assessmentVisitResultId: number,
+    uniqueStudents: Record<string, number>,
+  ) {
+    // filtering student whose module is not 'odk'
+    let totalTimeTaken = 0;
+    const nonOdkModuleStudents = createAssessmentVisitResultData.results
+      .filter(
+        (result) => result.module !== AssessmentVisitResultsStudentModule.ODK,
+      )
+      .map((result) => {
+        if (!uniqueStudents.hasOwnProperty(result.student_session)) {
+          // since the total time taken is same for a single student for all competencies, we'll consider one entry
+          totalTimeTaken += result?.total_time_taken ?? 0;
+        }
+        uniqueStudents[result.student_session] = result.is_passed ? 1 : 0; // @TODO fix NIPUN logic
+        return {
+          student_name: result.student_name,
+          competency_id: result.competency_id,
+          module: result.module,
+          end_time: result.end_time,
+          is_passed: result.is_passed,
+          start_time: result.start_time,
+          statement: result.statement,
+          achievement: result.achievement,
+          total_questions: result.total_questions,
+          success_criteria: result.success_criteria,
+          session_completed: result.session_completed,
+          is_network_active: result.is_network_active,
+          workflow_ref_id: result.workflow_ref_id,
+          total_time_taken: result.total_time_taken,
+          student_session: result.student_session,
+          assessment_visit_results_v2_id: assessmentVisitResultId,
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          grade: createAssessmentVisitResultData.grade,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          student_id: result.student_id ?? null,
+        };
+      });
+
+    if (nonOdkModuleStudents.length) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await tx[tables.assessment_visit_results_students].createMany({
+        data: nonOdkModuleStudents,
+        skipDuplicates: true,
+      });
+    }
+    return totalTimeTaken;
+  }
+
+  async recalculateNipunResultsIfPresent(createAssessmentVisitResultData: CreateAssessmentVisitResult) {
+    const cycle_id = await this.prismaService.assessment_cycles.findFirst({
+      orderBy: {
+        id: 'desc'
+      }
+    });
+    if(!cycle_id) {
+      throw new BadRequestException("No cycle ID found");
+    }
+    const nipunResultCalculated = await this.prismaService.assessment_cycle_school_nipun_results.findFirst({
+      where: {
+        udise: createAssessmentVisitResultData.udise,
+        mentor_id: createAssessmentVisitResultData.mentor_id,
+        cycle_id: cycle_id.id
+      }
+    });
+    if(nipunResultCalculated) {
+      await this.schoolService.calculateExaminerCycleUdiseResult(createAssessmentVisitResultData.mentor_id, cycle_id.id, createAssessmentVisitResultData.udise)
+      this.logger.debug("Recalculating Nipun Results")
+      Sentry.captureMessage('Delayed Assessments Recieved', {
+        user: {
+          id: createAssessmentVisitResultData.mentor_id + '',
+        },
+        extra: {
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          grade: createAssessmentVisitResultData.grade,
+          subject_id: createAssessmentVisitResultData.subject_id,
+          udise: createAssessmentVisitResultData.udise,
+          cycle_id: cycle_id.id
+        },
+      });
+    }
+  }
+
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    let totalTimeTaken: number = 0;
-    const submissionDate = new Date();  // we'll dump all records in the current quarter's table
     let uniqueStudents: Record<string, number> = {};
-    const tables = this.getAssessmentVisitResultsTables(submissionDate.getFullYear(), submissionDate.getMonth() + 1); // since getMonth() gives month's index
+    let totalTimeTaken = 0;
+    const submissionDate = new Date(); // we'll dump all records in the current quarter's table
+    const tables = this.getAssessmentVisitResultsTables(
+      submissionDate.getFullYear(),
+      submissionDate.getMonth() + 1,
+    ); // since getMonth() gives month's index
     try {
       // Checking if Assessment visit result already exist; if not we'll create it
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      let assessmentVisitResult = await this.prismaService[tables.assessment_visit_results_v2].findFirst({
+      let assessmentVisitResult = await this.prismaService[
+        tables.assessment_visit_results_v2
+      ].findFirst({
         select: {
           id: true,
         },
@@ -164,167 +362,96 @@ export class AppService {
             grade: createAssessmentVisitResultData.grade,
             subject_id: createAssessmentVisitResultData.subject_id,
             udise: createAssessmentVisitResultData.udise,
-          }
+          },
         });
         this.logger.log('Duplicate found. Ignoring..');
         return assessmentVisitResult; // we'll not process any further because it's a duplicate
       }
 
-      // filtering student whose module is 'odk'
-      const assessmentVisitResultStudents =
-        createAssessmentVisitResultData.results.filter(
-          (result) =>
-            result.module === AssessmentVisitResultsStudentModule.ODK,
-        );
+      const response = await this.prismaService.$transaction(
+        async (tx) => {
+          assessmentVisitResult = await this.createAssessmentVisitResultV2(
+            tx,
+            tables,
+            createAssessmentVisitResultData,
+          );
 
-      const response = await this.prismaService.$transaction(async (tx) => {
-        // @ts-ignore
-        assessmentVisitResult = await tx[tables.assessment_visit_results_v2].create({
-          select: {
-            id: true,
-          },
-          data: {
-            submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-            grade: createAssessmentVisitResultData.grade,
-            subject_id: createAssessmentVisitResultData.subject_id,
-            mentor_id: createAssessmentVisitResultData.mentor_id,
-            actor_id: createAssessmentVisitResultData.actor_id,
-            block_id: createAssessmentVisitResultData.block_id,
-            assessment_type_id:
-              createAssessmentVisitResultData.assessment_type_id,
-            udise: createAssessmentVisitResultData.udise,
-            no_of_student: createAssessmentVisitResultData.no_of_student,
-            app_version_code:
-              createAssessmentVisitResultData.app_version_code,
-            module_result: {}, // populating it default
-          },
-        });
+          totalTimeTaken +=
+            await this.createAssessmentVisitResultsStudnetsAndODKResultsStudents(
+              tx,
+              tables,
+              createAssessmentVisitResultData,
+              assessmentVisitResult.id,
+              uniqueStudents,
+            );
 
-        const assessmentVisitResultId = assessmentVisitResult.id;
+          totalTimeTaken += await this.createAssessmentVisitResultsNonODK(
+            tx,
+            tables,
+            createAssessmentVisitResultData,
+            assessmentVisitResult.id,
+            uniqueStudents,
+          );
 
-        for (const student of assessmentVisitResultStudents) {
-          // Create student submission
-          // @ts-ignore
-          const assessmentVisitResultStudent = await tx[tables.assessment_visit_results_students].create({
-            data: {
-              student_name: student.student_name,
-              competency_id: student.competency_id,
-              module: student.module,
-              end_time: student.end_time,
-              is_passed: student.is_passed,
-              start_time: student.start_time,
-              statement: student.statement,
-              achievement: student.achievement,
-              total_questions: student.total_questions,
-              success_criteria: student.success_criteria,
-              session_completed: student.session_completed,
-              is_network_active: student.is_network_active,
-              workflow_ref_id: student.workflow_ref_id,
-              total_time_taken: student.total_time_taken,
-              student_session: student.student_session,
-              assessment_visit_results_v2_id: assessmentVisitResult.id,
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              student_id: student.student_id ?? null,
-            },
-          });
-          uniqueStudents[student.student_session] = student.is_passed ? 1 : 0;  // @TODO fix NIPUN logic
-          if (!uniqueStudents.hasOwnProperty(student.student_session)) {
-            // since the total time taken is same for a single student for all competencies, we'll consider one entry
-            totalTimeTaken += student?.total_time_taken ?? 0;
-          }
-
-          const assessmentVisitResultStudentId = assessmentVisitResultStudent.id;
-
-          // creating multiple Assessment visit results student odk results
-          // noinspection TypeScriptValidateJSTypes
-          // @ts-ignore
-          await tx[tables.assessment_visit_results_student_odk_results].createMany({
-            data: student.odk_results.map((odkResult) => {
-              return {
-                question: odkResult.question,
-                answer: odkResult.answer,
-                assessment_visit_results_students_id:
-                  assessmentVisitResultStudentId,
-              };
-            }),
-            skipDuplicates: true,
-          });
-        }
-
-        // filtering student whose module is not 'odk'
-        const nonOdkModuleStudents = createAssessmentVisitResultData.results
-          .filter(
-            (result) =>
-              result.module !== AssessmentVisitResultsStudentModule.ODK,
-          )
-          .map((result) => {
-            if (!uniqueStudents.hasOwnProperty(result.student_session)) {
-              // since the total time taken is same for a single student for all competencies, we'll consider one entry
-              totalTimeTaken += result?.total_time_taken ?? 0;
-            }
-            uniqueStudents[result.student_session] = result.is_passed ? 1 : 0;    // @TODO fix NIPUN logic
-            return {
-              student_name: result.student_name,
-              competency_id: result.competency_id,
-              module: result.module,
-              end_time: result.end_time,
-              is_passed: result.is_passed,
-              start_time: result.start_time,
-              statement: result.statement,
-              achievement: result.achievement,
-              total_questions: result.total_questions,
-              success_criteria: result.success_criteria,
-              session_completed: result.session_completed,
-              is_network_active: result.is_network_active,
-              workflow_ref_id: result.workflow_ref_id,
-              total_time_taken: result.total_time_taken,
-              student_session: result.student_session,
-              assessment_visit_results_v2_id: assessmentVisitResultId,
-              submission_timestamp: createAssessmentVisitResultData.submission_timestamp,
-              grade: createAssessmentVisitResultData.grade,
-              mentor_id: createAssessmentVisitResultData.mentor_id,
-              student_id: result.student_id ?? null,
-            };
-          });
-
-        if (nonOdkModuleStudents.length) {
-          // @ts-ignore
-          await tx[tables.assessment_visit_results_students].createMany({
-            data: nonOdkModuleStudents,
-            skipDuplicates: true,
-          });
-        }
-
-        await this.dumpAssessmentsInHypertable(createAssessmentVisitResultData);  // dump into hypertable
-        return assessmentVisitResult;
-      }, {
-        timeout: 15000,
-      });
+          await this.dumpAssessmentsInHypertable(
+            createAssessmentVisitResultData,
+          ); // dump into hypertable
+          return assessmentVisitResult;
+        },
+        {
+          timeout: 15000,
+        },
+      );
 
       // update metrics in cache
       const cacheHomeScreen = new MonthlyCacheManager(
         BigInt(createAssessmentVisitResultData.mentor_id),
         submissionDate.getFullYear(),
         submissionDate.getMonth() + 1,
-        this.redisHelper
+        this.redisHelper,
       );
 
-      const hydrated: boolean = await cacheHomeScreen.hydrate(createAssessmentVisitResultData.udise, createAssessmentVisitResultData.grade, totalTimeTaken, uniqueStudents)
-      if (hydrated && createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER && createAssessmentVisitResultData.assessment_type_id == AssessmentTypeEnum.NIPUN_ABHYAS) {
+      const hydrated: boolean = await cacheHomeScreen.hydrate(
+        createAssessmentVisitResultData.udise,
+        createAssessmentVisitResultData.grade,
+        totalTimeTaken,
+        uniqueStudents,
+      );
+      if (
+        hydrated &&
+        createAssessmentVisitResultData.actor_id == ActorEnum.TEACHER &&
+        createAssessmentVisitResultData.assessment_type_id ==
+          AssessmentTypeEnum.NIPUN_ABHYAS
+      ) {
         // Let's now update teacher's metrics cache
         const assessmentsCount = Object.keys(uniqueStudents).length;
-        const nipunCount = Object.values(uniqueStudents).reduce((partialSum, a) => partialSum + a, 0);
-        const cacheDaily = new DailyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
-          submissionDate.getFullYear(), submissionDate.getMonth() + 1, submissionDate.getDate(), this.redisHelper);
+        const nipunCount = Object.values(uniqueStudents).reduce(
+          (partialSum, a) => partialSum + a,
+          0,
+        );
+        const cacheDaily = new DailyCacheManager(
+          BigInt(createAssessmentVisitResultData.mentor_id),
+          submissionDate.getFullYear(),
+          submissionDate.getMonth() + 1,
+          submissionDate.getDate(),
+          this.redisHelper,
+        );
         if (await cacheDaily.hydrate(assessmentsCount, nipunCount)) {
           // sync weekly metrics too because we synced daily as well
-          const cacheWeekly = new WeeklyCacheManager(BigInt(createAssessmentVisitResultData.mentor_id),
-            submissionDate.getFullYear(), moment().isoWeek(), this.redisHelper);
-          await cacheWeekly.hydrate(assessmentsCount, nipunCount)
+          const cacheWeekly = new WeeklyCacheManager(
+            BigInt(createAssessmentVisitResultData.mentor_id),
+            submissionDate.getFullYear(),
+            moment().isoWeek(),
+            this.redisHelper,
+          );
+          await cacheWeekly.hydrate(assessmentsCount, nipunCount);
         }
+      }
+      if(createAssessmentVisitResultData.actor_id == ActorEnum.EXAMINER)
+      {
+        // Re-calculate Nipun Results due to Bug 
+        // https://github.com/Mission-Prerna/prerna-lakshya-app/issues/346
+        await this.recalculateNipunResultsIfPresent(createAssessmentVisitResultData);
       }
       return response;
     } catch (e) {
@@ -332,7 +459,7 @@ export class AppService {
       this.handleRequestError(e);
     }
   }
-
+  
   async getMentorSchoolListIfHeHasVisited(
     mentor: Mentor,
     month: number,
@@ -912,7 +1039,6 @@ export class AppService {
   }
 
   async dumpAssessmentsInHypertable(assessment: CreateAssessmentVisitResult) {
-    console.log('here');
     let assessments = [];
     for (const result of assessment.results) {
       assessments.push({

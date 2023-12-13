@@ -30,14 +30,13 @@ import { SchoolServiceV2 } from './school/school.service.v2';
 import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calculate-examiner-cycle-udise-result.processor';
 
 @Module({
-  imports: [
+  imports: [ 
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     AuthModule,
     JwtModule,
     BullModule.forRootAsync({
-      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         redis: {
           host: configService.get('QUEUE_HOST'),
@@ -77,7 +76,6 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
     }),
     CacheModule.registerAsync({
       isGlobal: true,
-      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         store: (await redisStore({
           url: `redis://${configService.get('CACHE_HOST')}:${configService.get('CACHE_PORT')}`,

@@ -820,6 +820,31 @@ export class AppService {
     };
   }
 
+  async getMentorDetailsV2(mentor: Mentor, month: null | number = null, year: null | number = null) {
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1;  // since getMonth() gives index
+    }
+    let schoolList = [];
+    let examinerCycleDetails;
+    if(mentor.actor_id == ActorEnum.EXAMINER){
+      examinerCycleDetails = await this.getExaminerCycleDetails(mentor);
+      schoolList = examinerCycleDetails?.schools_list as Array<any>;
+      delete examinerCycleDetails?.schools_list
+    }
+    else {
+      schoolList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
+    }
+    return {
+      mentor: mentor,
+      school_list: schoolList,
+      home_overview: await this.getHomeScreenMetric(mentor, month, year),
+      examiner_cycle_details: examinerCycleDetails,
+    };
+  }
+
   async getMetadata() {
     const cacheData = await this.cacheService.get(CacheKeyMetadata());
     if (cacheData) return cacheData;

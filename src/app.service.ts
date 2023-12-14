@@ -405,15 +405,17 @@ export class AppService {
             action: true
           }
         },
+        id: true,
         created_at: true
       }
     });
 
     return appActionsData.map((appData) => {
       return {
+          "id" :appData.id,
           "action" : appData.android_actions.action,
-          "domain" : appData.android_actions.domain, 
-          "requested_at" : appData.created_at
+          "domain" : appData.android_actions.domain,
+          "requested_at" : appData.created_at.getTime()
         }
     })
   }

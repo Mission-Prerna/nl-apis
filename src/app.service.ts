@@ -533,15 +533,17 @@ export class AppService {
             action: true
           }
         },
+        id: true,
         created_at: true
       }
     });
 
     return appActionsData.map((appData) => {
       return {
+          "id" :appData.id,
           "action" : appData.android_actions.action,
-          "domain" : appData.android_actions.domain, 
-          "requested_at" : appData.created_at
+          "domain" : appData.android_actions.domain,
+          "requested_at" : appData.created_at.getTime()
         }
     })
   }
@@ -837,11 +839,13 @@ export class AppService {
     else {
       schoolList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
     }
+    const appActions = await this.getAppActionsForMentor(mentor)
     return {
       mentor: mentor,
       school_list: schoolList,
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
       examiner_cycle_details: examinerCycleDetails,
+      app_actions: appActions
     };
   }
 

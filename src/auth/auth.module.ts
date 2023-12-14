@@ -6,7 +6,7 @@ import { JwtAdminGuard } from './admin-jwt.guard';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [JwtModule, ConfigModule],
+  imports: [JwtModule],
   controllers: [],
   providers: [
     JwtAuthGuard,

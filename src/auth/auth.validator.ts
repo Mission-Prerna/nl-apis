@@ -2,12 +2,16 @@ import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validat
 import { ValidationArguments } from 'class-validator/types/validation/ValidationArguments';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaService();
-
+const prisma = new PrismaClient({
+  datasources: {db: {url: process.env.NODE_ENV === 'test' ? process.env.TEST_DATABASE_URL : process.env.DATABASE_URL}}
+})
 @Injectable()
 @ValidatorConstraint({ name: 'IsExist', async: true })
 export class IsExist implements ValidatorConstraintInterface {
+  
   async validate(value: string, validationArguments: ValidationArguments) {
     const model = validationArguments.constraints[0];
     const pathToProperty = validationArguments.constraints[1];

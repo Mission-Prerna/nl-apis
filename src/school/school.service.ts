@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -20,6 +20,7 @@ export class SchoolService {
 
   constructor(
     protected readonly prismaService: PrismaService,
+    @Inject(forwardRef(() => AppService))
     protected readonly appService: AppService,
     protected readonly i18n: I18nService,
   ) {}

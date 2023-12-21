@@ -663,6 +663,7 @@ export class AdminService {
       },
     }))
 
+    // club 2 promises together so they run in sequence
     const resetSchoolNipunResults = async () => {
       // delete student mappings to school
       let res = [await this.prismaService.assessment_cycle_district_school_mapping.deleteMany({
@@ -681,6 +682,7 @@ export class AdminService {
       }
       return res;
     }
+
     promises.push(resetSchoolNipunResults());
     
     if (data.delete_all) {

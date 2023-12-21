@@ -319,11 +319,8 @@ export class AppService {
     }
   }
 
-  async createAssessmentVisitResult(
-    createAssessmentVisitResultData: CreateAssessmentVisitResult,
-  ) {
-
-    // First check if for examiner the student submitted is in cycle
+  async checkIfAssessmentIsValid(createAssessmentVisitResultData: CreateAssessmentVisitResult)
+  {
     if(createAssessmentVisitResultData.actor_id == ActorEnum.EXAMINER)
     {
       const cycle_id = await this.prismaService.assessment_cycles.findFirst({
@@ -364,8 +361,19 @@ export class AppService {
             mappedStudentIDs: studentList,
           },
         });
-        return {}
+        return false;
       }
+      return true;
+    }
+  }
+
+  async createAssessmentVisitResult(
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+  ) {
+
+    // First check if for examiner the student submitted is in cycle
+    if(!await this.checkIfAssessmentIsValid(createAssessmentVisitResultData)) {
+      return {msg: "Subimssion is ignored, Bad Assessment submission request - student not found in cycle"}
     }
 
     let uniqueStudents: Record<string, number> = {};

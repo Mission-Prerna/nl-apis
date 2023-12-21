@@ -562,6 +562,40 @@ export class AppService {
     }
   }
 
+  async getAppActionsForMentor(
+    mentor: Mentor
+  ) {
+    const mentorId = Number(mentor.id);
+    const actorId = mentor.actor_id;
+    const appActionsData = await this.prismaService.app_actions.findMany({
+      where: {
+        OR: [
+          { mentor_id: { equals: mentorId } },
+          { actor_id: { equals: actorId } }
+        ]
+      },
+      select: {
+        android_actions: {
+          select: {
+            domain: true,
+            action: true
+          }
+        },
+        id: true,
+        created_at: true
+      }
+    });
+
+    return appActionsData.map((appData) => {
+      return {
+          "id" :appData.id,
+          "action" : appData.android_actions.action,
+          "domain" : appData.android_actions.domain,
+          "requested_at" : appData.created_at.getTime()
+        }
+    })
+  }
+ 
   async createAssessmentSurveyResult(
     assessmentSurveyResult: CreateAssessmentSurveyResult,
   ) {
@@ -808,7 +842,7 @@ export class AppService {
         delete teacher_school_list_mapping.school_list.name;
       }
       temp.teacher_school_list_mapping = teacher_school_list_mapping;
-      delete temp.districts;
+      delete temp.districts;  
       delete temp.blocks;
     }
     // @ts-ignore
@@ -826,11 +860,40 @@ export class AppService {
 
     const examinerCycleDetails = await this.getExaminerCycleDetails(mentor);
     const schoolsList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
+    const appActions = await this.getAppActionsForMentor(mentor)
     return {
       mentor: mentor,
       school_list: schoolsList.length ? schoolsList : (examinerCycleDetails ? examinerCycleDetails?.schools_list : []),
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
       examiner_cycle_details: examinerCycleDetails,
+      app_actions: appActions
+    };
+  }
+
+  async getMentorDetailsV2(mentor: Mentor, month: null | number = null, year: null | number = null) {
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1;  // since getMonth() gives index
+    }
+    let schoolList = [];
+    let examinerCycleDetails;
+    if(mentor.actor_id == ActorEnum.EXAMINER){
+      examinerCycleDetails = await this.getExaminerCycleDetails(mentor);
+      schoolList = examinerCycleDetails?.schools_list as Array<any>;
+      delete examinerCycleDetails?.schools_list
+    }
+    else {
+      schoolList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
+    }
+    const appActions = await this.getAppActionsForMentor(mentor)
+    return {
+      mentor: mentor,
+      school_list: schoolList,
+      home_overview: await this.getHomeScreenMetric(mentor, month, year),
+      examiner_cycle_details: examinerCycleDetails,
+      app_actions: appActions
     };
   }
 

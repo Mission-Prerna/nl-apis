@@ -202,6 +202,21 @@ export class AppController {
     );
   }
 
+  @Get('/api/v2/mentor/details')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getMentorDetailsV2(
+    @Query() queryParams: GetMentorDetailsDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return this.appService.getMentorDetailsV2(
+      mentor,
+      queryParams.month,
+      queryParams.year,
+    );
+  }
+
   @Get('/api/metadata')
   async getMetadata() {
     return this.appService.getMetadata();

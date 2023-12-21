@@ -94,6 +94,7 @@ export class SchoolServiceV2 extends SchoolService {
         FROM assessments a
         WHERE a.student_id IS NOT NULL
          AND a.udise = ${udise}
+         AND a.is_valid = true
          AND a.actor_id = ${mentor.actor_id}
          AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
@@ -205,6 +206,7 @@ export class SchoolServiceV2 extends SchoolService {
           and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
           and a.submitted_at between '%start_time%' and '%end_time%'
           and a.grade in (%grades%)
+          and a.is_valid = true
         order by a.student_id, a.submitted_at DESC
       ) t
       group by grade`;
@@ -286,6 +288,7 @@ export class SchoolServiceV2 extends SchoolService {
                                          a.is_passed
           from assessments a
           where a.mentor_id = ${mentor.id}
+            and a.is_valid = true
             and a.actor_id = ${ActorEnum.TEACHER}
             and a.udise = ${udise}
             and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
@@ -508,6 +511,7 @@ export class SchoolServiceV2 extends SchoolService {
               and grade in (1,2,3)
               and mentor_id = ${mentorID}
               and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}'
+              and a.is_valid = true
               group by a.student_id, a.grade 
             ) t
       where t.is_passed = true

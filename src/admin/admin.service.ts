@@ -605,37 +605,85 @@ export class AdminService {
         id: cycleId,
       },
     });
-    const promises = [
-      // delete assessments
-      this.prismaService.assessments.deleteMany({
-        where: {
-          udise: {
-            in: data.udises,
-          },
-          mentor_id: data.mentor_id,
-          actor_id: ActorEnum.EXAMINER,
-          submitted_at: {
-            gte: new Date(cycle.start_date),
-            lte: new Date(cycle.end_date),
-          },
-          NOT: {
-            student_id: null,
-          },
-        },
-      }),
-    ];
-    if (data.delete_all) {
-      // delete school nipun results
-      promises.push(this.prismaService.assessment_cycle_school_nipun_results.deleteMany({
-        where: {
-          udise: {
-            in: data.udises,
-          },
-          mentor_id: data.mentor_id,
-          cycle_id: cycleId,
-        },
-      }));
 
+    // Get assessment cycles for the current quarter which should be mapped to the latest cycle in progress
+    const promises = [];
+
+    // soft delete assessments
+    promises.push(this.prismaService.assessments.updateMany({
+      where: {
+        udise: {
+          in: data.udises,
+        },
+        mentor_id: data.mentor_id,
+        actor_id: ActorEnum.EXAMINER,
+        created_at: {
+          gte: new Date(cycle.start_date),
+          lte: new Date(cycle.end_date),
+        },
+        NOT: {
+          student_id: null,
+        },
+      },
+      data: {
+        is_valid: false,
+        updated_at: new Date(),
+      }
+    }))
+
+    // soft delete on quarter table
+    // We only delete assessment_visit_results_v2 as other quarter tables are connected via FKs
+    const quarterAssessmentTables = this.appService.getAssessmentVisitResultsTables()
+    // @ts-ignore
+    promises.push(this.prismaService[quarterAssessmentTables.assessment_visit_results_v2].updateMany({
+      where: {
+        udise: {
+          in: data.udises,
+        },
+        mentor_id: data.mentor_id,
+        created_at: {
+          gte: new Date(cycle.start_date),
+          lte: new Date(cycle.end_date),
+        }
+      },
+      data: {
+        is_valid: false,
+        updated_at: new Date(),
+      }
+    }));
+    
+    // delete school nipun results
+    promises.push(this.prismaService.assessment_cycle_school_nipun_results.deleteMany({
+      where: {
+        udise: {
+          in: data.udises,
+        },
+        mentor_id: data.mentor_id,
+        cycle_id: cycleId,
+      },
+    }))
+
+    const resetSchoolNipunResults = async () => {
+      // delete student mappings to school
+      let res = [await this.prismaService.assessment_cycle_district_school_mapping.deleteMany({
+        where: {
+          cycle_id: cycle.id,
+          udise: {
+            in: data.udises,
+          },
+        },
+      })]
+
+      if(data.reset_all) {
+        // reset assessment_cycle_school_nipun_results to recreate new student mappings
+        const assessmentCycledistrictSchoolMappings = data.udises.map(udise => { return {udise: udise} as CreateAssessmentCycleDistrictSchoolMapping})
+        res.push(await this.createAssessmentCycleDistrictSchoolMapping(cycle.id, assessmentCycledistrictSchoolMappings))
+      }
+      return res;
+    }
+    promises.push(resetSchoolNipunResults());
+    
+    if (data.delete_all) {
       // delete cycle mentor mapping
       promises.push(this.prismaService.assessment_cycle_district_mentor_mapping.deleteMany({
         where: {

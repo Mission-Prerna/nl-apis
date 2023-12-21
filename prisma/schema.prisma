@@ -137,6 +137,7 @@ model assessment_visit_results {
   block_id         Int      @default(0)
   time_taken       Int      @default(0)
   actor_id         Int      @default(0) @db.SmallInt
+  is_valid         Boolean  @default(true)
 
   @@index([actor, block], map: "assessment_visit_result_actor_block_index")
   @@index([actor], map: "assessment_visit_result_actor_index")
@@ -201,6 +202,8 @@ model assessment_visit_results_v2 {
   submission_timestamp              BigInt                              @default(0)
   app_version_code                  Int                                 @default(0)
   v                                 Int                                 @default(2) @db.SmallInt
+  is_valid                          Boolean                             @default(true)
+  updated_at                        DateTime                            @default(now()) @db.Timestamp(6)
   assessment_visit_results_students assessment_visit_results_students[]
   actors                            actors                              @relation(fields: [actor_id], references: [id])
   blocks                            blocks?                             @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1250,6 +1253,8 @@ model assessment_visit_results_v2_2023_apr_jun {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1286,6 +1291,8 @@ model assessment_visit_results_v2_2023_jul_sep {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1322,6 +1329,8 @@ model assessment_visit_results_v2_2023_oct_dec {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1740,6 +1749,10 @@ model students {
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 model assessments {
   id                   Int          @default(autoincrement())
   created_at           DateTime     @default(now()) @db.Timestamptz(6)
@@ -1772,6 +1785,8 @@ model assessments {
   old_student_id       BigInt
   results_json         Json?
   student_id           String?      @db.VarChar(15)
+  is_valid             Boolean      @default(true)
+  updated_at           DateTime     @default(now()) @db.Timestamp(6)
   actors               actors       @relation(fields: [actor_id], references: [id])
   blocks               blocks?      @relation(fields: [block_id], references: [id], onDelete: Restrict)
   mentor               mentor?      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
@@ -1830,8 +1845,9 @@ model assessment_cycle_district_school_mapping {
   assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id])
   school_list       school_list       @relation(fields: [udise], references: [udise])
 
+  @@unique([cycle_id, udise])
   @@index([cycle_id])
-  @@index([udise, cycle_id], map: "assessment_cycle_district_school_mapping_cycle_id_udise_idx")
+  @@index([udise])
 }
 
 model assessment_cycle_school_nipun_results {
@@ -1872,6 +1888,60 @@ model assessment_cycles {
 
   @@index([end_date], map: "assessment_cycles_end_date")
   @@index([start_date], map: "assessment_cycles_start_date")
+}
+
+model android_actions {
+  id          Int           @id @default(autoincrement())
+  domain      String        @db.VarChar
+  action      String
+  app_actions app_actions[]
+}
+
+model app_actions {
+  id                 Int             @id @default(autoincrement())
+  android_actions_id Int
+  mentor_id          Int
+  actor_id           Int
+  created_at         DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime        @default(now()) @db.Timestamptz(6)
+  android_actions    android_actions @relation(fields: [android_actions_id], references: [id], onUpdate: Restrict)
+
+  @@index([actor_id])
+  @@index([mentor_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model student_status_report {
+  name        String? @db.VarChar
+  Unique_ID   String? @map("Unique ID") @db.VarChar
+  grade       BigInt?
+  udise       BigInt?
+  District_ID BigInt? @map("District ID")
+  Block_ID    BigInt? @map("Block ID")
+  status      String? @db.VarChar(50)
+
+  @@ignore
+}
+
+model students_new_data {
+  id             Int          @id @default(autoincrement())
+  name           String       @db.VarChar(255)
+  gender         genders_enum
+  dob            DateTime?    @db.Date
+  admission_date DateTime?    @db.Date
+  roll_no        BigInt
+  unique_id      String       @unique(map: "students_new_data_unique_id_unique") @db.VarChar(15)
+  father_name    String       @default("") @db.VarChar(255)
+  mother_name    String       @default("") @db.VarChar(255)
+  grade          Int          @db.SmallInt
+  section        String       @default("") @db.Char(1)
+  udise          BigInt
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?    @db.Timestamptz(6)
+
+  @@index([udise, grade])
+  @@index([udise])
 }
 
 enum genders_enum {

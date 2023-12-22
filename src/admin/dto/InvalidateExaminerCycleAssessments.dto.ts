@@ -18,4 +18,8 @@ export class InvalidateExaminerCycleAssessmentsDto {
   @Type(() => Boolean)
   @IsBoolean()
   delete_all!: boolean;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  reset_all!: boolean;
 }

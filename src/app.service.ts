@@ -321,56 +321,56 @@ export class AppService {
 
   async checkIfAssessmentIsValid(createAssessmentVisitResultData: CreateAssessmentVisitResult)
   {
-    if(createAssessmentVisitResultData.actor_id == ActorEnum.EXAMINER)
-    {
-      const cycle_id = await this.prismaService.assessment_cycles.findFirst({
-        orderBy: {
-          id: 'desc'
-        }
-      });
-
-      if(!cycle_id) {
-        throw new BadRequestException("No cycles found");
-      }
-
-      const studentMappings = await this.prismaService.assessment_cycle_district_school_mapping.findFirstOrThrow({
-        where: {
-          udise: createAssessmentVisitResultData.udise,
-          cycle_id: cycle_id.id
-        }
-      })
-      const studentList = [...(studentMappings.class_1_students?.toString().split(',') || []), 
-        ...(studentMappings.class_2_students?.toString().split(',') || []),
-        ...(studentMappings.class_3_students?.toString().split(',') || [])];
-       
-      const assessmentStudentIDs = createAssessmentVisitResultData.results.map((x) => x.student_id);
-      const isStudentPresent = assessmentStudentIDs.every((x) => studentList.includes(x));
-      if(!isStudentPresent)
-      {
-        Sentry.captureMessage('Bad Assessment submission request - student not found in cycle', {
-          user: {
-            id: createAssessmentVisitResultData.mentor_id + '',
-          },
-          extra: {
-            submission_timestamp:
-              createAssessmentVisitResultData.submission_timestamp,
-            mentor_id: createAssessmentVisitResultData.mentor_id,
-            subject_id: createAssessmentVisitResultData.subject_id,
-            udise: createAssessmentVisitResultData.udise,
-            faultyStudentID: assessmentStudentIDs.filter((x) => !studentList.includes(x)),
-            mappedStudentIDs: studentList,
-          },
-        });
-        return false;
-      }
+    if(createAssessmentVisitResultData.actor_id !== ActorEnum.EXAMINER) {
       return true;
     }
+
+    const cycle_id = await this.prismaService.assessment_cycles.findFirst({
+      orderBy: {
+        id: 'desc'
+      }
+    });
+
+    if(!cycle_id) {
+      throw new BadRequestException("No cycles found");
+    }
+
+    const studentMappings = await this.prismaService.assessment_cycle_district_school_mapping.findFirstOrThrow({
+      where: {
+        udise: createAssessmentVisitResultData.udise,
+        cycle_id: cycle_id.id
+      }
+    })
+    const studentList = [...(studentMappings.class_1_students?.toString().split(',') || []), 
+      ...(studentMappings.class_2_students?.toString().split(',') || []),
+      ...(studentMappings.class_3_students?.toString().split(',') || [])];
+      
+    const assessmentStudentIDs = createAssessmentVisitResultData.results.map((x) => x.student_id);
+    const isStudentPresent = assessmentStudentIDs.every((x) => studentList.includes(x));
+    if(!isStudentPresent)
+    {
+      Sentry.captureMessage('Bad Assessment submission request - student not found in cycle', {
+        user: {
+          id: createAssessmentVisitResultData.mentor_id + '',
+        },
+        extra: {
+          submission_timestamp:
+            createAssessmentVisitResultData.submission_timestamp,
+          mentor_id: createAssessmentVisitResultData.mentor_id,
+          subject_id: createAssessmentVisitResultData.subject_id,
+          udise: createAssessmentVisitResultData.udise,
+          faultyStudentID: assessmentStudentIDs.filter((x) => !studentList.includes(x)),
+          mappedStudentIDs: studentList,
+        },
+      });
+      return false;
+    }
+    return true;
   }
 
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-
     // First check if for examiner the student submitted is in cycle
     if(!await this.checkIfAssessmentIsValid(createAssessmentVisitResultData)) {
       return {msg: "Subimssion is ignored, Bad Assessment submission request - student not found in cycle"}

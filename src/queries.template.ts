@@ -31,6 +31,8 @@ export function getAssessmentVisitResultsQuery(table: string) {
           constraint ${table}_udise_fkey
               references school_list (udise)
               on update cascade on delete restrict,
+      is_valid bool NOT NULL DEFAULT true,
+      updated_at timestamp NOT NULL DEFAULT now(),
       submission_timestamp bigint                   default '0'::bigint   not null,
       app_version_code     integer                  default 0             not null,
       v                    smallint                 default '2'::smallint not null,
@@ -67,6 +69,9 @@ export function getAssessmentVisitResultsQuery(table: string) {
   
   create index ${table}_sbsn_tz_idx
       on ${table} (submission_timestamp);
+  
+  CREATE INDEX ${table}_is_valid ON ${table} USING btree (is_valid);
+
 `;
 }
 

@@ -93,17 +93,17 @@ export class SchoolServiceV2 extends SchoolService {
               RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
         FROM assessments a
         WHERE a.student_id IS NOT NULL
-         AND a.udise = ${udise}
+         AND a.udise = $1
          AND a.is_valid = true
-         AND a.actor_id = ${mentor.actor_id}
+         AND a.actor_id = $2
          AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
-         and a.grade in (${grades.join(',')})
+         and a.grade = ANY($3::smallint[])
         GROUP BY a.student_id, a.submitted_at
       ) ss
       WHERE rank = 1`;
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.actor_id, grades);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
@@ -188,29 +188,6 @@ export class SchoolServiceV2 extends SchoolService {
       startDate = startDate.add('1', 'month');
     }
 
-    const query = `
-      select t.grade,
-        count(t.student_id)                                        as assessed,
-        count(case when t.is_passed is true then t.student_id end) as nipun,
-        max(t.submission_timestamp)                                as updated_at
-      from (
-        select distinct on (a.student_id) student_id,
-                                         a.grade,
-                                         a.submitted_at,
-                                         a.submission_timestamp,
-                                         a.is_passed
-        from assessments a
-        where a.student_id is not null
-          and a.udise = ${udise}
-          and a.actor_id = ${ActorEnum.TEACHER}
-          and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and a.submitted_at between '%start_time%' and '%end_time%'
-          and a.grade in (%grades%)
-          and a.is_valid = true
-        order by a.student_id, a.submitted_at DESC
-      ) t
-      group by grade`;
-
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
     const lang: string = I18nContext?.current()?.lang ?? 'en';
@@ -244,17 +221,36 @@ export class SchoolServiceV2 extends SchoolService {
       };
     }
     for (const item of monthsForQuery) {
-      const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month + 1);
       const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
       const endTime = moment(startTime).add(1, 'months')
+
+      const query = `
+      select t.grade,
+        count(t.student_id)                                        as assessed,
+        count(case when t.is_passed is true then t.student_id end) as nipun,
+        max(t.submission_timestamp)                                as updated_at
+      from (
+        select distinct on (a.student_id) student_id,
+                                         a.grade,
+                                         a.submitted_at,
+                                         a.submission_timestamp,
+                                         a.is_passed
+        from assessments a
+        where a.student_id is not null
+          and a.udise = $1
+          and a.actor_id = ${ActorEnum.TEACHER}
+          and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+          and a.submitted_at between '${startTime.format('YYYY-MM-DD HH:mm:ss')}' and '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+          and a.grade = ANY($2::smallint[])
+          and a.is_valid = true
+        order by a.student_id, a.submitted_at DESC
+      ) t
+      group by grade`;
+      
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
-        query
-          .replace('%table_student%', tables.assessment_visit_results_students)
-          .replace('%table_v2%', tables.assessment_visit_results_v2)
-          .replace('%mentor_id%', mentor.id.toString())
-          .replace('%start_time%', startTime.format('YYYY-MM-DD HH:mm:ss'))
-          .replace('%end_time%', endTime.format('YYYY-MM-DD HH:mm:ss'))
-          .replace('%grades%', grades.join(',')),
+        query, 
+        udise, 
+        grades
       );
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
@@ -275,6 +271,8 @@ export class SchoolServiceV2 extends SchoolService {
     udise: number,
     firstDayTimestamp: number,
     lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
+    const start_time = moment.unix(firstDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')
+    const end_time = moment.unix(lastDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')
     try {
       const query = `
         select count(distinct student_id)                                               as assessments_total,
@@ -287,17 +285,17 @@ export class SchoolServiceV2 extends SchoolService {
                                          a.submitted_at,
                                          a.is_passed
           from assessments a
-          where a.mentor_id = ${mentor.id}
+          where a.mentor_id = $1
             and a.is_valid = true
             and a.actor_id = ${ActorEnum.TEACHER}
-            and a.udise = ${udise}
+            and a.udise = $2
             and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
             and a.student_id is not null
             and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-            and a.submitted_at between '${moment.unix(firstDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}' and '${moment.unix(lastDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')}'
+            and a.submitted_at between '${start_time}' and '${end_time}'
           order by student_id, submitted_at DESC
         ) t`;
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, udise);
       return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,
@@ -440,15 +438,15 @@ export class SchoolServiceV2 extends SchoolService {
            (EXTRACT(EPOCH FROM case when snr.updated_at is not null then snr.updated_at else '1970-01-01 00:00:00+00:00' end) * 1000)::bigint as updated_at
         from assessment_cycle_district_school_mapping dsm
                  left join assessment_cycle_school_nipun_results snr
-                           on dsm.udise = snr.udise and snr.mentor_id = ${mentor.id} and snr.cycle_id = ${params.cycle_id}
+                           on dsm.udise = snr.udise and snr.mentor_id = $1 and snr.cycle_id = $2
                   left join school_list sl on dsm.udise = sl.udise
-        where dsm.cycle_id = ${params.cycle_id}
+        where dsm.cycle_id = $2
           and sl.district_id in (select district_id
                               from assessment_cycle_district_mentor_mapping
-                              where mentor_id = ${mentor.id}
-                                and cycle_id = ${params.cycle_id})
+                              where mentor_id = $1
+                                and cycle_id = $2)
       `;
-      return this.prismaService.$queryRawUnsafe(query);
+      return this.prismaService.$queryRawUnsafe(query, mentor.id, params.cycle_id);
     }
     return null;
   }
@@ -468,10 +466,10 @@ export class SchoolServiceV2 extends SchoolService {
         json_agg(dsm.class_3_students) as class_3_students
       from assessment_cycles c
                join assessment_cycle_district_school_mapping dsm
-                    on c.id = dsm.cycle_id and dsm.udise = ${udise} and dsm.cycle_id = ${cycleId}
-                        and c.id = ${cycleId}
+                    on c.id = dsm.cycle_id and dsm.udise = $1 and dsm.cycle_id = $2
+                        and c.id = $2
       group by c.id
-      limit 1`);
+      limit 1`, udise, cycleId);
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
       this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentorID})`);
@@ -504,12 +502,10 @@ export class SchoolServiceV2 extends SchoolService {
               a.grade,
               bool_and(a.is_passed) is_passed
               from assessments a
-              where a.student_id in (
-                                    ${'\''+studentIds.join('\',\'')+'\''}
-                )
-              and udise = ${udise}
+              where a.student_id = ANY($3::text[])
+              and udise = $1
               and grade in (1,2,3)
-              and mentor_id = ${mentorID}
+              and mentor_id = $2
               and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}'
               and a.is_valid = true
               group by a.student_id, a.grade 
@@ -518,7 +514,9 @@ export class SchoolServiceV2 extends SchoolService {
       group by t.grade    
     `;
     this.logger.debug(query)
-    const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(query);
+    const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(
+      query, udise, mentorID, studentIds
+    );
     this.logger.debug("Gradewise percentage for students", gradeWisePercentage)
     // the school will be nipun if all 3 grades are nipun
     let isNipun = true;

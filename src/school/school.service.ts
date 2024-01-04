@@ -77,14 +77,14 @@ export class SchoolService {
           avrs.student_id IS NOT NULL
           AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
           AND avrs.submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
-          and avrs.grade in (${grades.join(',')})
+          and avrs.grade = ANY($1::smallint[])
         GROUP BY avrs.student_id, avrs.submission_timestamp
       ) ss
       WHERE rank = 1;
     `;
     // console.log(query);
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query);
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, grades);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
@@ -167,30 +167,6 @@ export class SchoolService {
       startDate = startDate.add('1', 'month');
     }
 
-    const query = `
-      select t.grade,
-        count(t.student_id)                                        as assessed,
-        count(case when t.is_passed is true then t.student_id end) as nipun,
-        max(t.submission_timestamp) as updated_at
-      from (
-        select distinct on (avrs.student_id) student_id,
-          avrs.grade,
-          avrs.submission_timestamp,
-          avrs.is_passed
-        from %table_student% avrs 
-        join %table_v2% avr2 on (
-          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = ${udise} and avr2.actor_id = ${ActorEnum.TEACHER}
-        )
-        where avrs.student_id is not null
-          and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and avrs.submission_timestamp > %start_time%
-          and avrs.submission_timestamp < %end_time%
-          and avrs.grade in (%grades%)
-         order by avrs.student_id, avrs.submission_timestamp DESC
-           ) t
-      group by grade;
-    `;
-
     const gradeWiseSummary: Record<string, any> = {};
     let summaries: Record<string, object> = {};
     const lang: string = I18nContext?.current()?.lang ?? 'en';
@@ -226,15 +202,33 @@ export class SchoolService {
     }
     for (const item of monthsForQuery) {
       const tables = this.appService.getAssessmentVisitResultsTables(item.year, item.month+1);
-      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
-        query
-          .replace('%table_student%', tables.assessment_visit_results_students)
-          .replace('%table_v2%', tables.assessment_visit_results_v2)
-          .replace('%mentor_id%', mentor.id.toString())
-          .replace('%start_time%', (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%end_time%', (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString())
-          .replace('%grades%', grades.join(','))
-      );
+      const start_time = (moment().month(item.month).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString()
+      const end_time = (moment().month(item.month+1).year(item.year).date(1).utc().startOf('day').unix() * 1000).toString()
+      const query = `
+      select t.grade,
+        count(t.student_id)                                        as assessed,
+        count(case when t.is_passed is true then t.student_id end) as nipun,
+        max(t.submission_timestamp) as updated_at
+      from (
+        select distinct on (avrs.student_id) student_id,
+          avrs.grade,
+          avrs.submission_timestamp,
+          avrs.is_passed
+        from ${tables.assessment_visit_results_students} avrs 
+        join ${tables.assessment_visit_results_v2} avr2 on (
+          avrs.assessment_visit_results_v2_id = avr2.id and avr2.udise = $1 and avr2.actor_id = ${ActorEnum.TEACHER}
+        )
+        where avrs.student_id is not null
+          and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+          and avrs.submission_timestamp > ${start_time}
+          and avrs.submission_timestamp < ${end_time}
+          and avrs.grade = ANY($2::smallint[])
+         order by avrs.student_id, avrs.submission_timestamp DESC
+           ) t
+      group by grade;
+    `;
+
+      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(query, udise, grades);
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;
@@ -269,8 +263,8 @@ export class SchoolService {
           from ${tables.assessment_visit_results_students} avrs
                   join ${tables.assessment_visit_results_v2} as avr2
                        on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
-                           avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS} and avr2.udise = ${udise})
-          where avrs.mentor_id = ${mentor.id}
+                           avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS} and avr2.udise = $1)
+          where avrs.mentor_id = $2
            and avrs.student_id is not null
            and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
            and avrs.submission_timestamp > ${firstDayTimestamp}
@@ -279,7 +273,7 @@ export class SchoolService {
           ) t
       `;
       // console.log(query);
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.id);
       return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,

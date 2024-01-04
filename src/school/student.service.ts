@@ -22,7 +22,7 @@ export class StudentService {
         return cachedData;
       }
     }
-    const results: Array<{ grade: number, count: number }> = await this.prismaService.$queryRawUnsafe(`select grade, count(*) as count from students where udise = ${udise} group by grade`);
+    const results: Array<{ grade: number, count: number }> = await this.prismaService.$queryRawUnsafe(`select grade, count(*) as count from students where udise = $1 group by grade`, udise);
 
     // @ts-ignore
     this.cacheService.set(CacheKeySchoolStudentsCount(udise), results, {
@@ -64,11 +64,11 @@ export class StudentService {
     return this.prismaService.$queryRawUnsafe(`
       select s.unique_id as id, s.name, s.grade, s.roll_no
       from students s
-               join assessment_cycle_district_school_mapping dsm on s.udise = dsm.udise and dsm.cycle_id = ${cycleId}
-      where s.udise = ${udise}
-        and grade in (${grades.join(',')})
+               join assessment_cycle_district_school_mapping dsm on s.udise = dsm.udise and dsm.cycle_id = $1
+      where s.udise = $2
+        and grade = ANY($3::smallint[])
         and s.unique_id in
             (select jsonb_array_elements_text(dsm.class_1_students || dsm.class_2_students || dsm.class_3_students))    
-    `);
+    `, cycleId, udise, grades);
   }
 }

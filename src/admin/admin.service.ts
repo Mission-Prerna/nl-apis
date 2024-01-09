@@ -557,13 +557,13 @@ export class AdminService {
         SELECT udise, grade, unique_id,
               ROW_NUMBER() OVER (PARTITION BY udise, grade ORDER BY random()) AS rn
         FROM students
-        WHERE udise in (${udises.join(',')}) and
+        WHERE udise = ANY($1) and
         grade in (1, 2, 3)
     ) AS ranked
     WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
     GROUP BY udise, grade;`
 
-    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query);
+    const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query, udises);
     records.forEach(record => {
       switch (record.grade) {
         case 1:

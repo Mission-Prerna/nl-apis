@@ -50,8 +50,8 @@ export class SchoolServiceV2 extends SchoolService {
         if (!month || !year) {
           throw new UnprocessableEntityException('Missing [month,year] params.');
         }
-        firstDayTimestamp = (moment().month(month - 1).year(year).date(1).startOf('day').format('YYYY-MM-DD HH:mm:ss'));  // first day of current month
-        lastDayTimestamp = moment(firstDayTimestamp).add(1, 'months').format('YYYY-MM-DD HH:mm:ss'); // 1st day of next month
+        firstDayTimestamp = moment().month(month - 1).year(year).date(1).startOf('day');  // first day of current month
+        lastDayTimestamp = moment(firstDayTimestamp).add(1, 'months'); // 1st day of next month
         studentsList = await this.studentService.getSchoolStudents(udise);
         break;
       case ActorEnum.EXAMINER:
@@ -62,8 +62,8 @@ export class SchoolServiceV2 extends SchoolService {
         const cycle = await this.prismaService.assessment_cycles.findUniqueOrThrow({
           where: { id: cycleId },
         });
-        firstDayTimestamp = moment(cycle.start_date).format('YYYY-MM-DD HH:mm:ss');
-        lastDayTimestamp = moment(cycle.end_date).format('YYYY-MM-DD HH:mm:ss');
+        firstDayTimestamp = moment(cycle.start_date);
+        lastDayTimestamp = moment(cycle.end_date);
         studentsList = await this.studentService.getCycleStudents(udise, cycleId, grades);
         break;
       default:
@@ -97,13 +97,13 @@ export class SchoolServiceV2 extends SchoolService {
          AND a.is_valid = true
          AND a.actor_id = $2
          AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-         AND a.submitted_at BETWEEN '${firstDayTimestamp}' AND '${lastDayTimestamp}'
+         AND a.submission_timestamp BETWEEN $4 AND $5
          and a.grade = ANY($3::smallint[])
         GROUP BY a.student_id, a.submitted_at
       ) ss
       WHERE rank = 1`;
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.actor_id, grades);
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.actor_id, grades, firstDayTimestamp.valueOf(), lastDayTimestamp.valueOf());
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
@@ -271,8 +271,6 @@ export class SchoolServiceV2 extends SchoolService {
     udise: number,
     firstDayTimestamp: number,
     lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
-    const start_time = moment.unix(firstDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')
-    const end_time = moment.unix(lastDayTimestamp/1000).format('YYYY-MM-DD HH:mm:ss')
     try {
       const query = `
         select count(distinct student_id)                                               as assessments_total,
@@ -292,11 +290,11 @@ export class SchoolServiceV2 extends SchoolService {
             and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
             and a.student_id is not null
             and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-            and a.submitted_at between '${start_time}' and '${end_time}'
+            and a.submission_timestamp between $3 and $4
           order by student_id, submitted_at DESC
         ) t`;
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, udise);
-      return {
+        const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, udise, firstDayTimestamp, lastDayTimestamp);
+        return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,
         updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,

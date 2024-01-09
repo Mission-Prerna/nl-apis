@@ -76,7 +76,7 @@ export class SchoolService {
         WHERE
           avrs.student_id IS NOT NULL
           AND avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          AND avrs.submission_timestamp BETWEEN ${firstDayTimestamp} AND ${lastDayTimestamp}
+          AND avrs.submission_timestamp BETWEEN $2 AND $3
           and avrs.grade = ANY($1::smallint[])
         GROUP BY avrs.student_id, avrs.submission_timestamp
       ) ss
@@ -84,7 +84,7 @@ export class SchoolService {
     `;
     // console.log(query);
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, grades);
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, grades, firstDayTimestamp, lastDayTimestamp);
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;
@@ -220,15 +220,15 @@ export class SchoolService {
         )
         where avrs.student_id is not null
           and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and avrs.submission_timestamp > ${start_time}
-          and avrs.submission_timestamp < ${end_time}
+          and avrs.submission_timestamp > $3
+          and avrs.submission_timestamp < $4
           and avrs.grade = ANY($2::smallint[])
          order by avrs.student_id, avrs.submission_timestamp DESC
            ) t
       group by grade;
     `;
 
-      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(query, udise, grades);
+      const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(query, udise, grades, start_time, end_time);
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;
@@ -267,13 +267,13 @@ export class SchoolService {
           where avrs.mentor_id = $2
            and avrs.student_id is not null
            and avrs.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-           and avrs.submission_timestamp > ${firstDayTimestamp}
-           and avrs.submission_timestamp < ${lastDayTimestamp}
+           and avrs.submission_timestamp > $3
+           and avrs.submission_timestamp < $4
           order by student_id, submission_timestamp DESC
           ) t
       `;
       // console.log(query);
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.id);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.id, firstDayTimestamp, lastDayTimestamp);
       return {
         assessments_total: result[0].assessments_total,
         nipun_total: result[0].nipun_total,

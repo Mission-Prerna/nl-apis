@@ -528,7 +528,6 @@ export class AppService {
     if (cachedData) {
       return cachedData;
     }
-
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const mentorId = Number(mentor.id);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
@@ -547,8 +546,8 @@ export class AppService {
       (case when EXISTS(SELECT avr2.id from ${tables.assessment_visit_results_v2} as avr2 
           where avr2.udise = 	s.udise 
           and avr2.mentor_id = $1
-          and avr2.submission_timestamp > ${firstDayTimestamp} 
-          and avr2.submission_timestamp < ${lastDayTimestamp})
+          and avr2.submission_timestamp > $3 
+          and avr2.submission_timestamp < $4)
         THEN true 
         ELSE false
         end) as is_visited,
@@ -563,11 +562,11 @@ export class AppService {
       
       let response;
       if(mentor.block_id) {
-        query += ` and s.block_id = $3`
-        response = await this.prismaService.$queryRawUnsafe(query, mentorId, mentor.district_id, mentor.block_id)
+        query += ` and s.block_id = $5`
+        response = await this.prismaService.$queryRawUnsafe(query, mentorId, mentor.district_id, firstDayTimestamp, lastDayTimestamp, mentor.block_id)
       }
       else {
-        response = await this.prismaService.$queryRawUnsafe(query, mentorId, mentor.district_id)
+        response = await this.prismaService.$queryRawUnsafe(query, mentorId, firstDayTimestamp, lastDayTimestamp, mentor.district_id)
       }
 
       // @ts-ignore
@@ -714,7 +713,6 @@ export class AppService {
     if (Object.keys(cachedData).length !== 0) {
       return this.transformHomeScreenMetricCache(cachedData, mentor, month, year);
     }
-
     const tables = this.getAssessmentVisitResultsTables(year, month);
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0);  // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
@@ -726,8 +724,8 @@ export class AppService {
                from ${tables.assessment_visit_results_v2} as avr2
                where avr2.mentor_id = $1
                  and avr2.udise > 0
-                 and avr2.submission_timestamp > ${firstDayTimestamp}
-                 and avr2.submission_timestamp < ${lastDayTimestamp}) AS schools_visited,
+                 and avr2.submission_timestamp > $2
+                 and avr2.submission_timestamp < $3) AS schools_visited,
               COALESCE(AVG(avrs.total_time_taken), 0) :: int8 AS avg_time ,
               COUNT(DISTINCT avrs.student_session) AS assessments_taken,
               COUNT(DISTINCT CASE WHEN avrs.grade = 1 THEN avrs.student_session END) AS grade_1_assessments,
@@ -735,10 +733,10 @@ export class AppService {
               COUNT(DISTINCT CASE WHEN avrs.grade = 3 THEN avrs.student_session END) AS grade_3_assessments
           FROM ${tables.assessment_visit_results_students} AS avrs
           WHERE avrs.mentor_id = $1
-            AND avrs.submission_timestamp > ${firstDayTimestamp}
-            AND avrs.submission_timestamp < ${lastDayTimestamp}`;
+            AND avrs.submission_timestamp > $2
+            AND avrs.submission_timestamp < $3`;
 
-      const result: Record<string, any> = await this.prismaService.$queryRawUnsafe(query, mentor.id);
+      const result: Record<string, any> = await this.prismaService.$queryRawUnsafe(query, mentor.id, firstDayTimestamp, lastDayTimestamp);
       const response: Record<string, any> = {
         visited_schools: result[0]['schools_visited'],
         total_assessments: result[0]['assessments_taken'],
@@ -768,9 +766,9 @@ export class AppService {
         where
           avr2.mentor_id = $1
           and avr2.udise > 0
-          and avr2.submission_timestamp > ${firstDayTimestamp} 
-          and avr2.submission_timestamp < ${lastDayTimestamp}      
-      `, mentor.id);
+          and avr2.submission_timestamp > $2 
+          and avr2.submission_timestamp < $3      
+      `, mentor.id, firstDayTimestamp, lastDayTimestamp);
 
       const visitedSchools: Array<string> = visitedSchoolsResult.map((item) => {
         return item.udise.toString();
@@ -995,8 +993,8 @@ export class AppService {
                                  on (avr2.id = avrs.assessment_visit_results_v2_id and avr2.actor_id = ${ActorEnum.TEACHER} and
                                      avr2.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS})
                    where avrs.mentor_id = $1
-                     and avrs.submission_timestamp > ${firstDayTimestamp}
-                     and avrs.submission_timestamp < ${lastDayTimestamp}
+                     and avrs.submission_timestamp > $2
+                     and avrs.submission_timestamp < $3
                ) as weekly,
                (
                    select count(distinct avrs.student_session)                                     as assessments_today,
@@ -1007,11 +1005,12 @@ export class AppService {
                                      avr2.assessment_type_id =
                                      ${AssessmentTypeEnum.NIPUN_ABHYAS})
                    where avrs.mentor_id = $1
-                     and avrs.submission_timestamp > ${todayTimestamp}
-                     and avrs.submission_timestamp < ${lastDayTimestamp}
+                     and avrs.submission_timestamp > $4
+                     and avrs.submission_timestamp < $3
                ) as daily;
       `;
-      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id);
+      const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, firstDayTimestamp, lastDayTimestamp, todayTimestamp);
+      
 
       return {
         assessments_total: result[0].assessments_total,

@@ -58,7 +58,7 @@ export class AuthService {
         return await this.callUserService(endpoint, request, "POST");
     }
 
-    async verifyOTP(request: Request) {
+    async verifyOTPandGenerateAuthToken(request: Request) {
         const endpoint = `/api/verifyOTP`
         const verifyRes = await this.callUserService(endpoint, request);
         if(verifyRes.status.status !== "success") {

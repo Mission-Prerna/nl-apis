@@ -14,6 +14,6 @@ export class AuthController {
 
     @Post('verifyOTP')
     async verifyOTP(@Req() request: Request) {
-        return this.authService.verifyOTP(request);
+        return this.authService.verifyOTPandGenerateAuthToken(request);
     }
 }

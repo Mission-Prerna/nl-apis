@@ -20,10 +20,10 @@ export class AuthService {
     private async callUserService(endpoint: string, req: any, method = 'GET') {
         const url = this.userServiceBaseURL + endpoint;
         try{
-            const res = await axios(url, {method, headers: req.headers, params: req.query, data: req.body });
+            const res = await axios(url, {method, headers: {'x-application-id': this.FAApplicationID, ...req.headers}, params: req.query, data: req.body });
             return res.data;
         }
-        catch (error) 
+        catch (error)  
         {
             if (axios.isAxiosError(error)) {
                 const axiosError = error as AxiosError;

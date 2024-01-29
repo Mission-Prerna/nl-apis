@@ -3,9 +3,11 @@ name: Automated API tests using Postman CLI
 on:
   push:
     branches:
+      - development
       - master
   pull_request:
     branches:
+      - development
       - master
   workflow_dispatch:
 

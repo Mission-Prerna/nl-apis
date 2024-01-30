@@ -222,7 +222,7 @@ export class AppController {
     return this.appService.getMetadata();
   }
 
-  @Patch('/api/mentor/pin')
+  @Post('/api/mentor/pin')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)

@@ -42,6 +42,7 @@ import { MentorInterceptor } from './interceptors/mentor.interceptor';
 import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
+import { GetAppActionsDto } from './dto/AppActions.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -217,15 +218,15 @@ export class AppController {
     );
   }
 
-  @Get('/api/actions/:timestamp')
+  @Get('/api/actions')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
   async getMentorActionDetails(
-    @Param('timestamp') timeStamp: string,
+    @Query() queryParams: GetAppActionsDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.appService.getAppActionsForMentor(mentor, timeStamp);
+    return this.appService.getAppActionsForMentor(mentor, queryParams.timestamp);
   }
 
   @Get('/api/metadata')

@@ -901,13 +901,12 @@ export class AppService {
     else {
       schoolList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
     }
-    const appActions = await this.getAppActionsForMentor(mentor)
+
     return {
       mentor: mentor,
       school_list: schoolList,
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
       examiner_cycle_details: examinerCycleDetails,
-      app_actions: appActions
     };
   }
 

@@ -225,7 +225,7 @@ export class AppController {
     @Param('timestamp') timeStamp: string,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    return this.appService.getMentorActionDetails(mentor, timeStamp);
+    return this.appService.getAppActionsForMentor(mentor, timeStamp);
   }
 
   @Get('/api/metadata')

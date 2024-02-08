@@ -911,6 +911,46 @@ export class AppService {
     };
   }
 
+  async getMentorActionDetails(mentor: Mentor, timeStamp: string) {
+    const mentorId = Number(mentor.id);
+    const actorId = mentor.actor_id;
+  
+    const appActionsData = await this.prismaService.app_actions.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { mentor_id: { equals: mentorId } },
+              { actor_id: { equals: actorId } }
+            ]
+          },
+          {
+            created_at: { gte: new Date(parseInt(timeStamp))  }
+          }
+        ]
+      },
+      select: {
+        android_actions: {
+          select: {
+            domain: true,
+            action: true
+          }
+        },
+        id: true,
+        created_at: true
+      }
+    });
+    
+    return appActionsData.map((appData) => {
+      return {
+          "id" :appData.id,
+          "action" : appData.android_actions.action,
+          "domain" : appData.android_actions.domain,
+          "requested_at" : appData.created_at.getTime()
+        }
+    })
+   }
+
   async getMetadata() {
     const cacheData = await this.cacheService.get(CacheKeyMetadata());
     if (cacheData) return cacheData;

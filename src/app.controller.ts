@@ -217,6 +217,17 @@ export class AppController {
     );
   }
 
+  @Get('/api/actions/:timestamp')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getMentorActionDetails(
+    @Param('timestamp') timeStamp: string,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    return this.appService.getMentorActionDetails(mentor, timeStamp);
+  }
+
   @Get('/api/metadata')
   async getMetadata() {
     return this.appService.getMetadata();

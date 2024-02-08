@@ -901,7 +901,7 @@ export class AppService {
     else {
       schoolList = await this.getMentorSchoolListIfHeHasVisited(mentor, month, year);
     }
-
+    // Moved app action data to another api `/api/actions/{timestamp}` 
     return {
       mentor: mentor,
       school_list: schoolList,

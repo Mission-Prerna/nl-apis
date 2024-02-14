@@ -305,6 +305,21 @@ export class AppController {
     };
   }
 
+  @Put('/api/mentor/token')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async setMentorTokenPut(
+    @Body() body: UpsertMentorTokenDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    this.appService.upsertMentorToken(mentor, body.token).then(() => true);
+    return {
+      msg: 'Success!',
+      data: "Token upserted successfully",
+    };
+  }
+
   @Post('/api/mentor/bot/telemetry')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)

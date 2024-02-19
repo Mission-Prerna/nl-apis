@@ -566,7 +566,7 @@ export class AppService {
         response = await this.prismaService.$queryRawUnsafe(query, mentorId, mentor.district_id, firstDayTimestamp, lastDayTimestamp, mentor.block_id)
       }
       else {
-        response = await this.prismaService.$queryRawUnsafe(query, mentorId, firstDayTimestamp, lastDayTimestamp, mentor.district_id)
+        response = await this.prismaService.$queryRawUnsafe(query, mentorId, mentor.district_id, firstDayTimestamp, lastDayTimestamp)
       }
 
       // @ts-ignore

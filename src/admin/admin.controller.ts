@@ -33,10 +33,13 @@ import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { MentorClearCacheDto } from './dto/MentorInfoDto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SWAGGER_CONSTANTS } from 'src/utils/constants';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller('/admin')
+@ApiTags('admin')
 @UseInterceptors(SentryInterceptor)
 export class AdminController {
   constructor(
@@ -53,6 +56,7 @@ export class AdminController {
   @Post(['/mentor'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 500, ttl: 60000 } })
   async createMentor(
     @Body() body: CreateMentorDto,
@@ -63,6 +67,7 @@ export class AdminController {
   @Post(['/mentor/old'])
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 500, ttl: 60000 } })
   async createMentorOld(
     @Body() body: CreateMentorOldDto,
@@ -72,6 +77,7 @@ export class AdminController {
 
   @Post('/school/geo-fencing')
   @Roles(Role.Admin)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async schoolGeofencingBlacklist(
@@ -83,6 +89,7 @@ export class AdminController {
   @Get('/assessment-visit-results')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   async getAssessmentVisitResults(
     @Query() queryParams: GetAssessmentVisitResultsDto,
   ) {
@@ -92,6 +99,7 @@ export class AdminController {
   @Post('/queues/pause')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async pauseQueues() {
     await Promise.all([
@@ -105,6 +113,7 @@ export class AdminController {
   @Post('/queues/resume')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async resumeQueues() {
     await Promise.all([
@@ -118,6 +127,7 @@ export class AdminController {
   @Get('/queues/count')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async countQueues() {
     return {
@@ -130,6 +140,7 @@ export class AdminController {
   @Get('/queues/failed-count')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async countFailedQueues() {
     return {
@@ -142,6 +153,7 @@ export class AdminController {
   @Post('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
@@ -156,6 +168,7 @@ export class AdminController {
   @Patch('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async updateStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
@@ -170,6 +183,7 @@ export class AdminController {
   @Delete('/students')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async deleteStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: DeleteStudent })) body: DeleteStudent[],
@@ -180,6 +194,7 @@ export class AdminController {
   @Post('assessment-cycle')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycle(@Body() cycleData: CreateAssessmentCycle) {
     return this.service.createAssessmentCycle(cycleData);
@@ -188,6 +203,7 @@ export class AdminController {
   @Post('assessment-cycle/:cycle_id/district-school-mapping')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictSchoolMapping(
     @Param() params: CycleIdValidateDto,
@@ -199,6 +215,7 @@ export class AdminController {
   @Post('assessment-cycle/:cycle_id/district-examiner-mapping')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictExaminerMapping(
     @Param() params: CycleIdValidateDto,
@@ -210,6 +227,7 @@ export class AdminController {
   @Post('assessment-cycle/:cycle_id/invalidate-examiner-assessments')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async invalidateAssessmentCycleExaminerAssessments(
     @Param() params: CycleIdValidateDto,
@@ -221,6 +239,7 @@ export class AdminController {
   @Post('/mentor/clear-cache')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async clearMentorCache(
     @Body() body: MentorClearCacheDto,

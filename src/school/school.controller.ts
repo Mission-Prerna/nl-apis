@@ -27,7 +27,8 @@ import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import { AssessmentCycleValidatorDto } from '../dto/AssessmentCycleValidator.dto';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SWAGGER_CONSTANTS } from 'src/utils/constants';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -47,6 +48,7 @@ export class SchoolController {
   @Get(':udise/students')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   async getSchoolStudents(
     @Param() params: GetSchoolStudentsDto,
     @Res({ passthrough: true }) response: Response,
@@ -66,6 +68,7 @@ export class SchoolController {
   @Get(':udise/students/result')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getSchoolStudentsResults(
     @Param('udise', ParseIntPipe) udise: number,
@@ -78,6 +81,7 @@ export class SchoolController {
   @Get(':udise/students/result/summary')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getSchoolStudentsResultsSummary(
     @Param('udise', ParseIntPipe) udise: number,
@@ -90,6 +94,7 @@ export class SchoolController {
   @Get(':udise/teacher/performance/insights')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getSchoolTeacherPerformance(
     @Param('udise', ParseIntPipe) udise: number,
@@ -101,6 +106,7 @@ export class SchoolController {
   @Get('status')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getSchoolStatus(
     @Query() params: GetSchoolStatusDto,
@@ -112,6 +118,7 @@ export class SchoolController {
   @Post(':udise/result/calculate')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async calculateExaminerCycleUdiseResult(
     @Param('udise', ParseIntPipe) udise: number,

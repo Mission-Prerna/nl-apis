@@ -43,7 +43,8 @@ import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 import { GetAppActionsDto } from './dto/AppActions.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SWAGGER_CONSTANTS } from './utils/constants';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -86,6 +87,7 @@ export class AppController {
   @Post('/api/assessment-visit-results')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async createAssessmentVisitResults(
     @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
@@ -124,6 +126,7 @@ export class AppController {
   @Get('/api/mentor/schools')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorSchoolList(
     @Query() queryParams: GetMentorSchoolList,
@@ -139,6 +142,7 @@ export class AppController {
   @Post('/api/assessment-survey-results')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async createAssessmentSurveyResult(
     @Body(new ParseArrayPipe({ items: CreateAssessmentSurveyResult })) body: CreateAssessmentSurveyResult[],
@@ -177,6 +181,7 @@ export class AppController {
   @Get('/api/mentor/dashboard-overview')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getHomeScreenMetric(
     @Query() queryParams: GetHomeScreenMetric,
@@ -193,6 +198,7 @@ export class AppController {
   @Get('/api/mentor/details')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorDetails(
     @Query() queryParams: GetMentorDetailsDto,
@@ -208,6 +214,7 @@ export class AppController {
   @Get('/api/v2/mentor/details')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorDetailsV2(
     @Query() queryParams: GetMentorDetailsDto,
@@ -223,6 +230,7 @@ export class AppController {
   @Get('/api/actions')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorActionDetails(
     @Query() queryParams: GetAppActionsDto,
@@ -239,6 +247,7 @@ export class AppController {
   @Patch('/api/mentor/pin')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async setMentorPin(
     @Body() body: UpdateMentorPinDto,
@@ -251,6 +260,7 @@ export class AppController {
   @Get('/api/actor/dashboard-overview')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getActorHomeScreenMetric(
     @Param() id: number,
@@ -295,6 +305,7 @@ export class AppController {
   @Post('/api/mentor/token')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async setMentorToken(
     @Body() body: UpsertMentorTokenDto,
@@ -310,6 +321,7 @@ export class AppController {
   @Put('/api/mentor/token')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async setMentorTokenPut(
     @Body() body: UpsertMentorTokenDto,
@@ -325,6 +337,7 @@ export class AppController {
   @Post('/api/mentor/bot/telemetry')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async setMentorBotTelemetry(
     @Body() body: CreateBotTelemetryDto[],
@@ -340,6 +353,7 @@ export class AppController {
   @Get('/api/mentor/bot/telemetry')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorBotsWithAction(
     @Query() query: GetMentorBotsWithActionDto,
@@ -352,6 +366,7 @@ export class AppController {
   @Get('/api/mentor/bot')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getMentorBots(
     @Request() { mentor }: { mentor: Mentor },
@@ -363,6 +378,7 @@ export class AppController {
   @Get('/api/examiner/performance/insights')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(SWAGGER_CONSTANTS.SWAGGER_AUTH_SECURITY_SCHEMA_JWT)
   @UseInterceptors(MentorInterceptor)
   async getExaminerPerformanceInsights(
     @Query() params: AssessmentCycleValidatorDto,

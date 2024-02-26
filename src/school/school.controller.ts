@@ -27,10 +27,12 @@ import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import { AssessmentCycleValidatorDto } from '../dto/AssessmentCycleValidator.dto';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { ApiTags } from '@nestjs/swagger';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller('/api/school')
+@ApiTags('school')
 @UseInterceptors(SentryInterceptor)
 export class SchoolController {
   constructor(

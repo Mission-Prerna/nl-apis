@@ -43,10 +43,12 @@ import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 import { GetAppActionsDto } from './dto/AppActions.dto';
+import { ApiTags } from '@nestjs/swagger';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
 @Controller()
+@ApiTags('app')
 @UseInterceptors(SentryInterceptor)
 export class AppController {
   private readonly useQueues: boolean;

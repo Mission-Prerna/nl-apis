@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger, UnauthorizedException, UnprocessableEntityException, forwardRef } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, UnprocessableEntityException, forwardRef } from '@nestjs/common';
+import * as Sentry from '@sentry/minimal';
+import { I18nContext, I18nService } from 'nestjs-i18n';
+import { AppService } from '../app.service';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -8,14 +13,9 @@ import {
   StudentMonthlyAssessmentStatus,
   TypeTeacherHomeOverview,
 } from '../enums';
-import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
-import { I18nContext, I18nService } from 'nestjs-i18n';
-import { StudentService } from './student.service';
 import { SchoolService } from './school.service';
-import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
-import * as Sentry from '@sentry/minimal';
-import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
+import { StudentService } from './student.service';
 
 
 const moment = require('moment');
@@ -46,6 +46,7 @@ export class SchoolServiceV2 extends SchoolService {
     let studentsList: Array<Student> = [];
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
+      case ActorEnum.MENTOR:
         // for teacher
         if (!month || !year) {
           throw new UnprocessableEntityException('Missing [month,year] params.');
@@ -79,7 +80,7 @@ export class SchoolServiceV2 extends SchoolService {
             month: month,
           },
         });
-        throw new UnauthorizedException('You are not allowed to perform this action.');
+        throw new ForbiddenException('You are not allowed to perform this action.');
     }
 
     const query = `

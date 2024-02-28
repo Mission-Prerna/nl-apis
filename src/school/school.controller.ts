@@ -1,18 +1,22 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Headers,
+  HttpStatus,
   Param,
   ParseArrayPipe,
   ParseIntPipe,
   Post,
   Query,
+  Req,
   Request,
   Res,
   SetMetadata,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
 import { CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
@@ -27,6 +31,8 @@ import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import { AssessmentCycleValidatorDto } from '../dto/AssessmentCycleValidator.dto';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { ExcelFileUploadInterceptor } from 'src/interceptors/excel-file-upload.interceptor';
+import { CreateSchoolListResponseDto } from './dto/CreateSchoolListResponse.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -39,7 +45,33 @@ export class SchoolController {
     private readonly etagService: EtagService,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResultQueue: Queue,
-  ) {
+  ) {}
+
+  @Post('upload')
+  @UseInterceptors(ExcelFileUploadInterceptor)
+  async uploadCsv(
+    @Req() request: any,
+    @Res() res: FastifyReply,
+  ): Promise<CreateSchoolListResponseDto> {
+    try {
+      const file = request['processedFile'];
+      const { failureSchoolList=[], successSchoolList=[] } =
+        await this.service.createSchoolListFromFile(file);
+
+      return res.status(HttpStatus.CREATED).send({
+        message: `${
+          successSchoolList.length
+        } schools uploaded successfully out of ${
+          successSchoolList.length + failureSchoolList.length
+        }`,
+        successSchoolList,
+        failureSchoolList,
+      });
+    } catch (error: any) {
+      return res
+        .status(error?.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ message: error.message });
+    }
   }
 
   @Get(':udise/students')

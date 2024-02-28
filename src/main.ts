@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import * as Sentry from '@sentry/node';
+import fastifyMultipart from '@fastify/multipart';
 
 // javascript does not know how to stringify BigInt
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -17,6 +18,8 @@ async function bootstrap() {
     // Payload upto 20mib
     new FastifyAdapter({ bodyLimit: 1024 * 1024 * 20})
   );
+
+  await app.register(fastifyMultipart);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 

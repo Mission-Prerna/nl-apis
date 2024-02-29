@@ -33,6 +33,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { ExcelFileUploadInterceptor } from 'src/interceptors/excel-file-upload.interceptor';
 import { CreateSchoolListResponseDto } from './dto/CreateSchoolListResponse.dto';
+import { JwtAdminGuard } from 'src/auth/admin-jwt.guard';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -49,7 +50,7 @@ export class SchoolController {
 
   @Post('upload')
   @Roles(Role.Admin)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminGuard)
   @UseInterceptors(ExcelFileUploadInterceptor)
   async uploadCsv(
     @Req() request: any,

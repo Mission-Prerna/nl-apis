@@ -577,6 +577,7 @@ export class SchoolServiceV2 extends SchoolService {
     const successSchoolList: SchoolListResponse[] = [];
     const failureSchoolList: SchoolListResponse[] = [];
 
+    this.logger.log(`Started uploading parsed data`)
     // to iterate over data concurrently using Promise.all
     await Promise.all(
       data.map(async (element) => {
@@ -620,25 +621,31 @@ export class SchoolServiceV2 extends SchoolService {
         };
 
         try {
+          this.logger.log(`Creating/updating school with udise:- ${payload.udise}`)
           // Upsert using prisma and handle success/failure cases
           const response: any = await this.prismaService.school_list.upsert({
             where: { udise: payload.udise },
             update: payload,
             create: payload,
           });
+          this.logger.log(`Successfully created/updated school with udise:- ${payload.udise}`)
           successSchoolList.push(response);
         } catch (error) {
           const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+          this.logger.warn(`Failed to create/update school with udise:- ${payload.udise} with error message:- ${errorMessage}`,error)
           failureSchoolList.push({ ...payload, message: errorMessage });
         }
       }),
     );
+
+    this.logger.log(`Successfully uploaded parsed data`)
 
     return { successSchoolList, failureSchoolList };
   }
 
   async parseExcel(buffer: Buffer): Promise<SchoolListExcelDataDto[]> {
     try {
+      this.logger.log(`Started parsing the Excel file`)
       // 1. Read the Excel file using XLSX and get the first sheet and data
       const workbook = XLSX.read(buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
@@ -679,8 +686,11 @@ export class SchoolServiceV2 extends SchoolService {
       });
 
       // 4. Return the final parsed data
+      this.logger.log(`Successfully parsed Excel file`)
+
       return parsedData;
     } catch (error) {
+      this.logger.error(`Error parsing Excel file`, error)
       throw new BadRequestException('Failed to parse Excel file');
     }
   }

@@ -1,9 +1,11 @@
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-  BadRequestException,
+  NotFoundException,
+  PayloadTooLargeException,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 
@@ -18,7 +20,7 @@ export class ExcelFileUploadInterceptor implements NestInterceptor {
     const file = await request.file();
 
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new NotFoundException('No file uploaded');
     }
 
     // Check file type (excel or csv)
@@ -32,7 +34,7 @@ export class ExcelFileUploadInterceptor implements NestInterceptor {
     ];
 
     if (!allowedFileTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
+      throw new UnsupportedMediaTypeException(
         'Invalid file type. Only Excel/CSV files are allowed',
       );
     }
@@ -41,7 +43,7 @@ export class ExcelFileUploadInterceptor implements NestInterceptor {
     const maxFileSize = 20 * 1024 * 1024; // 20MB
     const fileSize = file?.file?.bytesRead || 0
     if (file.file && fileSize > maxFileSize) {
-      throw new BadRequestException(
+      throw new PayloadTooLargeException(
         'File size exceeds the allowed limit (20MB)',
       );
     }

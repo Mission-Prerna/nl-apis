@@ -21,6 +21,6 @@ export class SchoolListResponse {
 
 export class CreateSchoolListResponseDto {
   message?: string;
-  failureSchoolList: SchoolListResponse[];
-  successSchoolList: SchoolListResponse[];
+  failureSchoolList?: SchoolListResponse[];
+  successSchoolList?: SchoolListResponse[];
 }

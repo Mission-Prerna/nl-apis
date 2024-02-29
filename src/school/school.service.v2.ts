@@ -19,7 +19,6 @@ import { StudentService } from './student.service';
 import { CreateSchoolListDto, SchoolListExcelDataDto } from './dto/CreateSchoolList.dto';
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import * as XLSX from 'xlsx';
-import * as _ from 'lodash'
 import { CreateSchoolListResponseDto, SchoolListResponse } from './dto/CreateSchoolListResponse.dto';
 const moment = require('moment');
 
@@ -571,38 +570,47 @@ export class SchoolServiceV2 extends SchoolService {
     return await this.createSchoolListFromFileData(parsedData);
   }
 
-  async createSchoolListFromFileData(data: SchoolListExcelDataDto[]):Promise<CreateSchoolListResponseDto> {
+  async createSchoolListFromFileData(
+    data: SchoolListExcelDataDto[],
+  ): Promise<CreateSchoolListResponseDto> {
     // Initialize empty arrays for success and failure lists
     const successSchoolList: SchoolListResponse[] = [];
     const failureSchoolList: SchoolListResponse[] = [];
-  
-    // Use Lodash's `_.map` to iterate over data concurrently using Promise.all
+
+    // to iterate over data concurrently using Promise.all
     await Promise.all(
-      _.map(data, async (element) => {
+      data.map(async (element) => {
         const { block, nypanchayat, district } = element;
-  
-        // Find district details using Lodash's `_.get` to handle potential undefined values
+
+        // Find district details
         const districtDetails = await this.prismaService.districts.findUnique({
           where: { name: district },
         });
-        const district_id = _.get(districtDetails, 'id', -1);
-  
-        // Find block details using Lodash's `_.find` to potentially improve efficiency
+        const district_id = districtDetails?.id || -1; // giving default id as -1 to avoid entry
+
+        // Find block details
         const blockDetail = await this.prismaService.blocks.findUnique({
           where: { district_id_name: { district_id, name: block } },
         });
-        const block_id = _.get(blockDetail, 'id', -1);
-  
-        let nyay_panchayat_id;
-  
-        // Check for nypanchayat existence using Lodash's `_.isNil`
-        if (!_.isNil(nypanchayat)) {
-          const nypanchayatDetails = await this.prismaService.nyay_panchayats.findUnique({
-            where: { name_district_id_block_id: { block_id, district_id, name: nypanchayat } },
-          });
-          nyay_panchayat_id = _.get(nypanchayatDetails, 'id');
+        const block_id = blockDetail?.id || -1;
+
+        let nyay_panchayat_id = undefined;
+
+        // Check for nypanchayat existence
+        if (nypanchayat && district_id !== -1 && block_id !== -1) {
+          const nypanchayatDetails =
+            await this.prismaService.nyay_panchayats.findUnique({
+              where: {
+                name_district_id_block_id: {
+                  block_id,
+                  district_id,
+                  name: nypanchayat,
+                },
+              },
+            });
+          nyay_panchayat_id = nypanchayatDetails?.id;
         }
-  
+
         // Create payload for creating/updating entries in DB
         const payload: CreateSchoolListDto = {
           ...element,
@@ -610,7 +618,7 @@ export class SchoolServiceV2 extends SchoolService {
           district_id,
           nyay_panchayat_id,
         };
-  
+
         try {
           // Upsert using prisma and handle success/failure cases
           const response: any = await this.prismaService.school_list.upsert({
@@ -623,50 +631,57 @@ export class SchoolServiceV2 extends SchoolService {
           const { errorMessage } = getPrismaErrorStatusAndMessage(error);
           failureSchoolList.push({ ...payload, message: errorMessage });
         }
-      })
+      }),
     );
-  
+
     return { successSchoolList, failureSchoolList };
-  }  
+  }
 
   async parseExcel(buffer: Buffer): Promise<SchoolListExcelDataDto[]> {
-    // 1. Read the Excel file using XLSX and get the first sheet and data
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data: any = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    try {
+      // 1. Read the Excel file using XLSX and get the first sheet and data
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data: any = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // 2. Leverage Lodash for efficient array and object manipulation
-    const parsedData = _.chain(data.slice(1)) // Use Lodash to chain array operations and start from the second row
-      .map((row: any) => {
-        const rowData: any = {};
-        _.forEach(data[0], (header: string, index: number) => {
-          // Iterate over headers to create an object with key-value pairs
-          // The key is the header, and the value is the corresponding cell value from the current row
-          rowData[header] = _.trim(row[index]?.toString(), ' '); // Standardized trimming
+      // 2. Array manipulation
+      const parsedData = data
+        .slice(1) // Start from the second row
+        .map((row: any) => {
+          const rowData: any = {};
+          data[0].forEach((header: string, index: number) => {
+            // Loop through each element in the first row (header)
+            // 'header' stores the current header name (string) as it iterates
+            // 'index' stores the current index (number) as it iterates
+            rowData[header] = row[index]?.toString().trim(); // Formatting with trimming
+          });
+          return rowData;
         });
-        return rowData;
-      })
-      .value(); // Convert Lodash chain to a regular array
 
-    // 3. Additional data formatting using Lodash
-    _.forEach(parsedData, (item: SchoolListExcelDataDto) => {
-      // Convert 'udise', 'lat', 'long' and 'total_student_registered property to a number
-      item.udise = _.toNumber(item.udise);
-      item.lat = _.toNumber(item.lat);
-      item.long = _.toNumber(item.long);
-      item.total_student_registered = _.toNumber(item.total_student_registered);
+      // 3. Additional data formatting
+      parsedData.forEach((item: SchoolListExcelDataDto) => {
+        // Convert 'udise', 'lat', 'long' and 'total_student_registered property to a number
+        item.udise = Number(item.udise);
+        item.lat = item.lat ? Number(item.lat) : undefined ;
+        item.long = item.long ? Number(item.long) : undefined;
+        item.total_student_registered =
+          item.total_student_registered ? 
+          Number(item.total_student_registered) : 0;
 
-      // Convert 'geo_fence_enabled' and 'is_sankul' properties to boolean
-      item.geo_fence_enabled = Boolean(
-        _.toLower(_.toString(item.geo_fence_enabled)) === 'true',
-      );
-      item.is_sankul = Boolean(
-        _.toLower(_.toString(item.is_sankul)) === 'true',
-      );
-    });
+        // Convert 'geo_fence_enabled' and 'is_sankul' properties to boolean
+        item.geo_fence_enabled = Boolean(
+          item.geo_fence_enabled.toString().toLowerCase() === 'true',
+        );
+        item.is_sankul = Boolean(
+          item.is_sankul.toString().toLowerCase() === 'true',
+        );
+      });
 
-    // 4. Return the final parsed data
-    return parsedData;
+      // 4. Return the final parsed data
+      return parsedData;
+    } catch (error) {
+      throw new BadRequestException('Failed to parse Excel file');
+    }
   }
 }

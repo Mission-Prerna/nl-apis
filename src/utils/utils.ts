@@ -24,7 +24,7 @@ export function getPrismaErrorStatusAndMessage(error: any): {
     };
 
     const statusCode = errorCodeMap[errorCode];
-    const errorMessage = error.message.split('\n').pop() || error.message.split("\n").slice(-10).join("\n");
+    const errorMessage = error.message.split('\n').pop() || `Some values are missing`;
 
     return { statusCode, errorMessage };
   }

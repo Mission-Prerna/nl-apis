@@ -52,7 +52,6 @@ export class SchoolController {
   async uploadCsv(
     @Req() request: any,
   ): Promise<CreateSchoolListResponseDto> {
-    try {
       const file = request['processedFile'];
       const { failureSchoolList=[], successSchoolList=[] } =
         await this.service.createSchoolListFromFile(file);
@@ -65,9 +64,6 @@ export class SchoolController {
         successSchoolList,
         failureSchoolList,
       });
-    } catch (error: any) {
-      throw error
-    }
   }
 
   @Get(':udise/students')

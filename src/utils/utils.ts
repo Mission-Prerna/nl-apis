@@ -3,7 +3,6 @@ import {
   PrismaClientKnownRequestError,
   PrismaClientValidationError,
 } from '@prisma/client/runtime/library';
-import { get } from 'lodash';
 
 export function getPrismaErrorStatusAndMessage(error: any): {
   errorMessage: string | undefined;
@@ -13,7 +12,8 @@ export function getPrismaErrorStatusAndMessage(error: any): {
     error instanceof PrismaClientKnownRequestError ||
     error instanceof PrismaClientValidationError
   ) {
-    const errorCode = get(error, 'code', 'DEFAULT_ERROR_CODE');
+    // @ts-ignore
+    const errorCode = error?.code || 'DEFAULT_ERROR_CODE';
 
     const errorCodeMap: Record<string, number> = {
       P2000: HttpStatus.BAD_REQUEST,

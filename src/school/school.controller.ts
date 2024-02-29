@@ -48,6 +48,8 @@ export class SchoolController {
   ) {}
 
   @Post('upload')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(ExcelFileUploadInterceptor)
   async uploadCsv(
     @Req() request: any,

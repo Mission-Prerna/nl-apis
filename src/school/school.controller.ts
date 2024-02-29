@@ -51,14 +51,12 @@ export class SchoolController {
   @UseInterceptors(ExcelFileUploadInterceptor)
   async uploadCsv(
     @Req() request: any,
-    @Res() res: FastifyReply,
   ): Promise<CreateSchoolListResponseDto> {
     try {
       const file = request['processedFile'];
       const { failureSchoolList=[], successSchoolList=[] } =
         await this.service.createSchoolListFromFile(file);
-
-      return res.status(HttpStatus.CREATED).send({
+      return ({
         message: `${
           successSchoolList.length
         } schools uploaded successfully out of ${
@@ -68,9 +66,7 @@ export class SchoolController {
         failureSchoolList,
       });
     } catch (error: any) {
-      return res
-        .status(error?.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ message: error.message });
+      throw error
     }
   }
 

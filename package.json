@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@fastify/multipart": "^8.1.0",
     "@fusionauth/typescript-client": "^1.46.0",
     "@liaoliaots/nestjs-redis": "^9.0.5",
     "@liaoliaots/nestjs-redis-health": "^9.0.4",
@@ -50,7 +51,8 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
-    "webpack": "^5.88.2"
+    "webpack": "^5.88.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",

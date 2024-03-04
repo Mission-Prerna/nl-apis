@@ -11,7 +11,6 @@ import {
   SetMetadata,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
   Request
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';

@@ -49,7 +49,8 @@ export class SchoolServiceV2 extends SchoolService {
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
       case ActorEnum.MENTOR:
-        // for teacher
+      case ActorEnum.DIET_MENTOR:
+        // for teacher, mentor & diet mentor
         if (!month || !year) {
           throw new UnprocessableEntityException('Missing [month,year] params.');
         }

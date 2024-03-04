@@ -11,6 +11,8 @@ import {
   SetMetadata,
   UseGuards,
   UseInterceptors,
+  UploadedFile,
+  Request
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -33,6 +35,7 @@ import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { MentorClearCacheDto } from './dto/MentorInfoDto';
+import { MinioService } from 'src/minio/minio.service';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -47,6 +50,7 @@ export class AdminController {
     private readonly assessmentSurveyResultQueue: Queue,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResult: Queue,
+    private readonly minioService :  MinioService
   ) {
   }
 
@@ -227,4 +231,22 @@ export class AdminController {
   ) {
     return this.service.clearMentorCache(body.phoneNumbers);
   }
+  
+  @Post('/upload-forms-zip')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async uploadFormsZip(
+    @Request() request : any
+  ) {
+    try {
+      const zip = await request.file()
+      const publicUrl = await this.minioService.uploadZip(zip);
+      return { status: 'Zip file uploaded successfully', url: publicUrl };
+    } catch (error : any) {
+      console.log(error)
+      return { status: 'Failed to upload zip file', error: error.message };
+    }
+  }
+
 }

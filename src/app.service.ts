@@ -43,6 +43,7 @@ import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './ca
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { SchoolServiceV2 } from './school/school.service.v2';
+import { JwtService } from '@nestjs/jwt';
 
 const moment = require('moment');
 
@@ -60,6 +61,7 @@ export class AppService {
     // Circular dependency to SchoolService
     @Inject(forwardRef(() => SchoolServiceV2))
     protected readonly schoolService: SchoolServiceV2,
+    private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRaw`
       SELECT table_name
@@ -913,55 +915,168 @@ export class AppService {
     })
    }
 
-  async getMetadata() {
+  // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
+  async getMetadata(headers: any) {
+    // Check if metadata is available in cache, return cached data if present
     const cacheData = await this.cacheService.get(CacheKeyMetadata());
     if (cacheData) return cacheData;
 
-    const resp = {
-      actors: await this.prismaService.actors.findMany(),
-      designations: await this.prismaService.designations.findMany({
-        select: {
-          id: true,
-          name: true,
-        },
-      }),
-      subjects: await this.prismaService.subjects.findMany({
-        select: {
-          id: true,
-          name: true,
-        },
-      }),
-      assessment_types: await this.prismaService.assessment_types.findMany(),
-      competency_mapping: await this.prismaService.competency_mapping.findMany({
-        select: {
-          grade: true,
-          learning_outcome: true,
-          competency_id: true,
-          flow_state: true,
-          subject_id: true,
-        },
-        orderBy: {
-          learning_outcome: 'asc',
-        },
-      }),
-      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
-        select: {
-          competency_id: true,
-          grade: true,
-          is_active: true,
-          ref_ids: true,
-          subject_id: true,
-          type: true,
-          assessment_type_id: true,
-        },
-        where: {
-          is_active: true,
-        },
-      }),
+    // Retrieve the actor ID based on headers
+    const actorId = await this.getActorId(headers);
+
+    // Fetch competency mappings based on actor ID
+    const competencyMappings = await this.getCompetencyMappings(actorId);
+
+    // Extract unique, non-null, and non-undefined competency IDs
+    const uniqueCompetencyIds: number[] = Array.from(
+      new Set(
+        competencyMappings
+          .map((item) => item.competency_id as number)
+          .filter((id) => id !== null),
+      ),
+    );
+
+    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
+    let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
+      actorId,
+      uniqueCompetencyIds,
+    );
+
+    // Fetch additional metadata in parallel using Promise.all
+    const [actions, designations, subjects, assessmentTypes] =
+      await Promise.all([
+        this.prismaService.actors.findMany(),
+        this.prismaService.designations.findMany({
+          select: { id: true, name: true },
+        }),
+        this.prismaService.subjects.findMany({
+          select: { id: true, name: true },
+        }),
+        this.prismaService.assessment_types.findMany(),
+      ]);
+
+    // Construct the response object
+    const response = {
+      actions,
+      designations,
+      assessment_types: assessmentTypes,
+      subjects,
+      competency_mapping: competencyMappings,
+      workflow_ref_ids: workflowRefIdsMapping,
     };
+
+    // Store the response in cache
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
-    return resp;
+    await this.cacheService.set(CacheKeyMetadata(), response, {
+      ttl: CacheConstants.TTL_METADATA,
+    });
+
+    return response;
+  }
+
+  // Method to get the actor ID based on the provided headers
+  private async getActorId(headers: any): Promise<ActorEnum> {
+    try {
+      if (headers.authorization) {
+        // Decode the authorization token to get user information
+        const decodedAuthTokenData = <Record<string, any>>(
+          this.jwtService.decode(headers.authorization.split(' ')[1])
+        );
+
+        // Find mentor by phone number using Hasura user ID
+        const mentor = await this.findMentorByPhoneNumber(
+          decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
+            'X-Hasura-User-Id'
+          ],
+        );
+
+        // Return the actor ID if mentor is found, otherwise return NULL
+        return mentor ? mentor.actor_id : ActorEnum.NULL;
+      } else {
+        // If no authorization token, default to PARENT actor
+        return ActorEnum.PARENT;
+      }
+    } catch (error) {
+      // Return NULL in case of an error during actor ID retrieval
+      return ActorEnum.NULL;
+    }
+  }
+
+  // Method to get competency mappings based on actor ID
+  private async getCompetencyMappings(actorId: ActorEnum) {
+    let learningOutcomePrefix = '';
+    switch (actorId) {
+      case ActorEnum.EXAMINER:
+        learningOutcomePrefix = 'Examiner:';
+        break;
+      case ActorEnum.DIET_MENTOR:
+      case ActorEnum.TEACHER:
+      case ActorEnum.MENTOR:
+      case ActorEnum.PARENT:
+        learningOutcomePrefix = 'Nipun Lakshya:';
+        break;
+      default:
+        break;
+    }
+
+    // Fetch competency mappings based on actor-specific learning outcome prefix
+    return await this.prismaService.competency_mapping.findMany({
+      where: {
+        learning_outcome: { startsWith: learningOutcomePrefix },
+      },
+      select: {
+        grade: true,
+        learning_outcome: true,
+        competency_id: true,
+        flow_state: true,
+        subject_id: true,
+      },
+      orderBy: { learning_outcome: 'asc' },
+    });
+  }
+
+  // Method to get workflow ref IDs mapping based on actor ID and competency mappings
+  private async getWorkflowRefIdsMapping(
+    actorId: ActorEnum,
+    uniqueCompetencyIds: number[],
+  ) {
+    let workflowRefIdsMapping: any[] = [];
+
+    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
+    if (actorId !== ActorEnum.NULL) {
+      workflowRefIdsMapping =
+        await this.prismaService.workflow_refids_mapping.findMany({
+          select: {
+            competency_id: true,
+            grade: true,
+            is_active: true,
+            ref_ids: true,
+            subject_id: true,
+            type: true,
+            assessment_type_id: true,
+          },
+          where: {
+            is_active: true,
+            competency_id: { in: uniqueCompetencyIds },
+          },
+        });
+    } else {
+      workflowRefIdsMapping =
+        await this.prismaService.workflow_refids_mapping.findMany({
+          select: {
+            competency_id: true,
+            grade: true,
+            is_active: true,
+            ref_ids: true,
+            subject_id: true,
+            type: true,
+            assessment_type_id: true,
+          },
+          where: { is_active: true },
+        });
+    }
+
+    return workflowRefIdsMapping;
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {

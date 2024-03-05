@@ -582,45 +582,83 @@ export class SchoolServiceV2 extends SchoolService {
     await Promise.all(
       data.map(async (element) => {
         const { block, nypanchayat, district } = element;
-
-        // Find district details
-        const districtDetails = await this.prismaService.districts.findUnique({
-          where: { name: district },
-        });
-        const district_id = districtDetails?.id || -1; // giving default id as -1 to avoid entry
-
-        // Find block details
-        const blockDetail = await this.prismaService.blocks.findUnique({
-          where: { district_id_name: { district_id, name: block } },
-        });
-        const block_id = blockDetail?.id || -1;
-
-        let nyay_panchayat_id = undefined;
-
-        // Check for nypanchayat existence
-        if (nypanchayat && district_id !== -1 && block_id !== -1) {
-          const nypanchayatDetails =
-            await this.prismaService.nyay_panchayats.findUnique({
-              where: {
-                name_district_id_block_id: {
-                  block_id,
-                  district_id,
-                  name: nypanchayat,
-                },
-              },
-            });
-          nyay_panchayat_id = nypanchayatDetails?.id;
-        }
-
-        // Create payload for creating/updating entries in DB
-        const payload: CreateSchoolListDto = {
+        let payload: CreateSchoolListDto = {
           ...element,
-          block_id,
-          district_id,
-          nyay_panchayat_id,
+          block_id: -1,
+          district_id: -1,
+          nyay_panchayat_id: -1,
         };
-
         try {
+          const checkProperties = [
+            'block',
+            'nypanchayat',
+            'district',
+            'udise',
+            'geo_fence_enabled',
+            'is_sankul',
+            'area_type',
+            'category',
+          ];
+
+          for (const property of checkProperties) {
+            if (property === 'geo_fence_enabled' || property === 'is_sankul') {
+              if (
+                element[property] === undefined ||
+                element[property] === null
+              ) {
+                throw new BadRequestException(
+                  `Missing or invalid value for property: ${property}`,
+                );
+              }
+            } else {
+              // @ts-ignore
+              if (!element[property]) {
+                throw new BadRequestException(
+                  `Missing or invalid value for property: ${property}`,
+                );
+              }
+            }
+          }
+
+          // Find district details
+          const districtDetails = await this.prismaService.districts.findUnique(
+            {
+              where: { name: district },
+            },
+          );
+          const district_id = districtDetails?.id || -1; // giving default id as -1 to avoid entry
+
+          // Find block details
+          const blockDetail = await this.prismaService.blocks.findUnique({
+            where: { district_id_name: { district_id, name: block } },
+          });
+          const block_id = blockDetail?.id || -1;
+
+          let nyay_panchayat_id = undefined;
+
+          // Check for nypanchayat existence
+          if (nypanchayat && district_id !== -1 && block_id !== -1) {
+            const nypanchayatDetails =
+              await this.prismaService.nyay_panchayats.findUnique({
+                where: {
+                  name_district_id_block_id: {
+                    block_id,
+                    district_id,
+                    name: nypanchayat,
+                  },
+                },
+              });
+            nyay_panchayat_id = nypanchayatDetails?.id;
+          }
+
+          // Create payload for creating/updating entries in DB
+          payload = {
+            ...element,
+            block_id,
+            district_id,
+            nyay_panchayat_id,
+          };
+
           // Upsert using prisma and handle success/failure cases
           const response: any = await this.prismaService.school_list.upsert({
             where: { udise: payload.udise },
@@ -663,12 +701,13 @@ export class SchoolServiceV2 extends SchoolService {
       // 3. Additional data formatting
       parsedData.forEach((item: SchoolListExcelDataDto) => {
         // Convert 'udise', 'lat', 'long' and 'total_student_registered property to a number
-        item.udise = Number(item.udise);
-        item.lat = item.lat ? Number(item.lat) : undefined ;
+        //@ts-ignore
+        item.udise = item?.udise ? Number(item.udise) : undefined;
+        item.lat = item.lat ? Number(item.lat) : undefined;
         item.long = item.long ? Number(item.long) : undefined;
-        item.total_student_registered =
-          item.total_student_registered ? 
-          Number(item.total_student_registered) : 0;
+        item.total_student_registered = item?.total_student_registered
+          ? Number(item.total_student_registered)
+          : 0;
 
         // Convert 'geo_fence_enabled' and 'is_sankul' properties to boolean
         item.geo_fence_enabled = Boolean(
@@ -677,6 +716,14 @@ export class SchoolServiceV2 extends SchoolService {
         item.is_sankul = Boolean(
           item.is_sankul.toString().toLowerCase() === 'true',
         );
+
+        // Convert 'district', 'block', 'area_type' and 'nypanchayat' properties to uppercase
+        item.area_type = item?.area_type ? item.area_type.toUpperCase() : '';
+        item.district = item?.district ? item.district.toUpperCase() : '';
+        item.block = item?.block ? item.block.toUpperCase() : '';
+        item.nypanchayat = item?.nypanchayat
+          ? item.nypanchayat.toUpperCase()
+          : '';
       });
 
       // 4. Return the final parsed data

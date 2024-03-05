@@ -222,9 +222,8 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-  async clearMentorCache(
-    @Body() body: MentorClearCacheDto,
-  ) {
-    return this.service.clearMentorCache(body.phoneNumbers);
+  async clearMentorCache(@Body() body: MentorClearCacheDto) {
+    const { actorIds, phoneNumbers } = body;
+    return this.service.clearMentorCache(phoneNumbers, actorIds);
   }
 }

@@ -916,13 +916,13 @@ export class AppService {
    }
 
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
-  async getMetadata(headers: any) {
-    // Check if metadata is available in cache, return cached data if present
-    const cacheData = await this.cacheService.get(CacheKeyMetadata());
-    if (cacheData) return cacheData;
-
+  async getMetadata(headers: any) {    
     // Retrieve the actor ID based on headers
     const actorId = await this.getActorId(headers);
+
+    // Check if metadata is available in cache, return cached data if present
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
+    if (cacheData) return cacheData;
 
     // Fetch competency mappings based on actor ID
     const competencyMappings = await this.getCompetencyMappings(actorId);
@@ -967,7 +967,7 @@ export class AppService {
 
     // Store the response in cache
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(), response, {
+    await this.cacheService.set(CacheKeyMetadata(actorId), response, {
       ttl: CacheConstants.TTL_METADATA,
     });
 

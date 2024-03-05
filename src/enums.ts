@@ -131,8 +131,8 @@ export interface CycleDistrictUdiseRow {
   udise: number;
 }
 
-export function CacheKeyMetadata() {
-  return 'metadata';
+export function CacheKeyMetadata(actorId: ActorEnum) {
+  return `metadata:${ActorEnum[actorId]}`;
 }
 
 export function CacheKeyMentorDetail(phoneNumber: string) {

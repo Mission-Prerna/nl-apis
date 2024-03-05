@@ -602,8 +602,17 @@ export class AdminService {
   async clearAllMentorCache(mentorId: bigint) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear() 
+    const actorId = await this.prismaService.mentor.findUniqueOrThrow({
+      where: {
+        id: mentorId,
+      },
+      select: {
+        actor_id: true,
+      },
+    });
+
     const keys = [
-      CacheKeyMetadata(), 
+      CacheKeyMetadata(actorId.actor_id), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
       CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear),
@@ -710,19 +719,29 @@ export class AdminService {
     return Promise.all(promises)
   }
 
-  async clearMentorCache(phoneNumbers: string[]) {
+  async clearMentorCache(phoneNumbers: string[], actorIds: ActorEnum[]) {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
-    const mentorSchoolListPromises = phoneNumbers.map(phoneNumber => {
-      return this.cacheService.del(CacheKeyMentorSchoolList(phoneNumber, month, year))
+    const mentorSchoolListPromises = phoneNumbers.map((phoneNumber) => {
+      return this.cacheService.del(
+        CacheKeyMentorSchoolList(phoneNumber, month, year),
+      );
     });
 
-    const mentorDetailPromises = phoneNumbers.map(phoneNumber => {
-      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber))
+    const mentorDetailPromises = phoneNumbers.map((phoneNumber) => {
+      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
+    });
+
+    const metadataPromises = actorIds.map((actorId) => {
+      return this.cacheService.del(CacheKeyMetadata(actorId));
     });
 
     try {
-      await Promise.all([...mentorDetailPromises, ...mentorSchoolListPromises, this.cacheService.del(CacheKeyMetadata())]);
+      await Promise.all([
+        ...mentorDetailPromises,
+        ...mentorSchoolListPromises,
+        ...metadataPromises,
+      ]);
     } catch (e) {
       this.logger.error(e);
       return { status: 'Cache Clearing Failed', error: e }

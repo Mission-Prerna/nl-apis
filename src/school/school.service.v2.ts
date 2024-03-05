@@ -604,7 +604,7 @@ export class SchoolServiceV2 extends SchoolService {
           ];
 
           for (const property of checkProperties) {
-            if (property === 'geo_fence_enabled' || property === 'is_sankul') {
+            if (property === 'geo_fence_enabled' || property === 'is_sankul') {     // these are boolean properties so checking only for null or undefined
               if (
                 element[property] === undefined ||
                 element[property] === null

@@ -582,12 +582,15 @@ export class SchoolServiceV2 extends SchoolService {
     await Promise.all(
       data.map(async (element) => {
         const { block, nypanchayat, district } = element;
-        let payload: CreateSchoolListDto = {
+
+        // Create payload for creating/updating entries in DB
+        const payload: CreateSchoolListDto = {
           ...element,
-          block_id: -1,
+          block_id: -1, // initializing with a negative value
           district_id: -1,
-          nyay_panchayat_id: -1,
+          nyay_panchayat_id: undefined,
         };
+
         try {
           const checkProperties = [
             'block',
@@ -621,25 +624,25 @@ export class SchoolServiceV2 extends SchoolService {
           }
 
           // Find district details
-          const districtDetails = await this.prismaService.districts.findUnique(
+          const districtDetails = await this.prismaService.districts.findUniqueOrThrow(
             {
               where: { name: district },
             },
           );
           const district_id = districtDetails?.id || -1; // giving default id as -1 to avoid entry
+          payload.district_id = district_id; // updating payload district_id value
 
           // Find block details
-          const blockDetail = await this.prismaService.blocks.findUnique({
+          const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
             where: { district_id_name: { district_id, name: block } },
           });
           const block_id = blockDetail?.id || -1;
-
-          let nyay_panchayat_id = undefined;
+          payload.block_id = block_id; // updating payload block_id value
 
           // Check for nypanchayat existence
           if (nypanchayat && district_id !== -1 && block_id !== -1) {
             const nypanchayatDetails =
-              await this.prismaService.nyay_panchayats.findUnique({
+              await this.prismaService.nyay_panchayats.findUniqueOrThrow({
                 where: {
                   name_district_id_block_id: {
                     block_id,
@@ -648,16 +651,8 @@ export class SchoolServiceV2 extends SchoolService {
                   },
                 },
               });
-            nyay_panchayat_id = nypanchayatDetails?.id;
+            payload.nyay_panchayat_id = nypanchayatDetails?.id; // updating payload nyay_panchayat_id value
           }
-
-          // Create payload for creating/updating entries in DB
-          payload = {
-            ...element,
-            block_id,
-            district_id,
-            nyay_panchayat_id,
-          };
 
           // Upsert using prisma and handle success/failure cases
           const response: any = await this.prismaService.school_list.upsert({

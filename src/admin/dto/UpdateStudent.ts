@@ -12,7 +12,6 @@ import {
 } from 'class-validator';
 import { IsExist } from '../../auth/auth.validator';
 import { Transform } from 'class-transformer';
-import { ParseIntPipe } from '@nestjs/common';
 
 export class UpdateStudent {
   @IsString()
@@ -28,11 +27,11 @@ export class UpdateStudent {
 
   @IsDateString()
   @IsOptional()
-  dob?: Date;
+  dob!: Date;
 
   @IsDateString()
   @IsOptional()
-  admission_date?: Date;
+  admission_date!: Date;
 
   @IsInt()
   @IsNotEmpty()

@@ -915,8 +915,77 @@ export class AppService {
     })
    }
 
+
+   async getMetadata() {
+    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+    if (cacheData) return cacheData;
+  
+    const [
+      actors,
+      designations,
+      subjects,
+      assessmentTypes,
+      competencyMapping,
+      workflowRefIds
+    ] = await Promise.all([
+      this.prismaService.actors.findMany(),
+      this.prismaService.designations.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      this.prismaService.subjects.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      this.prismaService.assessment_types.findMany(),
+      this.prismaService.competency_mapping.findMany({
+        select: {
+          grade: true,
+          learning_outcome: true,
+          competency_id: true,
+          flow_state: true,
+          subject_id: true,
+        },
+        orderBy: {
+          learning_outcome: 'asc',
+        },
+      }),
+      this.prismaService.workflow_refids_mapping.findMany({
+        select: {
+          competency_id: true,
+          grade: true,
+          is_active: true,
+          ref_ids: true,
+          subject_id: true,
+          type: true,
+          assessment_type_id: true,
+        },
+        where: {
+          is_active: true,
+        },
+      }),
+    ]);
+  
+    const resp = {
+      actors,
+      designations,
+      subjects,
+      assessment_types: assessmentTypes,
+      competency_mapping: competencyMapping,
+      workflow_ref_ids: workflowRefIds,
+    };
+  
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    return resp;
+  }
+  
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
-  async getMetadata(headers: any) {    
+  async getMetadataV2(headers: any) {    
     // Retrieve the actor ID based on headers
     const actorId = await this.getActorId(headers);
 

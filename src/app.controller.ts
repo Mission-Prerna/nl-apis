@@ -230,9 +230,14 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  async getMetadata(@Request() request: any) {
+  async getMetadata() {
+    return this.appService.getMetadata();
+  }
+
+  @Get('/api/v2/metadata')
+  async getMetadataV2(@Request() request: any) {
     const headers = request.headers;
-    return this.appService.getMetadata(headers);
+    return this.appService.getMetadataV2(headers);
   }
 
   @Patch('/api/mentor/pin')

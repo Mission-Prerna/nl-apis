@@ -11,6 +11,7 @@ import {
   Validate,
 } from 'class-validator';
 import { IsExist } from '../../auth/auth.validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateStudent {
   @IsString()
@@ -70,7 +71,9 @@ export class UpdateStudent {
   @Validate(IsExist, ['school_list', 'udise'], {
     message: '',
   })
+
   @IsOptional()
+  @Transform(({ value }) => parseInt(value))
   udise!: number;
 
   @IsDateString()

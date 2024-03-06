@@ -613,6 +613,7 @@ export class AdminService {
 
     const keys = [
       CacheKeyMetadata(actorId.actor_id), 
+      CacheKeyMetadata(), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
       CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear),
@@ -732,9 +733,12 @@ export class AdminService {
       return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
 
-    const metadataPromises = actorIds.map((actorId) => {
-      return this.cacheService.del(CacheKeyMetadata(actorId));
-    });
+    const metadataPromises =
+      actorIds.length !== 0
+        ? actorIds.map((actorId) => {
+            return this.cacheService.del(CacheKeyMetadata(actorId));
+          })
+        : [this.cacheService.del(CacheKeyMetadata())];
 
     try {
       await Promise.all([

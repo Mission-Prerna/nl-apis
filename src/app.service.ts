@@ -915,8 +915,60 @@ export class AppService {
     })
    }
 
+
+  async getMetadata() {
+    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+    if (cacheData) return cacheData;
+
+    const resp = {
+      actors: await this.prismaService.actors.findMany(),
+      designations: await this.prismaService.designations.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      subjects: await this.prismaService.subjects.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      assessment_types: await this.prismaService.assessment_types.findMany(),
+      competency_mapping: await this.prismaService.competency_mapping.findMany({
+        select: {
+          grade: true,
+          learning_outcome: true,
+          competency_id: true,
+          flow_state: true,
+          subject_id: true,
+        },
+        orderBy: {
+          learning_outcome: 'asc',
+        },
+      }),
+      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
+        select: {
+          competency_id: true,
+          grade: true,
+          is_active: true,
+          ref_ids: true,
+          subject_id: true,
+          type: true,
+          assessment_type_id: true,
+        },
+        where: {
+          is_active: true,
+        },
+      }),
+    };
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    return resp;
+  }
+
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
-  async getMetadata(headers: any) {    
+  async getMetadataV2(headers: any) {    
     // Retrieve the actor ID based on headers
     const actorId = await this.getActorId(headers);
 

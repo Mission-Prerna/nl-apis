@@ -11,7 +11,10 @@ import {
   SetMetadata,
   UseGuards,
   UseInterceptors,
-  Request
+  Request,
+  Res,
+  HttpStatus,
+  Logger
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -49,7 +52,9 @@ export class AdminController {
     private readonly assessmentSurveyResultQueue: Queue,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResult: Queue,
-    private readonly minioService :  MinioService
+    private readonly minioService :  MinioService,
+    private readonly logger = new Logger(AdminController.name)
+
   ) {
   }
 
@@ -236,15 +241,21 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async uploadFormsZip(
-    @Request() request : any
+    @Request() request : any,
+    @Res() response : any
   ) {
     try {
-      const zip = await request.file()
-      const publicUrl = await this.minioService.uploadZip(zip);
-      return { status: 'Zip file uploaded successfully', url: publicUrl };
+      const file = await request.file()
+      const fileName = file.filename;
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+      if (fileExtension !== 'zip') {
+        return response.status(HttpStatus.BAD_REQUEST).send({ error: 'File is not a ZIP file' });
+      }
+      const publicUrl = await this.minioService.uploadZip(file);
+      response.status(HttpStatus.OK).send({ status: 'Zip file uploaded successfully', url: publicUrl });
     } catch (error : any) {
-      console.log(error)
-      return { status: 'Failed to upload zip file', error: error.message };
+      this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
+      response.status(error.status).send({ error: 'Failed to upload zip file', message: error.message });
     }
   }
 

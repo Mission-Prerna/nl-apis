@@ -1012,7 +1012,7 @@ export class AppService {
     );
 
     // Fetch additional metadata in parallel using Promise.all
-    const [actions, designations, subjects, assessmentTypes] =
+    const [actors, designations, subjects, assessmentTypes] =
       await Promise.all([
         this.prismaService.actors.findMany(),
         this.prismaService.designations.findMany({
@@ -1026,7 +1026,7 @@ export class AppService {
 
     // Construct the response object
     const response = {
-      actions,
+      actors,
       designations,
       assessment_types: assessmentTypes,
       subjects,

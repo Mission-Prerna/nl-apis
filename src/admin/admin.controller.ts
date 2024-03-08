@@ -53,10 +53,10 @@ export class AdminController {
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResult: Queue,
     private readonly minioService :  MinioService,
-    private readonly logger = new Logger(AdminController.name)
-
   ) {
   }
+
+  private readonly logger = new Logger(AdminController.name)
 
   @Post(['/mentor'])
   @Roles(Role.Admin)

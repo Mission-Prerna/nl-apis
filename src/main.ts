@@ -23,6 +23,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
+  app.register(fastifyMultipart)
+
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
 

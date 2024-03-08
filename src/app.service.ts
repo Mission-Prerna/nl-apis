@@ -1046,10 +1046,11 @@ export class AppService {
   // Method to get the actor ID based on the provided headers
   private async getActorId(headers: any): Promise<ActorEnum> {
     try {
-      if (headers.authorization) {
+      const token  = headers?.authorization?.split(' ')[1]
+      if (token) {
         // Decode the authorization token to get user information
         const decodedAuthTokenData = <Record<string, any>>(
-          this.jwtService.decode(headers.authorization.split(' ')[1])
+          this.jwtService.decode(token)
         );
 
         // Find mentor by phone number using Hasura user ID

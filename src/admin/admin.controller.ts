@@ -12,9 +12,9 @@ import {
   UseGuards,
   UseInterceptors,
   Request,
-  Res,
-  HttpStatus,
-  Logger
+  Logger,
+  BadRequestException,
+  InternalServerErrorException
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -241,21 +241,20 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async uploadFormsZip(
-    @Request() request : any,
-    @Res() response : any
+    @Request() request : any
   ) {
     try {
       const file = await request.file()
       const fileName = file.filename;
       const fileExtension = fileName.split('.').pop().toLowerCase();
       if (fileExtension !== 'zip') {
-        return response.status(HttpStatus.BAD_REQUEST).send({ error: 'File is not a ZIP file' });
+        throw new BadRequestException({ error: 'File is not a ZIP file' })
       }
       const publicUrl = await this.minioService.uploadZip(file);
-      response.status(HttpStatus.OK).send({ status: 'Zip file uploaded successfully', url: publicUrl });
+      return { status: 'Zip file uploaded successfully', url: publicUrl };
     } catch (error : any) {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
-      response.status(error.status).send({ error: 'Failed to upload zip file', message: error.message });
+      throw new InternalServerErrorException({ error: 'Failed to upload zip file', message: error.message });
     }
   }
 

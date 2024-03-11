@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   CACHE_MANAGER,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -44,6 +46,8 @@ import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { SchoolServiceV2 } from './school/school.service.v2';
 import { JwtService } from '@nestjs/jwt';
+import axios, { AxiosResponse } from 'axios';
+import { FastifyRequest } from 'fastify';
 
 const moment = require('moment');
 
@@ -1576,4 +1580,46 @@ export class AppService {
       },
     ];
   }
+
+  public async callBhashiniService(req: FastifyRequest) {
+    const endpoint = 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline';
+    return await this.bhashiniProxy(endpoint, req);
+  }
+
+  public async bhashiniProxy(
+    apiUrl: string,
+    req: FastifyRequest,
+  ): Promise<AxiosResponse<any>> {
+    try {
+      this.logger.debug('Calling bhashini proxy service')
+      const authorizationHeader = req.headers['authorization'];
+      const contentTypeHeader = req.headers['content-type'];
+
+      const headers = {
+        Authorization: authorizationHeader,
+        'Content-Type': contentTypeHeader,
+      };
+
+      const body = req.body;
+      const params = req.params;
+
+      const requestOptions = { headers, params };
+
+      const { data } = await axios.post(apiUrl, body, requestOptions);
+      this.logger.debug('Bhashini proxy service called successfully')
+      return data;
+    } catch (error: any) {
+      this.logger.error('Error in Bhashini proxy Service:', error);
+
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          error: 'Bhashini API request failed',
+          message: error?.message || 'Internal Server Error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 }

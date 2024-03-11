@@ -43,6 +43,8 @@ import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 import { GetAppActionsDto } from './dto/AppActions.dto';
+import { FastifyRequest } from 'fastify';
+import { Throttle } from '@nestjs/throttler';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -376,5 +378,14 @@ export class AppController {
       throw new NotImplementedException('Only Examiners are allowed to access this endpoint.');
     }
     return this.appService.getExaminerHomeScreenMetric(mentor, params.cycle_id);
+  }
+
+  @Post('/api/bhashini')
+  //@ts-ignore
+  @Throttle({ default: { limit: process.env.BHASHNI_THROTTLE_LIMIT || 500, ttl: process.env.BHASHNI_THROTTLE_TTL || 60000 } })
+  async bhashini(
+    @Request() request: FastifyRequest
+    ) {
+    return this.appService.callBhashiniService(request);
   }
 }

@@ -55,7 +55,6 @@ const moment = require('moment');
 export class AppService {
   protected readonly logger = new Logger(AppService.name);
   protected allTables: Record<string, any> = {};
-  private readonly bhashiniApiEndpoint: string;
 
   constructor(
     protected readonly prismaService: PrismaService,
@@ -68,7 +67,6 @@ export class AppService {
     protected readonly schoolService: SchoolServiceV2,
     private readonly jwtService: JwtService,
   ) {
-    this.bhashiniApiEndpoint = this.configService.getOrThrow<string>('BHASHINI_API_ENDPOINT');
     this.prismaService.$queryRaw`
       SELECT table_name
         FROM information_schema.tables
@@ -1584,16 +1582,16 @@ export class AppService {
   }
 
   public async callBhashiniService(req: FastifyRequest) {
-    const endpoint = '/services/inference/pipeline';
+    const endpoint = 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline';
     return await this.bhashiniProxy(endpoint, req);
   }
 
   public async bhashiniProxy(
-    endpoint: string,
+    apiUrl: string,
     req: FastifyRequest,
   ): Promise<AxiosResponse<any>> {
     try {
-      this.logger.log('Calling bhashini proxy service')
+      this.logger.debug('Calling bhashini proxy service')
       const authorizationHeader = req.headers['authorization'];
       const contentTypeHeader = req.headers['content-type'];
 
@@ -1604,12 +1602,11 @@ export class AppService {
 
       const body = req.body;
       const params = req.params;
-      const apiUrl = this.bhashiniApiEndpoint + endpoint;
 
       const requestOptions = { headers, params };
 
       const { data } = await axios.post(apiUrl, body, requestOptions);
-      this.logger.log('Bhashini proxy service called successfully')
+      this.logger.debug('Bhashini proxy service called successfully')
       return data;
     } catch (error: any) {
       this.logger.error('Error in Bhashini proxy Service:', error);

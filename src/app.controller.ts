@@ -381,10 +381,11 @@ export class AppController {
   }
 
   @Post('/api/bhashini')
-  @Throttle({ default: { limit: 500, ttl: 60000 } })
+  //@ts-ignore
+  @Throttle({ default: { limit: process.env.BHASHNI_THROTTLE_LIMIT || 500, ttl: process.env.BHASHNI_THROTTLE_TTL || 60000 } })
   async bhashini(
     @Request() request: FastifyRequest
-  ) {
+    ) {
     return this.appService.callBhashiniService(request);
   }
 }

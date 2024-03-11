@@ -25,6 +25,8 @@ import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssess
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { Cache } from 'cache-manager';
 import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
+import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateStudentsResponse.dto';
+import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 
 @Injectable()
 export class AdminService {
@@ -433,23 +435,52 @@ export class AdminService {
     });
   }
 
-  async updateStudents(students: UpdateStudent[]) {
-    return Promise.all(
-      students.map((student) => {
+  async updateStudents(
+    students: UpdateStudent[],
+  ): Promise<StudentsUpdateResponseDto> {
+    const failedStudentUpdates: StudentsUpdateResponse[] = [];
+    const successStudentUpdates: StudentsUpdateResponse[] = [];
+
+    await Promise.all(
+      students.map(async (student: UpdateStudent) => {
         if (student.dob) {
           student.dob = new Date(student.dob);
         }
         if (student.admission_date) {
           student.admission_date = new Date(student.admission_date);
         }
-        student.deleted_at = null;  // whenever there is an update, we'll restore the student
-        return this.prismaService.students.update({
-          // @ts-ignore
-          where: { unique_id: student.unique_id }, data: student,
-        });
+        student.deleted_at = null; // whenever there is an update, we'll restore the student
+        try {
+          await this.prismaService.students.update({
+            where: { unique_id: student.unique_id },
+            // @ts-ignore
+            data: student,
+          });
+          
+          successStudentUpdates.push({
+            unique_id: student.unique_id,
+            message: 'Successfully updated',
+          });
+        } catch (error: any) {
+          const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+          failedStudentUpdates.push({
+            unique_id: student.unique_id,
+            message: errorMessage,
+          });
+        }
       }),
     );
+    return {
+      message: `Successfully updated ${
+        successStudentUpdates.length
+      } students out of ${
+        successStudentUpdates.length + failedStudentUpdates.length
+      }`,
+      failedStudentUpdates,
+      successStudentUpdates,
+    };
   }
+
 
   async deleteStudents(students: DeleteStudent[]) {
     return this.prismaService.students.updateMany({

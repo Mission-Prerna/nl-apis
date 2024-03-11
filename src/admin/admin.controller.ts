@@ -160,11 +160,7 @@ export class AdminController {
   async updateStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
   ) {
-    await this.service.updateStudents(body);
-    return {
-      msg: 'Success!',
-      data: null,
-    };
+    return await this.service.updateStudents(body);
   }
 
   @Delete('/students')

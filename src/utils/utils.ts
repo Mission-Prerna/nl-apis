@@ -5,7 +5,7 @@ import {
 } from '@prisma/client/runtime/library';
 
 export function getPrismaErrorStatusAndMessage(error: any): {
-  errorMessage: string | undefined;
+  errorMessage: string;
   statusCode: number;
 } {
   if (

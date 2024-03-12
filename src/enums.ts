@@ -83,6 +83,7 @@ export enum CacheConstants {
   TTL_METADATA = 86400, // in seconds
   TTL_SCHOOL_STUDENTS = 86400, // in seconds
   TTL_SCHOOL_STUDENTS_COUNT = 86400, // in seconds
+  TTL_MENTOR_PERFORMANCE_INSIGHTS = 5 * 60 * 1000, // 5 minutes in milliseconds
 }
 
 export enum Role {
@@ -113,7 +114,7 @@ export type MentorMonthlyMetrics = {
   avg_time: number,
   grade_1_assessments: number,
   grade_2_assessments: number,
-  grade_3_assessments: number
+  grade_3_assessments: number,
 }
 
 export type MentorWeeklyMetrics = {

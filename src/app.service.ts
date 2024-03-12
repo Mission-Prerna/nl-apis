@@ -879,6 +879,126 @@ export class AppService {
     };
   }
 
+  async getMentorHomeScreenMetricV2(
+    mentor: Mentor,
+    month: null | number = null,
+    year: null | number = null,
+  ) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1; // since getMonth() gives index
+    }
+
+    // We'll check if there is data in the cache
+    const cacheData = await this.cacheService.get(
+      `${CacheKeyMentorMonthlyMetrics(mentor.id, month, year)}_v2`,
+    );
+
+    const insightDetails = cacheData
+      ? cacheData
+      : await this.getMentorInsightsV2(mentor, month, year);
+
+    // If there is cache data still calculating the response for latest updated data synchronously in background and updating cache also
+    if (cacheData) {
+      this.getMentorInsightsV2(mentor, month, year);
+    }
+
+    return {
+      totalInsights: [
+        {
+          type: 'school',
+          label: this.i18n.t(`common.Assessed schools`, { lang: lang }),
+          count: Number(insightDetails?.schools_visited),
+        },
+        {
+          type: 'student',
+          label: this.i18n.t(`common.Assessed students`, { lang: lang }),
+          count: Number(insightDetails?.assessments_taken),
+        },
+        {
+          type: 'time',
+          label: this.i18n.t(`common.AVERAGE_TIME_PER_ASSESSMENT`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.avg_time),
+        },
+      ],
+      gradesInsights: [
+        {
+          type: `grade_1`,
+          label: this.i18n.t(`common.Class 1 Assessed`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_1_assessments) || 0,
+        },
+        {
+          type: `grade_2`,
+          label: this.i18n.t(`common.Class 2 Assessed`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_2_assessments) || 0,
+        },
+        {
+          type: `grade_3`,
+          label: this.i18n.t(`common.Class 3 Assessed`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_3_assessments) || 0,
+        },
+      ],
+      month,
+      year,
+      updated_at: insightDetails?.max_updated_at,
+    };
+  }
+
+  async getMentorInsightsV2(mentor: Mentor, month: number, year: number) {
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0); // first day of current month
+    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
+
+    try {
+      const query = `
+      SELECT
+          MAX(updated_at) AS max_updated_at,
+          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
+          COUNT(DISTINCT student_session) AS assessments_taken,
+          COUNT(DISTINCT CASE WHEN grade = 1 THEN student_session END) AS grade_1_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 2 THEN student_session END) AS grade_2_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 3 THEN student_session END) AS grade_3_assessments
+      FROM assessments
+      WHERE mentor_id = $1
+          AND submission_timestamp > $2
+          AND submission_timestamp < $3;
+  `;
+
+      const result: Record<string, any> =
+        await this.prismaService.$queryRawUnsafe(
+          query,
+          mentor.id,
+          firstDayTimestamp,
+          lastDayTimestamp,
+        );
+
+      await this.cacheService.set(
+        `${CacheKeyMentorMonthlyMetrics(mentor.id, month, year)}_v2`,
+        result[0],
+        //@ts-ignore
+        {
+          ttl: CacheConstants.TTL_MENTOR_PERFORMANCE_INSIGHTS,
+        },
+      );
+
+      return result[0];
+    } catch (e) {
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
+    }
+  }
+
   async getAppActionsForMentor(mentor: Mentor, timeStamp: string) {
     const mentorId = Number(mentor.id);
     const actorId = mentor.actor_id;

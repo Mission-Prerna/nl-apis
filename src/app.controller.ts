@@ -220,6 +220,26 @@ export class AppController {
     );
   }
 
+  @Get('/api/v2/mentor/performance/insights')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getMentorPerformanceInsights(
+    @Query() queryParams: GetMentorDetailsDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    if (mentor.actor_id != ActorEnum.MENTOR) {
+      throw new NotImplementedException(
+        'Only Mentors are allowed to access this endpoint.',
+      );
+    }
+    return this.appService.getMentorHomeScreenMetricV2(
+      mentor,
+      queryParams.month,
+      queryParams.year,
+    );
+  }
+
   @Get('/api/actions')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)

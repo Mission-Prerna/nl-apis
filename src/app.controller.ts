@@ -380,7 +380,7 @@ export class AppController {
     return this.appService.getExaminerHomeScreenMetric(mentor, params.cycle_id);
   }
 
-  @Post('/api/bhashini')
+  @Post('/api/bhashini*')
   //@ts-ignore
   @Throttle({ default: { limit: process.env.BHASHNI_THROTTLE_LIMIT || 500, ttl: process.env.BHASHNI_THROTTLE_TTL || 60000 } })
   async bhashini(

@@ -1592,16 +1592,13 @@ export class AppService {
     req: FastifyRequest,
   ): Promise<AxiosResponse<any>> {
     try {
-      this.logger.debug('Calling bhashini proxy service');
-      const authorizationHeader = req.headers['authorization'];
-      const contentTypeHeader = req.headers['content-type'];
-      
-      const headers = {
-        Authorization: authorizationHeader,
-        'Content-Type': contentTypeHeader,
-      };
-      
       const apiUrl = `https://dhruva-api.bhashini.gov.in` + endpoint;
+      this.logger.debug(`Calling bhashini proxy service at url:- ${apiUrl}`);
+      
+      const headers = req.headers
+      delete headers['host']
+      delete headers['content-length']
+
       const body = req.body;
       const params = req.params;
 

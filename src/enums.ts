@@ -83,6 +83,7 @@ export enum CacheConstants {
   TTL_METADATA = 86400, // in seconds
   TTL_SCHOOL_STUDENTS = 86400, // in seconds
   TTL_SCHOOL_STUDENTS_COUNT = 86400, // in seconds
+  TTL_MENTOR_PERFORMANCE_INSIGHTS = 5 * 60 * 1000, // 5 minutes in milliseconds
 }
 
 export enum Role {
@@ -113,7 +114,7 @@ export type MentorMonthlyMetrics = {
   avg_time: number,
   grade_1_assessments: number,
   grade_2_assessments: number,
-  grade_3_assessments: number
+  grade_3_assessments: number,
 }
 
 export type MentorWeeklyMetrics = {
@@ -153,6 +154,11 @@ export function CacheKeyMentorMonthlyVisitedSchools(mentorId: bigint, month: num
 export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, year: number) {
   const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
   return `hm.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
+}
+
+export function CacheKeyMentorMonthlyMetricsV2(mentorId: bigint, month: number, year: number) {
+  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+  return `v2_hm.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
 export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {

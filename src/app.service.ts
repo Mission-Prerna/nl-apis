@@ -20,6 +20,7 @@ import {
   CacheConstants,
   CacheKeyMentorDailyMetrics,
   CacheKeyMentorDetail,
+  CacheKeyMentorMonthlyMetricsV2,
   CacheKeyMentorMonthlyMetrics,
   CacheKeyMentorSchoolList,
   CacheKeyMentorWeeklyMetrics,
@@ -894,7 +895,7 @@ export class AppService {
 
     // We'll check if there is data in the cache
     const cacheData = await this.cacheService.get(
-      `${CacheKeyMentorMonthlyMetrics(mentor.id, month, year)}_v2`,
+      `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,
     );
 
     const insightDetails = cacheData
@@ -960,31 +961,23 @@ export class AppService {
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
 
     try {
-      const query = `
+      const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
-          MAX(updated_at) AS max_updated_at,
-          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
-          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
-          COUNT(DISTINCT student_session) AS assessments_taken,
-          COUNT(DISTINCT CASE WHEN grade = 1 THEN student_session END) AS grade_1_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 2 THEN student_session END) AS grade_2_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 3 THEN student_session END) AS grade_3_assessments
+        MAX(updated_at) AS max_updated_at,
+        COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+        COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
+        COUNT(DISTINCT student_session) AS assessments_taken,
+        COUNT(DISTINCT CASE WHEN grade = 1 THEN student_session END) AS grade_1_assessments,
+        COUNT(DISTINCT CASE WHEN grade = 2 THEN student_session END) AS grade_2_assessments,
+        COUNT(DISTINCT CASE WHEN grade = 3 THEN student_session END) AS grade_3_assessments
       FROM assessments
-      WHERE mentor_id = $1
-          AND submission_timestamp > $2
-          AND submission_timestamp < $3;
-  `;
-
-      const result: Record<string, any> =
-        await this.prismaService.$queryRawUnsafe(
-          query,
-          mentor.id,
-          firstDayTimestamp,
-          lastDayTimestamp,
-        );
+      WHERE mentor_id = ${mentor.id}
+        AND submission_timestamp > ${firstDayTimestamp}
+        AND submission_timestamp < ${lastDayTimestamp}
+    `;
 
       await this.cacheService.set(
-        `${CacheKeyMentorMonthlyMetrics(mentor.id, month, year)}_v2`,
+        `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,
         result[0],
         //@ts-ignore
         {

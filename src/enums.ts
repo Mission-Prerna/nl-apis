@@ -156,6 +156,11 @@ export function CacheKeyMentorMonthlyMetrics(mentorId: bigint, month: number, ye
   return `hm.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
 }
 
+export function CacheKeyMentorMonthlyMetricsV2(mentorId: bigint, month: number, year: number) {
+  const monthIdentifier = month < 10 ? `0${month.toString()}` : `${month.toString()}`;
+  return `v2_hm.monthly:${year.toString()}${monthIdentifier}:mentor:${mentorId.toString()}`;
+}
+
 export function CacheKeyMentorWeeklyMetrics(mentorId: bigint, week: number, year: number) {
   const weekIdentifier = week < 10 ? `0${week.toString()}` : `${week.toString()}`;
   return `hm.weekly:${year.toString()}${weekIdentifier}:mentor:${mentorId.toString()}`;

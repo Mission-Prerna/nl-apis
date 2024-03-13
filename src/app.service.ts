@@ -952,7 +952,7 @@ export class AppService {
       ],
       month,
       year,
-      updated_at: insightDetails?.max_updated_at,
+      updated_at: moment(insightDetails?.max_updated_at).valueOf(),  // changing value to epoch format
     };
   }
 

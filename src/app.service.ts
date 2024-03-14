@@ -916,7 +916,7 @@ export class AppService {
         },
         {
           type: 'student',
-          label: this.i18n.t(`common.Assessed students`, { lang: lang }),
+          label: this.i18n.t(`common.COMPLETED_STUDENT_ASSESSMENTS`, { lang: lang }),
           count: Number(insightDetails?.assessments_taken),
         },
         {
@@ -930,21 +930,21 @@ export class AppService {
       gradesInsights: [
         {
           type: `grade_1`,
-          label: this.i18n.t(`common.Class 1 Assessed`, {
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_1`, {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_1_assessments) || 0,
         },
         {
           type: `grade_2`,
-          label: this.i18n.t(`common.Class 2 Assessed`, {
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_2`, {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_2_assessments) || 0,
         },
         {
           type: `grade_3`,
-          label: this.i18n.t(`common.Class 3 Assessed`, {
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_3`, {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_3_assessments) || 0,

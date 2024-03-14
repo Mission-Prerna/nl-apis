@@ -11,5 +11,9 @@
   "Class 1 Assessed": "कक्षा 1 के आकलन",
   "Class 2 Assessed": "कक्षा 2 के आकलन",
   "Class 3 Assessed": "कक्षा 3 के आकलन",
-  "AVERAGE_TIME_PER_ASSESSMENT": "औसत समय प्रति आंकलन"
+  "AVERAGE_TIME_PER_ASSESSMENT": "औसत समय प्रति आंकलन",
+  "COMPLETED_STUDENT_ASSESSMENTS": "छात्रों के आंकलन पूरे किये",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_1": "आंकलन कक्षा 1 में पूरे किये",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_2": "आंकलन कक्षा 2 में पूरे किये",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "आंकलन कक्षा 3 में पूरे किये"
 }

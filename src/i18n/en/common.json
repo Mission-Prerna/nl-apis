@@ -11,5 +11,9 @@
   "Class 1 Assessed": "Class 1 Assessed",
   "Class 2 Assessed": "Class 2 Assessed",
   "Class 3 Assessed": "Class 3 Assessed",
-  "AVERAGE_TIME_PER_ASSESSMENT": "Average time per assessment"
+  "AVERAGE_TIME_PER_ASSESSMENT": "Average time per assessment",
+  "COMPLETED_STUDENT_ASSESSMENTS": "completed student assessments",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_1": "Assessments completed in class 1",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_2": "Assessments completed in class 2",
+  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "Assessments completed in class 3"
 }

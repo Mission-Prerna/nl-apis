@@ -963,18 +963,34 @@ export class AppService {
     try {
       const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
-        MAX(updated_at) AS max_updated_at,
-        COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
-        COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
-        COUNT(DISTINCT student_session) AS assessments_taken,
-        COUNT(DISTINCT CASE WHEN grade = 1 THEN student_session END) AS grade_1_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 2 THEN student_session END) AS grade_2_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 3 THEN student_session END) AS grade_3_assessments
+          MAX(updated_at) AS max_updated_at,
+          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
+          COUNT(DISTINCT 
+              CASE 
+                  WHEN student_id IS NOT NULL THEN student_id    -- Counting distinct student_id whose value in not null
+              END
+          ) AS assessments_taken,
+          COUNT(DISTINCT CASE WHEN grade = 1 THEN 
+              CASE 
+                  WHEN student_id IS NOT NULL THEN student_id 
+              END
+          END) AS grade_1_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 2 THEN 
+              CASE 
+                  WHEN student_id IS NOT NULL THEN student_id 
+              END
+          END) AS grade_2_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 3 THEN 
+              CASE 
+                  WHEN student_id IS NOT NULL THEN student_id 
+              END
+          END) AS grade_3_assessments
       FROM assessments
       WHERE mentor_id = ${mentor.id}
-        AND submission_timestamp > ${firstDayTimestamp}
-        AND submission_timestamp < ${lastDayTimestamp}
-    `;
+          AND submission_timestamp > ${firstDayTimestamp}
+          AND submission_timestamp < ${lastDayTimestamp}
+      `;
 
       await this.cacheService.set(
         `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,

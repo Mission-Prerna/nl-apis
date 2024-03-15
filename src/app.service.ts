@@ -965,27 +965,12 @@ export class AppService {
       SELECT
           MAX(updated_at) AS max_updated_at,
           COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
-          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
-          COUNT(DISTINCT 
-              CASE 
-                  WHEN student_id IS NOT NULL THEN student_id    -- Counting distinct student_id whose value in not null
-              END
-          ) AS assessments_taken,
-          COUNT(DISTINCT CASE WHEN grade = 1 THEN 
-              CASE 
-                  WHEN student_id IS NOT NULL THEN student_id 
-              END
-          END) AS grade_1_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 2 THEN 
-              CASE 
-                  WHEN student_id IS NOT NULL THEN student_id 
-              END
-          END) AS grade_2_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 3 THEN 
-              CASE 
-                  WHEN student_id IS NOT NULL THEN student_id 
-              END
-          END) AS grade_3_assessments
+          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,  
+          -- Counting distinct student_id, not null and greater that 0 to exclude anonymous students
+          COUNT(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 1 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 2 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 3 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
       FROM assessments
       WHERE mentor_id = ${mentor.id}
           AND submission_timestamp > ${firstDayTimestamp}

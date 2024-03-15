@@ -963,18 +963,19 @@ export class AppService {
     try {
       const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
-        MAX(updated_at) AS max_updated_at,
-        COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
-        COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,
-        COUNT(DISTINCT student_session) AS assessments_taken,
-        COUNT(DISTINCT CASE WHEN grade = 1 THEN student_session END) AS grade_1_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 2 THEN student_session END) AS grade_2_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 3 THEN student_session END) AS grade_3_assessments
+          MAX(updated_at) AS max_updated_at,
+          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,  
+          -- Counting distinct student_id, not null and greater that 0 to exclude anonymous students
+          COUNT(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 1 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 2 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
+          COUNT(DISTINCT student_id) FILTER (WHERE grade = 3 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
       FROM assessments
       WHERE mentor_id = ${mentor.id}
-        AND submission_timestamp > ${firstDayTimestamp}
-        AND submission_timestamp < ${lastDayTimestamp}
-    `;
+          AND submission_timestamp > ${firstDayTimestamp}
+          AND submission_timestamp < ${lastDayTimestamp}
+      `;
 
       await this.cacheService.set(
         `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,

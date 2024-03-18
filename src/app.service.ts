@@ -895,7 +895,7 @@ export class AppService {
 
     // We'll check if there is data in the cache
     const cacheData = await this.cacheService.get(
-      CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year),
+      CacheKeyMentorMonthlyMetricsV2(mentor.phone_no, month, year),
     );
 
     const insightDetails = cacheData
@@ -978,7 +978,7 @@ export class AppService {
       `;
 
       await this.cacheService.set(
-        CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year),
+        CacheKeyMentorMonthlyMetricsV2(mentor.phone_no, month, year),
         result[0],
         //@ts-ignore
         {

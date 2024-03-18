@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyMetricsV2, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -646,7 +646,7 @@ export class AdminService {
       CacheKeyMetadata(), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
-      CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear),
+      CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear)
     ]
     const promises = keys.map(key => this.cacheService.del(key))
     return Promise.all(promises)
@@ -753,11 +753,16 @@ export class AdminService {
   async clearMentorCache(phoneNumbers: string[], actorIds: ActorEnum[]) {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
-    const mentorSchoolListPromises = phoneNumbers.map((phoneNumber) => {
-      return this.cacheService.del(
-        CacheKeyMentorSchoolList(phoneNumber, month, year),
-      );
-    });
+
+    const mentorCachePromises = phoneNumbers.map((phoneNumber) => {
+      const schoolListKey = CacheKeyMentorSchoolList(phoneNumber, month, year);
+      const metricsV2Key = CacheKeyMentorMonthlyMetricsV2(phoneNumber, month, year);
+      
+      return Promise.all([
+          this.cacheService.del(schoolListKey),
+          this.cacheService.del(metricsV2Key)
+      ]);
+  });
 
     const mentorDetailPromises = phoneNumbers.map((phoneNumber) => {
       return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
@@ -773,8 +778,8 @@ export class AdminService {
     try {
       await Promise.all([
         ...mentorDetailPromises,
-        ...mentorSchoolListPromises,
         ...metadataPromises,
+        ...mentorCachePromises
       ]);
     } catch (e) {
       this.logger.error(e);

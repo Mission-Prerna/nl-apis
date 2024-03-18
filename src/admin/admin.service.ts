@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyMetricsV2, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -647,6 +647,7 @@ export class AdminService {
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
       CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear),
+      CacheKeyMentorMonthlyMetricsV2(mentorId, currentMonth, currentYear),
     ]
     const promises = keys.map(key => this.cacheService.del(key))
     return Promise.all(promises)

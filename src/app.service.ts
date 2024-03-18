@@ -895,7 +895,7 @@ export class AppService {
 
     // We'll check if there is data in the cache
     const cacheData = await this.cacheService.get(
-      `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,
+      CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year),
     );
 
     const insightDetails = cacheData
@@ -963,14 +963,14 @@ export class AppService {
     try {
       const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
-          MAX(updated_at) AS max_updated_at,
+        MAX(updated_at) AS max_updated_at,
           COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
           COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,  
-          -- Counting distinct student_id, not null and greater that 0 to exclude anonymous students
-          COUNT(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
-          COUNT(DISTINCT student_id) FILTER (WHERE grade = 1 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
-          COUNT(DISTINCT student_id) FILTER (WHERE grade = 2 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
-          COUNT(DISTINCT student_id) FILTER (WHERE grade = 3 AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
+          -- Counting distinct student_id, not null, greater than 0, and not ending with ".0" to exclude anonymous students
+          COUNT(DISTINCT student_id) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
+          COUNT(DISTINCT CASE WHEN grade = 1 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 2 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 3 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
       FROM assessments
       WHERE mentor_id = ${mentor.id}
           AND submission_timestamp > ${firstDayTimestamp}
@@ -978,7 +978,7 @@ export class AppService {
       `;
 
       await this.cacheService.set(
-        `${CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year)}`,
+        CacheKeyMentorMonthlyMetricsV2(mentor.id, month, year),
         result[0],
         //@ts-ignore
         {

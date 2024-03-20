@@ -43,6 +43,8 @@ import { AdminService } from './admin/admin.service';
 import { AssessmentCycleValidatorDto } from './dto/AssessmentCycleValidator.dto';
 import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto';
 import { GetAppActionsDto } from './dto/AppActions.dto';
+import { FastifyRequest } from 'fastify';
+import { Throttle } from '@nestjs/throttler';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -218,6 +220,26 @@ export class AppController {
     );
   }
 
+  @Get('/api/v2/mentor/performance/insights')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getMentorPerformanceInsights(
+    @Query() queryParams: GetMentorDetailsDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    if (mentor.actor_id != ActorEnum.MENTOR) {
+      throw new NotImplementedException(
+        'Only Mentors are allowed to access this endpoint.',
+      );
+    }
+    return this.appService.getMentorHomeScreenMetricV2(
+      mentor,
+      queryParams.month,
+      queryParams.year,
+    );
+  }
+
   @Get('/api/actions')
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
@@ -232,6 +254,12 @@ export class AppController {
   @Get('/api/metadata')
   async getMetadata() {
     return this.appService.getMetadata();
+  }
+
+  @Get('/api/v2/metadata')
+  async getMetadataV2(@Request() request: any) {
+    const headers = request.headers;
+    return this.appService.getMetadataV2(headers);
   }
 
   @Patch('/api/mentor/pin')
@@ -370,5 +398,14 @@ export class AppController {
       throw new NotImplementedException('Only Examiners are allowed to access this endpoint.');
     }
     return this.appService.getExaminerHomeScreenMetric(mentor, params.cycle_id);
+  }
+
+  @Post('/api/bhashini*')
+  //@ts-ignore
+  @Throttle({ default: { limit: process.env.BHASHNI_THROTTLE_LIMIT || 500, ttl: process.env.BHASHNI_THROTTLE_TTL || 60000 } })
+  async bhashini(
+    @Request() request: FastifyRequest
+    ) {
+    return this.appService.callBhashiniService(request);
   }
 }

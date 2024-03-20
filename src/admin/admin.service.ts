@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyMetricsV2, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -25,6 +25,8 @@ import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssess
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { Cache } from 'cache-manager';
 import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
+import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateStudentsResponse.dto';
+import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 
 @Injectable()
 export class AdminService {
@@ -433,22 +435,50 @@ export class AdminService {
     });
   }
 
-  async updateStudents(students: UpdateStudent[]) {
-    return Promise.all(
-      students.map((student) => {
+  async updateStudents(
+    students: UpdateStudent[],
+  ): Promise<StudentsUpdateResponseDto> {
+    const failedStudentUpdates: StudentsUpdateResponse[] = [];
+    const successStudentUpdates: StudentsUpdateResponse[] = [];
+
+    await Promise.all(
+      students.map(async (student: UpdateStudent) => {
         if (student.dob) {
           student.dob = new Date(student.dob);
         }
         if (student.admission_date) {
           student.admission_date = new Date(student.admission_date);
         }
-        student.deleted_at = null;  // whenever there is an update, we'll restore the student
-        return this.prismaService.students.update({
-          // @ts-ignore
-          where: { unique_id: student.unique_id }, data: student,
-        });
+        student.deleted_at = null; // whenever there is an update, we'll restore the student
+        try {
+          await this.prismaService.students.update({
+            where: { unique_id: student.unique_id },
+            // @ts-ignore
+            data: student,
+          });
+          
+          successStudentUpdates.push({
+            unique_id: student.unique_id,
+            message: 'Successfully updated',
+          });
+        } catch (error: any) {
+          const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+          failedStudentUpdates.push({
+            unique_id: student.unique_id,
+            message: errorMessage,
+          });
+        }
       }),
     );
+    return {
+      message: `Successfully updated ${
+        successStudentUpdates.length
+      } students out of ${
+        successStudentUpdates.length + failedStudentUpdates.length
+      }`,
+      failedStudentUpdates,
+      successStudentUpdates,
+    };
   }
 
   async deleteStudents(students: DeleteStudent[]) {
@@ -602,11 +632,21 @@ export class AdminService {
   async clearAllMentorCache(mentorId: bigint) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear() 
+    const actorId = await this.prismaService.mentor.findUniqueOrThrow({
+      where: {
+        id: mentorId,
+      },
+      select: {
+        actor_id: true,
+      },
+    });
+
     const keys = [
+      CacheKeyMetadata(actorId.actor_id), 
       CacheKeyMetadata(), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
-      CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear),
+      CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear)
     ]
     const promises = keys.map(key => this.cacheService.del(key))
     return Promise.all(promises)
@@ -710,19 +750,37 @@ export class AdminService {
     return Promise.all(promises)
   }
 
-  async clearMentorCache(phoneNumbers: string[]) {
+  async clearMentorCache(phoneNumbers: string[], actorIds: ActorEnum[]) {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
-    const mentorSchoolListPromises = phoneNumbers.map(phoneNumber => {
-      return this.cacheService.del(CacheKeyMentorSchoolList(phoneNumber, month, year))
+
+    const mentorCachePromises = phoneNumbers.map((phoneNumber) => {
+      const schoolListKey = CacheKeyMentorSchoolList(phoneNumber, month, year);
+      const metricsV2Key = CacheKeyMentorMonthlyMetricsV2(phoneNumber, month, year);
+      
+      return Promise.all([
+          this.cacheService.del(schoolListKey),
+          this.cacheService.del(metricsV2Key)
+      ]);
+  });
+
+    const mentorDetailPromises = phoneNumbers.map((phoneNumber) => {
+      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
 
-    const mentorDetailPromises = phoneNumbers.map(phoneNumber => {
-      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber))
-    });
+    const metadataPromises =
+      actorIds.length !== 0
+        ? actorIds.map((actorId) => {
+            return this.cacheService.del(CacheKeyMetadata(actorId));
+          })
+        : [this.cacheService.del(CacheKeyMetadata())];
 
     try {
-      await Promise.all([...mentorDetailPromises, ...mentorSchoolListPromises, this.cacheService.del(CacheKeyMetadata())]);
+      await Promise.all([
+        ...mentorDetailPromises,
+        ...metadataPromises,
+        ...mentorCachePromises
+      ]);
     } catch (e) {
       this.logger.error(e);
       return { status: 'Cache Clearing Failed', error: e }

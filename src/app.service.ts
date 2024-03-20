@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   CACHE_MANAGER,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -18,6 +20,7 @@ import {
   CacheConstants,
   CacheKeyMentorDailyMetrics,
   CacheKeyMentorDetail,
+  CacheKeyMentorMonthlyMetricsV2,
   CacheKeyMentorMonthlyMetrics,
   CacheKeyMentorSchoolList,
   CacheKeyMentorWeeklyMetrics,
@@ -43,6 +46,9 @@ import { DailyCacheManager, MonthlyCacheManager, WeeklyCacheManager } from './ca
 import { CreateBotTelemetryDto } from './dto/CreateBotTelemetry.dto';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { SchoolServiceV2 } from './school/school.service.v2';
+import { JwtService } from '@nestjs/jwt';
+import axios, { AxiosResponse } from 'axios';
+import { FastifyRequest } from 'fastify';
 
 const moment = require('moment');
 
@@ -60,6 +66,7 @@ export class AppService {
     // Circular dependency to SchoolService
     @Inject(forwardRef(() => SchoolServiceV2))
     protected readonly schoolService: SchoolServiceV2,
+    private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRaw`
       SELECT table_name
@@ -873,6 +880,119 @@ export class AppService {
     };
   }
 
+  async getMentorHomeScreenMetricV2(
+    mentor: Mentor,
+    month: null | number = null,
+    year: null | number = null,
+  ) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+    if (year === null) {
+      year = new Date().getFullYear();
+    }
+    if (month === null) {
+      month = new Date().getMonth() + 1; // since getMonth() gives index
+    }
+
+    // We'll check if there is data in the cache
+    const cacheData = await this.cacheService.get(
+      CacheKeyMentorMonthlyMetricsV2(mentor.phone_no, month, year),
+    );
+
+    const insightDetails = cacheData
+      ? cacheData
+      : await this.getMentorInsightsV2(mentor, month, year);
+
+    // If there is cache data still calculating the response for latest updated data synchronously in background and updating cache also
+    if (cacheData) {
+      this.getMentorInsightsV2(mentor, month, year);
+    }
+
+    return {
+      totalInsights: [
+        {
+          type: 'school',
+          label: this.i18n.t(`common.Assessed schools`, { lang: lang }),
+          count: Number(insightDetails?.schools_visited),
+        },
+        {
+          type: 'student',
+          label: this.i18n.t(`common.COMPLETED_STUDENT_ASSESSMENTS`, { lang: lang }),
+          count: Number(insightDetails?.assessments_taken),
+        },
+        {
+          type: 'time',
+          label: this.i18n.t(`common.AVERAGE_TIME_PER_ASSESSMENT`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.avg_time),
+        },
+      ],
+      gradesInsights: [
+        {
+          type: `grade_1`,
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_1`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_1_assessments) || 0,
+        },
+        {
+          type: `grade_2`,
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_2`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_2_assessments) || 0,
+        },
+        {
+          type: `grade_3`,
+          label: this.i18n.t(`common.ASSESSMENTS_COMPLETED_IN_CLASS_3`, {
+            lang: lang,
+          }),
+          count: Number(insightDetails?.grade_3_assessments) || 0,
+        },
+      ],
+      month,
+      year,
+      updated_at: moment(insightDetails?.max_updated_at).valueOf(),  // changing value to epoch format
+    };
+  }
+
+  async getMentorInsightsV2(mentor: Mentor, month: number, year: number) {
+    const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0); // first day of current month
+    const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
+
+    try {
+      const result: Record<string, any> = await this.prismaService.$queryRaw`
+      SELECT
+        MAX(updated_at) AS max_updated_at,
+          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,  
+          -- Counting distinct student_id, not null, greater than 0, and not ending with ".0" to exclude anonymous students
+          COUNT(DISTINCT student_id) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
+          COUNT(DISTINCT CASE WHEN grade = 1 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 2 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
+          COUNT(DISTINCT CASE WHEN grade = 3 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
+      FROM assessments
+      WHERE mentor_id = ${mentor.id}
+          AND submission_timestamp > ${firstDayTimestamp}
+          AND submission_timestamp < ${lastDayTimestamp}
+      `;
+
+      await this.cacheService.set(
+        CacheKeyMentorMonthlyMetricsV2(mentor.phone_no, month, year),
+        result[0],
+        //@ts-ignore
+        {
+          ttl: CacheConstants.TTL_MENTOR_PERFORMANCE_INSIGHTS,
+        },
+      );
+
+      return result[0];
+    } catch (e) {
+      this.logger.error(`Error occurred: ${e}`);
+      this.handleRequestError(e);
+    }
+  }
+
   async getAppActionsForMentor(mentor: Mentor, timeStamp: string) {
     const mentorId = Number(mentor.id);
     const actorId = mentor.actor_id;
@@ -913,26 +1033,34 @@ export class AppService {
     })
    }
 
-  async getMetadata() {
+
+   async getMetadata() {
     const cacheData = await this.cacheService.get(CacheKeyMetadata());
     if (cacheData) return cacheData;
-
-    const resp = {
-      actors: await this.prismaService.actors.findMany(),
-      designations: await this.prismaService.designations.findMany({
+  
+    const [
+      actors,
+      designations,
+      subjects,
+      assessmentTypes,
+      competencyMapping,
+      workflowRefIds
+    ] = await Promise.all([
+      this.prismaService.actors.findMany(),
+      this.prismaService.designations.findMany({
         select: {
           id: true,
           name: true,
         },
       }),
-      subjects: await this.prismaService.subjects.findMany({
+      this.prismaService.subjects.findMany({
         select: {
           id: true,
           name: true,
         },
       }),
-      assessment_types: await this.prismaService.assessment_types.findMany(),
-      competency_mapping: await this.prismaService.competency_mapping.findMany({
+      this.prismaService.assessment_types.findMany(),
+      this.prismaService.competency_mapping.findMany({
         select: {
           grade: true,
           learning_outcome: true,
@@ -944,7 +1072,7 @@ export class AppService {
           learning_outcome: 'asc',
         },
       }),
-      workflow_ref_ids: await this.prismaService.workflow_refids_mapping.findMany({
+      this.prismaService.workflow_refids_mapping.findMany({
         select: {
           competency_id: true,
           grade: true,
@@ -958,10 +1086,185 @@ export class AppService {
           is_active: true,
         },
       }),
+    ]);
+  
+    const resp = {
+      actors,
+      designations,
+      subjects,
+      assessment_types: assessmentTypes,
+      competency_mapping: competencyMapping,
+      workflow_ref_ids: workflowRefIds,
     };
+  
     // @ts-ignore
     await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
     return resp;
+  }
+  
+  // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
+  async getMetadataV2(headers: any) {    
+    // Retrieve the actor ID based on headers
+    const actorId = await this.getActorId(headers);
+
+    // Check if metadata is available in cache, return cached data if present
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
+    if (cacheData) return cacheData;
+
+    // Fetch competency mappings based on actor ID
+    const competencyMappings = await this.getCompetencyMappings(actorId);
+
+    // Extract unique, non-null, and non-undefined competency IDs
+    const uniqueCompetencyIds: number[] = Array.from(
+      new Set(
+        competencyMappings
+          .map((item) => item.competency_id as number)
+          .filter((id) => id !== null),
+      ),
+    );
+
+    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
+    let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
+      actorId,
+      uniqueCompetencyIds,
+    );
+
+    // Fetch additional metadata in parallel using Promise.all
+    const [actors, designations, subjects, assessmentTypes] =
+      await Promise.all([
+        this.prismaService.actors.findMany(),
+        this.prismaService.designations.findMany({
+          select: { id: true, name: true },
+        }),
+        this.prismaService.subjects.findMany({
+          select: { id: true, name: true },
+        }),
+        this.prismaService.assessment_types.findMany(),
+      ]);
+
+    // Construct the response object
+    const response = {
+      actors,
+      designations,
+      assessment_types: assessmentTypes,
+      subjects,
+      competency_mapping: competencyMappings,
+      workflow_ref_ids: workflowRefIdsMapping,
+    };
+
+    // Store the response in cache
+    // @ts-ignore
+    await this.cacheService.set(CacheKeyMetadata(actorId), response, {
+      ttl: CacheConstants.TTL_METADATA,
+    });
+
+    return response;
+  }
+
+  // Method to get the actor ID based on the provided headers
+  private async getActorId(headers: any): Promise<ActorEnum> {
+    try {
+      const token  = headers?.authorization?.split(' ')[1]
+      if (token) {
+        // Decode the authorization token to get user information
+        const decodedAuthTokenData = <Record<string, any>>(
+          this.jwtService.decode(token)
+        );
+
+        // Find mentor by phone number using Hasura user ID
+        const mentor = await this.findMentorByPhoneNumber(
+          decodedAuthTokenData?.['https://hasura.io/jwt/claims']?.[
+            'X-Hasura-User-Id'
+          ],
+        );
+
+        // Return the actor ID if mentor is found, otherwise return NULL
+        return mentor ? mentor.actor_id : ActorEnum.NULL;
+      } else {
+        // If no authorization token, default to PARENT actor
+        return ActorEnum.PARENT;
+      }
+    } catch (error) {
+      // Return NULL in case of an error during actor ID retrieval
+      return ActorEnum.NULL;
+    }
+  }
+
+  // Method to get competency mappings based on actor ID
+  private async getCompetencyMappings(actorId: ActorEnum) {
+    let learningOutcomePrefix = '';
+    switch (actorId) {
+      case ActorEnum.EXAMINER:
+        learningOutcomePrefix = 'Examiner:';
+        break;
+      case ActorEnum.DIET_MENTOR:
+      case ActorEnum.TEACHER:
+      case ActorEnum.MENTOR:
+      case ActorEnum.PARENT:
+        learningOutcomePrefix = 'Nipun Lakshya:';
+        break;
+      default:
+        break;
+    }
+
+    // Fetch competency mappings based on actor-specific learning outcome prefix
+    return await this.prismaService.competency_mapping.findMany({
+      where: {
+        learning_outcome: { startsWith: learningOutcomePrefix },
+      },
+      select: {
+        grade: true,
+        learning_outcome: true,
+        competency_id: true,
+        flow_state: true,
+        subject_id: true,
+      },
+      orderBy: { learning_outcome: 'asc' },
+    });
+  }
+
+  // Method to get workflow ref IDs mapping based on actor ID and competency mappings
+  private async getWorkflowRefIdsMapping(
+    actorId: ActorEnum,
+    uniqueCompetencyIds: number[],
+  ) {
+    let workflowRefIdsMapping: any[] = [];
+
+    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
+    if (actorId !== ActorEnum.NULL) {
+      workflowRefIdsMapping =
+        await this.prismaService.workflow_refids_mapping.findMany({
+          select: {
+            competency_id: true,
+            grade: true,
+            is_active: true,
+            ref_ids: true,
+            subject_id: true,
+            type: true,
+            assessment_type_id: true,
+          },
+          where: {
+            is_active: true,
+            competency_id: { in: uniqueCompetencyIds },
+          },
+        });
+    } else {
+      workflowRefIdsMapping =
+        await this.prismaService.workflow_refids_mapping.findMany({
+          select: {
+            competency_id: true,
+            grade: true,
+            is_active: true,
+            ref_ids: true,
+            subject_id: true,
+            type: true,
+            assessment_type_id: true,
+          },
+          where: { is_active: true },
+        });
+    }
+
+    return workflowRefIdsMapping;
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
@@ -1391,4 +1694,45 @@ export class AppService {
       },
     ];
   }
+
+  public async callBhashiniService(req: FastifyRequest) {
+    const separator = '/api/bhashini';
+    const endpoint = req.url.split(separator)[1];
+    return await this.bhashiniProxy(endpoint, req);
+  }
+
+  public async bhashiniProxy(
+    endpoint: string,
+    req: FastifyRequest,
+  ): Promise<AxiosResponse<any>> {
+    try {
+      const apiUrl = `https://dhruva-api.bhashini.gov.in` + endpoint;
+      this.logger.debug(`Calling bhashini proxy service at url:- ${apiUrl}`);
+      
+      const headers = req.headers
+      delete headers['host']
+      delete headers['content-length']
+
+      const body = req.body;
+      const params = req.params;
+
+      const requestOptions = { headers, params };
+
+      const { data } = await axios.post(apiUrl, body, requestOptions);
+      this.logger.debug('Bhashini proxy service called successfully');
+      return data;
+    } catch (error: any) {
+      this.logger.error('Error in Bhashini proxy Service:', error);
+
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          error: 'Bhashini API request failed',
+          message: error?.message || 'Internal Server Error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 }

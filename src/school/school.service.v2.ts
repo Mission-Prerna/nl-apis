@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger, UnauthorizedException, UnprocessableEntityException, forwardRef } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, UnprocessableEntityException, forwardRef } from '@nestjs/common';
+import * as Sentry from '@sentry/minimal';
+import { I18nContext, I18nService } from 'nestjs-i18n';
+import { AppService } from '../app.service';
+import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
+import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
 import {
   ActorEnum,
   AssessmentTypeEnum,
@@ -8,16 +13,13 @@ import {
   StudentMonthlyAssessmentStatus,
   TypeTeacherHomeOverview,
 } from '../enums';
-import { AppService } from '../app.service';
 import { PrismaService } from '../prisma.service';
-import { I18nContext, I18nService } from 'nestjs-i18n';
-import { StudentService } from './student.service';
 import { SchoolService } from './school.service';
-import { GetSchoolStudentsResultDto } from '../dto/GetSchoolStudentsResult.dto';
-import * as Sentry from '@sentry/minimal';
-import { GetSchoolStatusDto } from '../dto/GetSchoolStatus.dto';
-
-
+import { StudentService } from './student.service';
+import { CreateSchoolListDto, SchoolListExcelDataDto } from './dto/CreateSchoolList.dto';
+import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
+import * as XLSX from 'xlsx';
+import { CreateSchoolListResponseDto, SchoolListResponse } from './dto/CreateSchoolListResponse.dto';
 const moment = require('moment');
 
 @Injectable()
@@ -46,7 +48,9 @@ export class SchoolServiceV2 extends SchoolService {
     let studentsList: Array<Student> = [];
     switch (mentor.actor_id) {
       case ActorEnum.TEACHER:
-        // for teacher
+      case ActorEnum.MENTOR:
+      case ActorEnum.DIET_MENTOR:
+        // for teacher, mentor & diet mentor
         if (!month || !year) {
           throw new UnprocessableEntityException('Missing [month,year] params.');
         }
@@ -79,7 +83,7 @@ export class SchoolServiceV2 extends SchoolService {
             month: month,
           },
         });
-        throw new UnauthorizedException('You are not allowed to perform this action.');
+        throw new ForbiddenException('You are not allowed to perform this action.');
     }
 
     const query = `
@@ -521,17 +525,17 @@ export class SchoolServiceV2 extends SchoolService {
     if (gradeWisePercentage.length != 3) {
       // i.e. not all class assessments has been done (OR) no Nipun student percentage - the school is NOT_NIPUN
       isNipun = false;
-    } else if (gradeWisePercentage.filter(item => {
+    } else if (gradeWisePercentage.filter((item:any) => {
       return item.grade == 1 && item.percentage < cycleDetails[0].class_1_nipun_percentage;
     }).length) {
       // i.e. grade 1 % < cycle defined percentage
       isNipun = false;
-    } else if (gradeWisePercentage.filter(item => {
+    } else if (gradeWisePercentage.filter((item:any) => {
       return item.grade == 2 && item.percentage < cycleDetails[0].class_2_nipun_percentage;
     }).length) {
       // i.e. grade 2 % < cycle defined percentage
       isNipun = false;
-    } else if (gradeWisePercentage.filter(item => {
+    } else if (gradeWisePercentage.filter((item:any) => {
       return item.grade == 3 && item.percentage < cycleDetails[0].class_3_nipun_percentage;
     }).length) {
       // i.e. grade 3 % < cycle defined percentage
@@ -557,5 +561,170 @@ export class SchoolServiceV2 extends SchoolService {
         updated_at: new Date()
       },
     });
+  }
+
+  async createSchoolListFromFile(
+    file: any,
+  ): Promise<CreateSchoolListResponseDto> {
+    const buffer = await file.toBuffer();
+    const parsedData: SchoolListExcelDataDto[] = await this.parseExcel(buffer);
+    return await this.createSchoolListFromFileData(parsedData);
+  }
+
+  async createSchoolListFromFileData(
+    data: SchoolListExcelDataDto[],
+  ): Promise<CreateSchoolListResponseDto> {
+    // Initialize empty arrays for success and failure lists
+    const successSchoolList: SchoolListResponse[] = [];
+    const failureSchoolList: SchoolListResponse[] = [];
+
+    // to iterate over data concurrently using Promise.all
+    await Promise.all(
+      data.map(async (element) => {
+        const { block, nypanchayat, district } = element;
+
+        // Create payload for creating/updating entries in DB
+        const payload: CreateSchoolListDto = {
+          ...element,
+          block_id: -1, // initializing with a negative value
+          district_id: -1,
+          nyay_panchayat_id: undefined,
+        };
+
+        try {
+          const checkProperties = [
+            'block',
+            'nypanchayat',
+            'district',
+            'udise',
+            'geo_fence_enabled',
+            'is_sankul',
+            'area_type',
+            'category',
+          ];
+
+          for (const property of checkProperties) {
+            if (property === 'geo_fence_enabled' || property === 'is_sankul') {     // these are boolean properties so checking only for null or undefined
+              if (
+                element[property] === undefined ||
+                element[property] === null
+              ) {
+                throw new BadRequestException(
+                  `Missing or invalid value for property: ${property}`,
+                );
+              }
+            } else {
+              // @ts-ignore
+              if (!element[property]) {
+                throw new BadRequestException(
+                  `Missing or invalid value for property: ${property}`,
+                );
+              }
+            }
+          }
+
+          // Find district details
+          const districtDetails = await this.prismaService.districts.findUniqueOrThrow(
+            {
+              where: { name: district },
+            },
+          );
+          const district_id = districtDetails?.id || -1; // giving default id as -1 to avoid entry
+          payload.district_id = district_id; // updating payload district_id value
+
+          // Find block details
+          const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
+            where: { district_id_name: { district_id, name: block } },
+          });
+          const block_id = blockDetail?.id || -1;
+          payload.block_id = block_id; // updating payload block_id value
+
+          // Check for nypanchayat existence
+          if (nypanchayat && district_id !== -1 && block_id !== -1) {
+            const nypanchayatDetails =
+              await this.prismaService.nyay_panchayats.findUniqueOrThrow({
+                where: {
+                  name_district_id_block_id: {
+                    block_id,
+                    district_id,
+                    name: nypanchayat,
+                  },
+                },
+              });
+            payload.nyay_panchayat_id = nypanchayatDetails?.id; // updating payload nyay_panchayat_id value
+          }
+
+          // Upsert using prisma and handle success/failure cases
+          const response: any = await this.prismaService.school_list.upsert({
+            where: { udise: payload.udise },
+            update: payload,
+            create: payload,
+          });
+          successSchoolList.push(response);
+        } catch (error) {
+          const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+          failureSchoolList.push({ ...payload, message: errorMessage });
+        }
+      }),
+    );
+
+    return { successSchoolList, failureSchoolList };
+  }
+
+  async parseExcel(buffer: Buffer): Promise<SchoolListExcelDataDto[]> {
+    try {
+      // 1. Read the Excel file using XLSX and get the first sheet and data
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data: any = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // 2. Array manipulation
+      const parsedData = data
+        .slice(1) // Start from the second row
+        .map((row: any) => {
+          const rowData: any = {};
+          data[0].forEach((header: string, index: number) => {
+            // Loop through each element in the first row (header)
+            // 'header' stores the current header name (string) as it iterates
+            // 'index' stores the current index (number) as it iterates
+            rowData[header] = row[index]?.toString().trim(); // Formatting with trimming
+          });
+          return rowData;
+        });
+
+      // 3. Additional data formatting
+      parsedData.forEach((item: SchoolListExcelDataDto) => {
+        // Convert 'udise', 'lat', 'long' and 'total_student_registered property to a number
+        //@ts-ignore
+        item.udise = item?.udise ? Number(item.udise) : undefined;
+        item.lat = item.lat ? Number(item.lat) : undefined;
+        item.long = item.long ? Number(item.long) : undefined;
+        item.total_student_registered = item?.total_student_registered
+          ? Number(item.total_student_registered)
+          : 0;
+
+        // Convert 'geo_fence_enabled' and 'is_sankul' properties to boolean
+        item.geo_fence_enabled = Boolean(
+          item.geo_fence_enabled.toString().toLowerCase() === 'true',
+        );
+        item.is_sankul = Boolean(
+          item.is_sankul.toString().toLowerCase() === 'true',
+        );
+
+        // Convert 'district', 'block', 'area_type' and 'nypanchayat' properties to uppercase
+        item.area_type = item?.area_type ? item.area_type.toUpperCase() : '';
+        item.district = item?.district ? item.district.toUpperCase() : '';
+        item.block = item?.block ? item.block.toUpperCase() : '';
+        item.nypanchayat = item?.nypanchayat
+          ? item.nypanchayat.toUpperCase()
+          : '';
+      });
+
+      // 4. Return the final parsed data
+      return parsedData;
+    } catch (error) {
+      throw new BadRequestException('Failed to parse Excel file');
+    }
   }
 }

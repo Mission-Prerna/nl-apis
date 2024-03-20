@@ -11,6 +11,10 @@ import {
   SetMetadata,
   UseGuards,
   UseInterceptors,
+  Request,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -33,6 +37,7 @@ import { CycleIdValidateDto } from './dto/CycleIdValidateDto';
 import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssessmentCycleDistrictExaminerMapping';
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { MentorClearCacheDto } from './dto/MentorInfoDto';
+import { MinioService } from 'src/minio/minio.service';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -47,8 +52,11 @@ export class AdminController {
     private readonly assessmentSurveyResultQueue: Queue,
     @InjectQueue(QueueEnum.CalculateExaminerCycleUdiseResult)
     private readonly calculateExaminerCycleUdiseResult: Queue,
+    private readonly minioService :  MinioService,
   ) {
   }
+
+  private readonly logger = new Logger(AdminController.name)
 
   @Post(['/mentor'])
   @Roles(Role.Admin)
@@ -160,11 +168,7 @@ export class AdminController {
   async updateStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: UpdateStudent })) body: UpdateStudent[],
   ) {
-    await this.service.updateStudents(body);
-    return {
-      msg: 'Success!',
-      data: null,
-    };
+    return await this.service.updateStudents(body);
   }
 
   @Delete('/students')
@@ -222,9 +226,31 @@ export class AdminController {
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-  async clearMentorCache(
-    @Body() body: MentorClearCacheDto,
-  ) {
-    return this.service.clearMentorCache(body.phoneNumbers);
+  async clearMentorCache(@Body() body: MentorClearCacheDto) {
+    const { actorIds, phoneNumbers } = body;
+    return this.service.clearMentorCache(phoneNumbers, actorIds);
   }
+  
+  @Post('/upload-forms-zip')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async uploadFormsZip(
+    @Request() request : any
+  ) {
+    try {
+      const file = await request.file()
+      const fileName = file.filename;
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+      if (fileExtension !== 'zip') {
+        throw new BadRequestException({ error: 'File is not a ZIP file' })
+      }
+      const publicUrl = await this.minioService.uploadZip(file);
+      return { status: 'Zip file uploaded successfully', url: publicUrl };
+    } catch (error : any) {
+      this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
+      throw new InternalServerErrorException({ error: 'Failed to upload zip file', message: error.message });
+    }
+  }
+
 }

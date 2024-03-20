@@ -71,6 +71,7 @@ export class UpdateStudent {
   @Validate(IsExist, ['school_list', 'udise'], {
     message: '',
   })
+
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   udise!: number;

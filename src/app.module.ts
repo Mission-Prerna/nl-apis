@@ -28,6 +28,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { StudentService } from './school/student.service';
 import { SchoolServiceV2 } from './school/school.service.v2';
 import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calculate-examiner-cycle-udise-result.processor';
+import { MinioModule } from './minio/minio.module';
+import { MinioService } from './minio/minio.service';
 
 @Module({
   imports: [ 
@@ -104,6 +106,7 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
       ttl: process.env?.RATE_LIMIT_TTL ? parseInt(process.env.RATE_LIMIT_TTL) : 60000, // in milliseconds
       limit: process.env?.RATE_LIMIT ? parseInt(process.env.RATE_LIMIT) : 50,
     }]),
+    MinioModule,
   ],
   controllers: [AppController, SchoolController, AdminController],
   providers: [
@@ -119,11 +122,12 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
     SchoolService,
     SchoolServiceV2,
     StudentService,
+    MinioService,
     AdminService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
+    }
   ],
 })
 export class AppModule {}

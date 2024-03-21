@@ -7,17 +7,14 @@ export class MinioService {
 
   private readonly minioClient: Minio.Client;
   private readonly minioUrl: string;
-  private readonly minioPort: number;
   private readonly enableSSL: boolean;
   private readonly logger = new Logger(MinioService.name)
 
   constructor(protected readonly configService: ConfigService) {
     this.minioUrl = this.configService.getOrThrow<string>('MINIO_URL');
-    this.minioPort = this.configService.getOrThrow<number>('MINIO_PORT');
     this.enableSSL = this.configService.getOrThrow<string>('MINIO_USE_SSL') === 'true'
     this.minioClient = new Minio.Client({
       endPoint: this.minioUrl,
-      port: +this.minioPort,
       useSSL: this.enableSSL,
       accessKey: this.configService.getOrThrow<string>('MINIO_ACCESS_KEY'),
       secretKey: this.configService.getOrThrow<string>('MINIO_SECRET'),
@@ -33,7 +30,7 @@ export class MinioService {
     try {
       await this.minioClient.putObject(bucketName, objectName, await zipFile.toBuffer()); 
       const protocol = this.enableSSL ? 'https' : 'http';
-      return `${protocol}://${this.minioUrl}:${this.minioPort}/${bucketName}/${objectName}`
+      return `${protocol}://${this.minioUrl}/${bucketName}/${objectName}`
     } catch (error : any) {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
       throw new HttpException(`Failed to upload zip file. ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);

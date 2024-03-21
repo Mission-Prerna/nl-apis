@@ -13,8 +13,8 @@ import {
   UseInterceptors,
   Request,
   Logger,
-  BadRequestException,
-  InternalServerErrorException
+  InternalServerErrorException,
+  UnsupportedMediaTypeException
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -243,7 +243,7 @@ export class AdminController {
       const fileName = file.filename;
       const fileExtension = fileName.split('.').pop().toLowerCase();
       if (fileExtension !== 'zip') {
-        throw new BadRequestException({ error: 'File is not a ZIP file' })
+        throw new UnsupportedMediaTypeException('File is not a ZIP file')
       }
       const publicUrl = await this.minioService.uploadZip(file);
       return { status: 'Zip file uploaded successfully', url: publicUrl };

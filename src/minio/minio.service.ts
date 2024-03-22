@@ -29,8 +29,7 @@ export class MinioService {
 
     try {
       await this.minioClient.putObject(bucketName, objectName, await zipFile.toBuffer()); 
-      const protocol = this.enableSSL ? 'https' : 'http';
-      return `${protocol}://${this.minioUrl}/${bucketName}/${objectName}`
+      return `${this.minioUrl}/${bucketName}/${objectName}`
     } catch (error : any) {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
       throw new HttpException(`Failed to upload zip file. ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);

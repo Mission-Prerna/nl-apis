@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import * as Minio from 'minio';
 import { ConfigService } from '@nestjs/config';
 
@@ -26,14 +26,15 @@ export class MinioService {
     const filename = zipFile.filename
     const formattedDate = new Date().toISOString().slice(0, 19).replace(/[-T:/]/g, ''); 
     const objectName = `${filename.substring(0, filename.lastIndexOf('.'))}_${formattedDate}.zip`;
-
     try {
       await this.minioClient.putObject(bucketName, objectName, await zipFile.toBuffer()); 
-      return `${this.minioUrl}/${bucketName}/${objectName}`
+       // Get the presigned URL for the uploaded object
+       const presignedUrl = await this.minioClient.presignedGetObject(bucketName, objectName);
+       const url = presignedUrl.split('?')[0]
+       return url
     } catch (error : any) {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
-      throw new HttpException(`Failed to upload zip file. ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new InternalServerErrorException(`Failed to upload zip file. ${error.message}`);
     }
-
   }
 }

@@ -89,8 +89,13 @@ export class AppController {
   @UseInterceptors(MentorInterceptor)
   async createAssessmentVisitResults(
     @Body(new ParseArrayPipe({ items: CreateAssessmentVisitResult })) body: CreateAssessmentVisitResult[],
-    @Request() { mentorId }: { mentorId: number },
-  ) {
+    @Request() { mentor }: { mentor: Mentor },
+    ) {
+    const mentorId = mentor.id as unknown as number;
+    // Remove insight cache for mentor
+    if (mentor.actor_id === ActorEnum.MENTOR) {
+      await this.appService.clearMentorInsightV2Cache(mentor.phone_no);
+    }
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto

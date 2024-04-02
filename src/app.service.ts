@@ -880,6 +880,14 @@ export class AppService {
     };
   }
 
+  async clearMentorInsightV2Cache(phoneNumber: string) {
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
+    return await this.cacheService.del(
+      CacheKeyMentorMonthlyMetricsV2(phoneNumber, month, year),
+    );
+  }
+
   async getMentorHomeScreenMetricV2(
     mentor: Mentor,
     month: null | number = null,

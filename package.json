@@ -20,6 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@bull-board/api": "^5.15.3",
+    "@bull-board/fastify": "^5.15.3",
+    "@bull-board/nestjs": "^5.15.3",
     "@fastify/multipart": "^8.1.0",
     "@fusionauth/typescript-client": "^1.46.0",
     "@liaoliaots/nestjs-redis": "^9.0.5",

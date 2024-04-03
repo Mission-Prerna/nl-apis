@@ -30,9 +30,12 @@ import { SchoolServiceV2 } from './school/school.service.v2';
 import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calculate-examiner-cycle-udise-result.processor';
 import { MinioModule } from './minio/minio.module';
 import { MinioService } from './minio/minio.service';
+import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { FastifyAdapter, } from '@bull-board/fastify';
 
 @Module({
-  imports: [ 
+  imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -61,6 +64,33 @@ import { MinioService } from './minio/minio.service';
       },
       {
         name: QueueEnum.CalculateExaminerCycleUdiseResult,
+      },
+    ),
+    BullBoardModule.forRoot({
+      route: '/queues',
+      adapter: FastifyAdapter,
+    }),
+    BullBoardModule.forFeature(
+      {
+        name: QueueEnum.AssessmentVisitResults,
+        adapter: BullAdapter,
+        options: {
+          readOnlyMode: (process.env.BULL_BOARD_READ_ONLY_MODE ? process.env.BULL_BOARD_READ_ONLY_MODE === 'true' : true),
+        }, // Use process.env.BULL_BOARD_READ_ONLY_MODE or default to true
+      },
+      {
+        name: QueueEnum.AssessmentSurveyResult,
+        adapter: BullAdapter,
+        options: {
+          readOnlyMode: (process.env.BULL_BOARD_READ_ONLY_MODE ? process.env.BULL_BOARD_READ_ONLY_MODE === 'true' : true),
+        },
+      },
+      {
+        name: QueueEnum.CalculateExaminerCycleUdiseResult,
+        adapter: BullAdapter,
+        options: {
+          readOnlyMode: (process.env.BULL_BOARD_READ_ONLY_MODE ? process.env.BULL_BOARD_READ_ONLY_MODE === 'true' : true),
+        },
       },
     ),
     RedisModule.forRootAsync({

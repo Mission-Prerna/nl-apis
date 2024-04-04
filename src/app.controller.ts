@@ -228,11 +228,11 @@ export class AppController {
     @Query() queryParams: GetMentorDetailsDto,
     @Request() { mentor }: { mentor: Mentor },
   ) {
-    if (mentor.actor_id != ActorEnum.MENTOR) {
+    if (![ActorEnum.MENTOR, ActorEnum.DIET_MENTOR].includes(mentor.actor_id)) {
       throw new NotImplementedException(
-        'Only Mentors are allowed to access this endpoint.',
+          'Only Mentors & Diet Mentors are allowed to access this endpoint.',
       );
-    }
+  }  
     return this.appService.getMentorHomeScreenMetricV2(
       mentor,
       queryParams.month,

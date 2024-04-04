@@ -1481,7 +1481,7 @@ export class AppService {
     let assessments = [];
     for (const result of assessment.results) {
       assessments.push({
-        subject_id: assessment.subject_id,
+        subject_id: result.subject_id ??  assessment.subject_id,
         mentor_id: assessment.mentor_id,
         actor_id: assessment.actor_id,
         block_id: assessment.block_id,

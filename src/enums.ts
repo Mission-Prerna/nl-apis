@@ -74,7 +74,7 @@ export enum SubjectEnum {
   NULL = 0,
   MATH = 1,
   HINDI = 2,
-  ENGLISH = 2,
+  ENGLISH = 3,
 }
 
 export enum CacheConstants {

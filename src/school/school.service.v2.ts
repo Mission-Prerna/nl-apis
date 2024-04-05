@@ -727,4 +727,27 @@ export class SchoolServiceV2 extends SchoolService {
       throw new BadRequestException('Failed to parse Excel file');
     }
   }
+
+  async markSchoolResultFraud(
+    mentorId: number,
+    udise: number,
+    cycle_id: number,
+  ) {
+    try {
+      return await this.prismaService.school_results_fraud_reports.create({
+        data: { udise, cycle_id, mentor_id: mentorId, is_fraud: true },
+      });
+    } catch (error) {
+      Sentry.captureMessage('Failed to mark school result as fraud', {
+        user: {
+          id: mentorId + '',
+        },
+        extra: {
+          cycle_id,
+          udise,
+        },
+      });
+      return error;
+    }
+  }
 }

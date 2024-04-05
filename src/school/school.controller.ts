@@ -162,4 +162,16 @@ export class SchoolController {
       data: null,
     };
   }
+
+  @Post(':udise/result/report/fraud')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async reportSchoolResultFraud(
+    @Param('udise', ParseIntPipe) udise: number,
+    @Query() { cycle_id }: AssessmentCycleValidatorDto,
+    @Request() { mentorId }: { mentorId: number },
+  ) {
+    return await this.service.markSchoolResultFraud(mentorId, udise, cycle_id);
+  }
 }

@@ -99,6 +99,7 @@ export class AppController {
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
+        dto.actor_id = mentor.actor_id; // assign logged in mentor's actor_id to dto
         await this.assessmentVisitResultQueue.add(
           JobEnum.CreateAssessmentVisitResults,
           dto,
@@ -117,6 +118,7 @@ export class AppController {
       const response = [];
       for (const dto of body) { // iterate over objects & push to DB
         dto.mentor_id = mentorId; // assign logged in mentor to dto
+        dto.actor_id = mentor.actor_id; // assign logged in mentor's actor_id to dto
         response.push(await this.appService.createAssessmentVisitResult(dto));
       }
       return {

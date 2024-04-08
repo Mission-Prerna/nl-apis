@@ -96,18 +96,29 @@ export class SchoolServiceV2 extends SchoolService {
               COUNT(CASE WHEN a.is_passed = false THEN 1 END)                      AS failed,
               RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
         FROM assessments a
+      LEFT JOIN mentor m ON a.mentor_id = m.id
         WHERE a.student_id IS NOT NULL
          AND a.udise = $1
          AND a.is_valid = true
-         AND a.actor_id = $2
-         AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+         AND (a.actor_id = $2 OR m.phone_no = $6)
+         AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submission_timestamp BETWEEN $4 AND $5
-         and a.grade = ANY($3::smallint[])
+         AND a.grade = ANY($3::smallint[])
         GROUP BY a.student_id, a.submitted_at
-      ) ss
+      ) ss  
       WHERE rank = 1`;
+
     const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.actor_id, grades, firstDayTimestamp.valueOf(), lastDayTimestamp.valueOf());
+    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
+      query,
+      udise,
+      mentor.actor_id,
+      grades,
+      firstDayTimestamp.valueOf(),
+      lastDayTimestamp.valueOf(),
+      mentor.phone_no,
+    );
+
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;

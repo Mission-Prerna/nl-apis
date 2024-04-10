@@ -730,7 +730,7 @@ export class SchoolServiceV2 extends SchoolService {
   }
 
   async markSchoolResultFraud(
-    mentor_id: number,
+    mentor_id: bigint,
     udise: number,
     cycle_id: number,
   ) {

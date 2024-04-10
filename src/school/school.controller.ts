@@ -3,7 +3,7 @@ import {
   Controller,
   Get,
   Headers,
-  HttpStatus,
+  NotImplementedException,
   Param,
   ParseArrayPipe,
   ParseIntPipe,
@@ -19,7 +19,7 @@ import {
 import { FastifyReply } from 'fastify';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
-import { CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
+import { ActorEnum, CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
 import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { GetSchoolStudentsDto } from '../dto/GetSchoolStudents.dto';
 import { Response } from 'express';
@@ -170,8 +170,13 @@ export class SchoolController {
   async reportSchoolResultFraud(
     @Param('udise', ParseIntPipe) udise: number,
     @Query() { cycle_id }: AssessmentCycleValidatorDto,
-    @Request() { mentorId }: { mentorId: number },
+    @Request() { mentor }: { mentor: Mentor },
   ) {
-    return await this.service.markSchoolResultFraud(mentorId, udise, cycle_id);
+    if (!(mentor.actor_id === ActorEnum.EXAMINER)) {
+      throw new NotImplementedException(
+        'Only Examiners are allowed to access this endpoint.',
+      );
+    }
+    return await this.service.markSchoolResultFraud(mentor.id, udise, cycle_id);
   }
 }

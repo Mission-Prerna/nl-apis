@@ -96,11 +96,10 @@ export class SchoolServiceV2 extends SchoolService {
               COUNT(CASE WHEN a.is_passed = false THEN 1 END)                      AS failed,
               RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
         FROM assessments a
-      LEFT JOIN mentor m ON a.mentor_id = m.id
         WHERE a.student_id IS NOT NULL
          AND a.udise = $1
          AND a.is_valid = true
-         AND (a.actor_id = $2 OR m.phone_no = $6)
+         AND a.actor_id = ANY($2::bigint[]) -- Ensure actor_id matches the type of array in the database
          AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submission_timestamp BETWEEN $4 AND $5
          AND a.grade = ANY($3::smallint[])
@@ -108,16 +107,23 @@ export class SchoolServiceV2 extends SchoolService {
       ) ss  
       WHERE rank = 1`;
 
-    const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
-      query,
-      udise,
-      mentor.actor_id,
-      grades,
-      firstDayTimestamp.valueOf(),
-      lastDayTimestamp.valueOf(),
-      mentor.phone_no,
-    );
+      const actorIds: number[] = [mentor.actor_id];
+
+      // If actor is a diet mentor then fetch result for mentor and diet mentor both
+      if (mentor.actor_id === ActorEnum.DIET_MENTOR) {
+        actorIds.push(ActorEnum.MENTOR);
+      }
+
+      const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
+        query,
+        udise,
+        actorIds,
+        grades,
+        firstDayTimestamp.valueOf(),
+        lastDayTimestamp.valueOf(),
+      );
+      
+      const studentWiseResults: Record<string, Student> = {};
 
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching

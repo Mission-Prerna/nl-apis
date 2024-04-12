@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, UnprocessableEntityException, forwardRef } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, InternalServerErrorException, Logger, UnprocessableEntityException, forwardRef } from '@nestjs/common';
 import * as Sentry from '@sentry/minimal';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { AppService } from '../app.service';
@@ -115,6 +115,7 @@ export class SchoolServiceV2 extends SchoolService {
 
     // Grade summary
     const gradeStudents: Record<string, { students: Array<Student>, nipun: number, not_nipun: number }> = {};
+
     studentsList.forEach(({ grade, id }: Student) => {
       grade = grade ?? 0; // just a ts check
       const assessedStudent = studentWiseResults[id.toString()] ?? null;
@@ -725,6 +726,78 @@ export class SchoolServiceV2 extends SchoolService {
       return parsedData;
     } catch (error) {
       throw new BadRequestException('Failed to parse Excel file');
+    }
+  }
+
+  async markSchoolResultFraud(
+    mentor_id: bigint,
+    udise: number,
+    cycle_id: number,
+  ) {
+    try {
+      const assessmentCycle =
+        await this.prismaService.assessment_cycles.findUniqueOrThrow({
+          where: {
+            id: cycle_id,
+          },
+        });
+
+      const currentDate = moment(); // Get the current date
+      const startDate = moment(assessmentCycle.start_date); // Get the assessment cycle start date
+      const endDate = moment(assessmentCycle.end_date).endOf('day'); // Get assessment cycle day's end date
+
+      if (startDate.isSameOrAfter(currentDate)) {
+        return { status: false, message: `Assessment cycle has not started yet.` };
+      }
+
+      if (endDate.isBefore(currentDate)) {
+        return { status: false, message: `Assessment cycle has ended.` };
+      }
+
+      const schoolResult =
+        await this.prismaService.assessment_cycle_school_nipun_results.findUnique(
+          {
+            where: {
+              cycle_id_udise_mentor_id: {
+                cycle_id,
+                udise,
+                mentor_id,
+              },
+            },
+          },
+        );
+
+      if (!schoolResult) {
+        return {
+          status: false,
+          message: `School has not been accessed by you, in this assessment cycle.`,
+        };
+      }
+
+      await this.prismaService.school_results_fraud_reports.create({
+        data: { udise, cycle_id, mentor_id, is_valid: true },
+      });
+
+      return {
+        status: true,
+        message: `Successfully marked school result as fraud.`,
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to mark school result as fraud', error);
+
+      Sentry.captureMessage('Failed to mark school result as fraud', {
+        user: {
+          id: mentor_id + '',
+        },
+        extra: {
+          cycle_id,
+          udise,
+        },
+      });
+
+      throw new InternalServerErrorException(
+        error?.message || 'Failed to mark school result as fraud',
+      );
     }
   }
 }

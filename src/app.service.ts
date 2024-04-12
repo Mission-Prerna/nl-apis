@@ -832,8 +832,11 @@ export class AppService {
       delete temp.districts;  
       delete temp.blocks;
     }
-    // @ts-ignore
-    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
+    // Checking temp is not null to avoid cache error
+    if(temp){
+      // @ts-ignore
+      await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
+    }
     return temp;
   }
 

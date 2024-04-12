@@ -1,9 +1,8 @@
 import {
-  BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
-  NotImplementedException,
   Param,
   ParseArrayPipe,
   ParseIntPipe,
@@ -173,7 +172,7 @@ export class SchoolController {
     @Request() { mentor }: { mentor: Mentor },
   ) {
     if (!(mentor.actor_id === ActorEnum.EXAMINER)) {
-      throw new NotImplementedException(
+      throw new ForbiddenException(
         'Only Examiners are allowed to access this endpoint.',
       );
     }

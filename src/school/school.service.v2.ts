@@ -107,12 +107,17 @@ export class SchoolServiceV2 extends SchoolService {
       ) ss  
       WHERE rank = 1`;
 
-      const actorIds: number[] = [mentor.actor_id];
+      const actorIds: number[] = [];
 
-      // If actor is a diet mentor then fetch result for mentor and diet mentor both
-      if (mentor.actor_id === ActorEnum.DIET_MENTOR) {
-        actorIds.push(ActorEnum.MENTOR);
-      }
+    // If actor is a Diet Mentor or Mentor then fetch result for Mentor and Diet Mentor both
+    if (
+      mentor.actor_id === ActorEnum.DIET_MENTOR ||
+      mentor.actor_id === ActorEnum.MENTOR
+    ) {
+      actorIds.push(ActorEnum.MENTOR, ActorEnum.DIET_MENTOR);
+    } else {
+      actorIds.push(mentor.actor_id);
+    }
 
       const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
         query,

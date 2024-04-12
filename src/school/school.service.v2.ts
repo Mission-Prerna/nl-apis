@@ -99,15 +99,32 @@ export class SchoolServiceV2 extends SchoolService {
         WHERE a.student_id IS NOT NULL
          AND a.udise = $1
          AND a.is_valid = true
-         AND a.actor_id = $2
-         AND a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
+         AND a.actor_id = ANY($2::bigint[]) -- Ensure actor_id matches the type of array in the database
+         AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submission_timestamp BETWEEN $4 AND $5
-         and a.grade = ANY($3::smallint[])
+         AND a.grade = ANY($3::smallint[])
         GROUP BY a.student_id, a.submitted_at
-      ) ss
+      ) ss  
       WHERE rank = 1`;
-    const studentWiseResults: Record<string, Student> = {};
-    const result: Array<Student> = await this.prismaService.$queryRawUnsafe(query, udise, mentor.actor_id, grades, firstDayTimestamp.valueOf(), lastDayTimestamp.valueOf());
+
+      const actorIds: number[] = [mentor.actor_id];
+
+      // If actor is a diet mentor then fetch result for mentor and diet mentor both
+      if (mentor.actor_id === ActorEnum.DIET_MENTOR) {
+        actorIds.push(ActorEnum.MENTOR);
+      }
+
+      const result: Array<Student> = await this.prismaService.$queryRawUnsafe(
+        query,
+        udise,
+        actorIds,
+        grades,
+        firstDayTimestamp.valueOf(),
+        lastDayTimestamp.valueOf(),
+      );
+      
+      const studentWiseResults: Record<string, Student> = {};
+
     result.forEach((res) => {
       // iterate and create a map student id wise for later faster fetching
       studentWiseResults[res.id.toString()] = res;

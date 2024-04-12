@@ -1115,15 +1115,16 @@ export class AppService {
   
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
   async getMetadataV2(headers: any) {    
-    // Retrieve the actor ID based on headers
+    // Retrieve the actor ID and minAppVersionCode based on headers
+    const minAppVersionCode =  Number(headers['minappversioncode']) || 0
     const actorId = await this.getActorId(headers);
 
     // Check if metadata is available in cache, return cached data if present
     const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
     if (cacheData) return cacheData;
 
-    // Fetch competency mappings based on actor ID
-    const competencyMappings = await this.getCompetencyMappings(actorId);
+    // Fetch competency mappings based on actor ID and minAppVersionCode
+    const competencyMappings = await this.getCompetencyMappings(actorId, minAppVersionCode);
 
     // Extract unique, non-null, and non-undefined competency IDs
     const uniqueCompetencyIds: number[] = Array.from(
@@ -1202,7 +1203,7 @@ export class AppService {
   }
 
   // Method to get competency mappings based on actor ID
-  private async getCompetencyMappings(actorId: ActorEnum) {
+  private async getCompetencyMappings(actorId: ActorEnum, minAppVersionCode: number) {
     let learningOutcomePrefix = '';
     switch (actorId) {
       case ActorEnum.EXAMINER:
@@ -1222,6 +1223,7 @@ export class AppService {
     return await this.prismaService.competency_mapping.findMany({
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
+        min_app_version_code: { gte: minAppVersionCode },
       },
       select: {
         grade: true,

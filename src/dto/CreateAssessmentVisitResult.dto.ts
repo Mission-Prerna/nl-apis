@@ -31,6 +31,7 @@ export class CreateAssessmentVisitResult {
   no_of_student!: number;
 
   @IsInt()
+  @IsOptional()
   @IsIn([
     ActorEnum.MENTOR,
     ActorEnum.EXAMINER,
@@ -38,7 +39,7 @@ export class CreateAssessmentVisitResult {
     ActorEnum.DIET_MENTOR,
     ActorEnum.PARENT,
   ])
-  actor_id!: number;
+  actor_id?: number;
 
   @IsInt()
   @IsOptional()

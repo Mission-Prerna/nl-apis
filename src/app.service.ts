@@ -1116,7 +1116,7 @@ export class AppService {
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
   async getMetadataV2(headers: any) {    
     // Retrieve the actor ID and minAppVersionCode based on headers
-    const minAppVersionCode =  Number(headers['minappversioncode']) || 0
+    const minAppVersionCode =  Number(headers['appVer']) || 0
     const actorId = await this.getActorId(headers);
 
     // Check if metadata is available in cache, return cached data if present

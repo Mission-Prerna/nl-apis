@@ -1124,7 +1124,7 @@ export class AppService {
     if (cacheData) return cacheData;
 
     // Fetch competency mappings based on actor ID and minAppVersionCode
-    const competencyMappings = await this.getCompetencyMappings(actorId, minAppVersionCode);
+    const competencyMappings = await this.getCompetencyMappings(actorId);
 
     // Extract unique, non-null, and non-undefined competency IDs
     const uniqueCompetencyIds: number[] = Array.from(
@@ -1139,6 +1139,7 @@ export class AppService {
     let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
       actorId,
       uniqueCompetencyIds,
+      minAppVersionCode
     );
 
     // Fetch additional metadata in parallel using Promise.all
@@ -1203,7 +1204,7 @@ export class AppService {
   }
 
   // Method to get competency mappings based on actor ID
-  private async getCompetencyMappings(actorId: ActorEnum, minAppVersionCode: number) {
+  private async getCompetencyMappings(actorId: ActorEnum) {
     let learningOutcomePrefix = '';
     switch (actorId) {
       case ActorEnum.EXAMINER:
@@ -1223,7 +1224,6 @@ export class AppService {
     return await this.prismaService.competency_mapping.findMany({
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
-        min_app_version_code: { gte: minAppVersionCode },
       },
       select: {
         grade: true,
@@ -1240,6 +1240,7 @@ export class AppService {
   private async getWorkflowRefIdsMapping(
     actorId: ActorEnum,
     uniqueCompetencyIds: number[],
+    minAppVersionCode:number
   ) {
     let workflowRefIdsMapping: any[] = [];
 
@@ -1259,6 +1260,7 @@ export class AppService {
           where: {
             is_active: true,
             competency_id: { in: uniqueCompetencyIds },
+            min_app_version_code: { gte: minAppVersionCode },
           },
         });
     } else {
@@ -1273,7 +1275,10 @@ export class AppService {
             type: true,
             assessment_type_id: true,
           },
-          where: { is_active: true },
+          where: {
+            is_active: true,
+            min_app_version_code: { gte: minAppVersionCode },
+          },
         });
     }
 

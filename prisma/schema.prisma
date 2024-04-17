@@ -731,18 +731,19 @@ model teacher_school_list_mapping {
 }
 
 model workflow_refids_mapping {
-  grade              Int
-  subject            String
-  competency_id      Int
-  type               String
-  is_active          Boolean           @default(true)
-  ref_ids            Json              @default("[]")
-  id                 Int               @id @unique @default(autoincrement())
-  assessment_type    String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
-  subject_id         Int
-  assessment_type_id Int?
-  assessment_types   assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
-  subjects           subjects          @relation(fields: [subject_id], references: [id])
+  grade                Int
+  subject              String
+  competency_id        Int
+  type                 String
+  is_active            Boolean           @default(true)
+  ref_ids              Json              @default("[]")
+  id                   Int               @id @unique @default(autoincrement())
+  assessment_type      String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
+  subject_id           Int
+  assessment_type_id   Int?
+  min_app_version_code Int               @default(0)
+  assessment_types     assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
+  subjects             subjects          @relation(fields: [subject_id], references: [id])
 
   @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
   @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")

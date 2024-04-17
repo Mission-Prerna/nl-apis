@@ -1115,14 +1115,15 @@ export class AppService {
   
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
   async getMetadataV2(headers: any) {    
-    // Retrieve the actor ID based on headers
+    // Retrieve the actor ID and minAppVersionCode based on headers
+    const minAppVersionCode =  Number(headers['appversioncode']) || 0
     const actorId = await this.getActorId(headers);
 
     // Check if metadata is available in cache, return cached data if present
     const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
     if (cacheData) return cacheData;
 
-    // Fetch competency mappings based on actor ID
+    // Fetch competency mappings based on actor ID and minAppVersionCode
     const competencyMappings = await this.getCompetencyMappings(actorId);
 
     // Extract unique, non-null, and non-undefined competency IDs
@@ -1138,6 +1139,7 @@ export class AppService {
     let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
       actorId,
       uniqueCompetencyIds,
+      minAppVersionCode
     );
 
     // Fetch additional metadata in parallel using Promise.all
@@ -1238,6 +1240,7 @@ export class AppService {
   private async getWorkflowRefIdsMapping(
     actorId: ActorEnum,
     uniqueCompetencyIds: number[],
+    minAppVersionCode:number
   ) {
     let workflowRefIdsMapping: any[] = [];
 
@@ -1257,6 +1260,7 @@ export class AppService {
           where: {
             is_active: true,
             competency_id: { in: uniqueCompetencyIds },
+            min_app_version_code: { gte: minAppVersionCode },
           },
         });
     } else {
@@ -1271,7 +1275,10 @@ export class AppService {
             type: true,
             assessment_type_id: true,
           },
-          where: { is_active: true },
+          where: {
+            is_active: true,
+            min_app_version_code: { gte: minAppVersionCode },
+          },
         });
     }
 

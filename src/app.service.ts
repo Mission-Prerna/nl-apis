@@ -1136,7 +1136,7 @@ export class AppService {
     );
 
     // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
-    let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
+    const workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
       actorId,
       uniqueCompetencyIds,
       minAppVersionCode
@@ -1236,53 +1236,50 @@ export class AppService {
     });
   }
 
+  private async getWorkflowRefIdsMappingForCompetency(competency_id: number, min_app_version_code: number) {
+    const validAppVersion = await this.prismaService.workflow_refids_mapping.findFirst({
+      orderBy: {
+        min_app_version_code: 'desc'
+      },
+      select: {
+        min_app_version_code: true
+      },
+      where : {
+        competency_id: competency_id,
+        min_app_version_code: {
+          lte: min_app_version_code
+        },
+        is_active: true
+      },
+    })
+    if(!validAppVersion) return []
+    return await this.prismaService.workflow_refids_mapping.findFirst({
+      where: {
+        competency_id: competency_id,
+        min_app_version_code: validAppVersion.min_app_version_code,
+        is_active: true
+      },
+      select: {
+        competency_id: true,
+        grade: true,
+        is_active: true,
+        ref_ids: true,
+        subject_id: true,
+        type: true,
+        assessment_type_id: true,
+      }
+    });
+  }
   // Method to get workflow ref IDs mapping based on actor ID and competency mappings
   private async getWorkflowRefIdsMapping(
     actorId: ActorEnum,
     uniqueCompetencyIds: number[],
     minAppVersionCode:number
   ) {
-    let workflowRefIdsMapping: any[] = [];
+      const promises = uniqueCompetencyIds.map(competencyId => 
+        this.getWorkflowRefIdsMappingForCompetency(competencyId, minAppVersionCode));
 
-    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
-    if (actorId !== ActorEnum.NULL) {
-      workflowRefIdsMapping =
-        await this.prismaService.workflow_refids_mapping.findMany({
-          select: {
-            competency_id: true,
-            grade: true,
-            is_active: true,
-            ref_ids: true,
-            subject_id: true,
-            type: true,
-            assessment_type_id: true,
-          },
-          where: {
-            is_active: true,
-            competency_id: { in: uniqueCompetencyIds },
-            min_app_version_code: { gte: minAppVersionCode },
-          },
-        });
-    } else {
-      workflowRefIdsMapping =
-        await this.prismaService.workflow_refids_mapping.findMany({
-          select: {
-            competency_id: true,
-            grade: true,
-            is_active: true,
-            ref_ids: true,
-            subject_id: true,
-            type: true,
-            assessment_type_id: true,
-          },
-          where: {
-            is_active: true,
-            min_app_version_code: { gte: minAppVersionCode },
-          },
-        });
-    }
-
-    return workflowRefIdsMapping;
+      return await Promise.all(promises);
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {

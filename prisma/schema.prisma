@@ -745,7 +745,7 @@ model workflow_refids_mapping {
   assessment_types     assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
   subjects             subjects          @relation(fields: [subject_id], references: [id])
 
-  @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
+  @@unique([subject, competency_id, type, assessment_type, grade, min_app_version_code], map: "workflow_refids_mapping_subject_competency_id_type_assessment_t")
   @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")
   @@index([subject_id])
 }
@@ -1918,8 +1918,8 @@ model school_results_fraud_reports {
   cycle_id          Int
   mentor_id         BigInt
   is_valid          Boolean
-  created_at        DateTime          @default(now()) @db.Timestamp(6)
-  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  created_at        DateTime          @default(now()) @db.Timetz(6)
+  updated_at        DateTime          @default(now()) @db.Timetz(6)
   assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
   mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
   school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)

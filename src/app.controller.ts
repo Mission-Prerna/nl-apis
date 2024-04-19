@@ -259,8 +259,9 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  async getMetadata() {
-    return this.appService.getMetadata();
+  async getMetadata(@Request() request: any) {
+    const headers = request.headers;
+    return this.appService.getMetadata(headers);
   }
 
   @Get('/api/v2/metadata')

@@ -1045,8 +1045,9 @@ export class AppService {
    }
 
 
-   async getMetadata() {
-    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+   async getMetadata(headers: any) {
+    const appVersionCode = Number(headers['appversioncode']) || 0
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(appVersionCode));
     if (cacheData) return cacheData;
   
     const [
@@ -1109,7 +1110,7 @@ export class AppService {
     };
   
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    await this.cacheService.set(CacheKeyMetadata(appVersionCode), resp, { ttl: CacheConstants.TTL_METADATA });
     return resp;
   }
   
@@ -1120,7 +1121,7 @@ export class AppService {
     const actorId = await this.getActorId(headers);
 
     // Check if metadata is available in cache, return cached data if present
-    const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(minAppVersionCode, actorId));
     if (cacheData) return cacheData;
 
     // Fetch competency mappings based on actor ID and minAppVersionCode
@@ -1167,7 +1168,7 @@ export class AppService {
 
     // Store the response in cache
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(actorId), response, {
+    await this.cacheService.set(CacheKeyMetadata(minAppVersionCode, actorId), response, {
       ttl: CacheConstants.TTL_METADATA,
     });
 
@@ -1262,7 +1263,6 @@ export class AppService {
       select: {
         competency_id: true,
         grade: true,
-        is_active: true,
         ref_ids: true,
         subject_id: true,
         type: true,

@@ -12,7 +12,7 @@ import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { CreateMentorDto } from '../dto/CreateMentor.dto';
-import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyMetricsV2, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata } from '../enums';
+import { ActorEnum, CacheKeyMentorDetail, CacheKeyMentorMonthlyMetrics, CacheKeyMentorMonthlyMetricsV2, CacheKeyMentorMonthlyVisitedSchools, CacheKeyMentorSchoolList, CacheKeyMentorWeeklyMetrics, CacheKeyMetadata, CacheKeyMetadataAll } from '../enums';
 import { MentorCreationFailedException } from '../exceptions/mentor-creation-failed.exception';
 import { CreateMentorOldDto } from '../dto/CreateMentorOld.dto';
 import { SchoolGeofencingBlacklistDto } from '../dto/SchoolGeofencingBlacklistDto';
@@ -646,8 +646,8 @@ export class AdminService {
     });
 
     const keys = [
-      CacheKeyMetadata(actorId.actor_id), 
-      CacheKeyMetadata(), 
+      CacheKeyMetadata('*', actorId.actor_id), 
+      CacheKeyMetadataAll(), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
       CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear)
@@ -772,12 +772,7 @@ export class AdminService {
       return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
 
-    const metadataPromises =
-      actorIds.length !== 0
-        ? actorIds.map((actorId) => {
-            return this.cacheService.del(CacheKeyMetadata(actorId));
-          })
-        : [this.cacheService.del(CacheKeyMetadata())];
+  const metadataPromises = [this.cacheService.del(CacheKeyMetadataAll())];
 
     try {
       await Promise.all([

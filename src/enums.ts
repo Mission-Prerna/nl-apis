@@ -132,9 +132,13 @@ export interface CycleDistrictUdiseRow {
   udise: number;
 }
 
-export function CacheKeyMetadata(actorId?: ActorEnum) {
-  if (actorId) return `metadata:${ActorEnum[actorId]}`;
-  return 'metadata';
+export function CacheKeyMetadataAll() {
+  return `metadata*`;
+}
+
+export function CacheKeyMetadata(app_version_code: any, actorId?: ActorEnum) {
+  if (actorId) return `metadata:${ActorEnum[actorId]}:${app_version_code}`;
+  return `metadata:${app_version_code}`;
 }
 
 export function CacheKeyMentorDetail(phoneNumber: string) {

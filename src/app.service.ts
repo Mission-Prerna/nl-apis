@@ -1056,7 +1056,6 @@ export class AppService {
       subjects,
       assessmentTypes,
       competencyMapping,
-      workflowRefIds
     ] = await Promise.all([
       this.prismaService.actors.findMany(),
       this.prismaService.designations.findMany({
@@ -1083,30 +1082,21 @@ export class AppService {
         orderBy: {
           learning_outcome: 'asc',
         },
-      }),
-      this.prismaService.workflow_refids_mapping.findMany({
-        select: {
-          competency_id: true,
-          grade: true,
-          is_active: true,
-          ref_ids: true,
-          subject_id: true,
-          type: true,
-          assessment_type_id: true,
-        },
-        where: {
-          is_active: true,
-        },
-      }),
+      })
     ]);
-  
+    
+    const workflow_ref_ids = await Promise.all(competencyMapping.map((item) => {
+      if(!item.competency_id) return;
+      return this.getWorkflowRefIdsMappingForCompetency(item.competency_id, appVersionCode)
+    }));
+
     const resp = {
       actors,
       designations,
       subjects,
       assessment_types: assessmentTypes,
       competency_mapping: competencyMapping,
-      workflow_ref_ids: workflowRefIds,
+      workflow_ref_ids: workflow_ref_ids,
     };
   
     // @ts-ignore

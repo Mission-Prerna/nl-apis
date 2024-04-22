@@ -3,9 +3,7 @@ import {
   CACHE_MANAGER,
   Inject,
   Injectable,
-  InternalServerErrorException,
   Logger,
-  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
@@ -29,8 +27,6 @@ import { Cache } from 'cache-manager';
 import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
 import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateStudentsResponse.dto';
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
-import * as XLSX from 'xlsx'
-import * as JSZip from 'jszip';
 
 @Injectable()
 export class AdminService {
@@ -785,107 +781,5 @@ export class AdminService {
       return { status: 'Cache Clearing Failed', error: e }
     }
     return { status: 'Cache Cleared Successfully' };
-  }
-
-  async modifyExcelSheet(buffer: Buffer): Promise<Buffer> {
-    // Unzip the provided buffer to extract Excel file content and filename
-    const { excelFileBuffer, fileName } = await this.unzipFile(buffer);
-
-    // Update the Excel sheet content
-    const modifiedBuffer = await this.updateExcelSheet(excelFileBuffer);
-
-    // Create a new zip with the modified Excel sheet and return its buffer
-    return await this.createZip(modifiedBuffer, fileName);
-  }
-
-  async unzipFile(
-    buffer: Buffer,
-  ): Promise<{ excelFileBuffer: Buffer; fileName: string }> {
-    try {
-      // Load the zip file from the buffer
-      const zip = new JSZip();
-      await zip.loadAsync(buffer);
-
-      // Get the first file from the zip (assuming only one file)
-      const fileName = Object.keys(zip.files)[0];
-      const zipEntry = zip.files[fileName];
-
-      // Extract the file content as a buffer
-      const excelFileBuffer = await zipEntry.async('nodebuffer');
-
-      return { excelFileBuffer, fileName };
-    } catch (error) {
-      // Log and rethrow any error that occurs during unzipping
-      this.logger.error('Failed to unzip file', error);
-      throw new InternalServerErrorException('Failed to unzip file');
-    }
-  }
-
-  async updateExcelSheet(excelFileBuffer: Buffer): Promise<Buffer> {
-    // Read the Excel workbook from the provided buffer
-    const workbook = XLSX.read(excelFileBuffer, { type: 'buffer' });
-
-    // Get the 'settings' named sheet from the workbook
-    const sheet = workbook.Sheets['settings'];
-
-    if (!sheet) {
-      // Throw an exception if the 'settings' sheet is not found
-      throw new NotFoundException('Sheet "settings" not found');
-    }
-
-    // Decode the range of the sheet to iterate over its cells
-    const range = XLSX.utils.decode_range(sheet['!ref'] || '');
-
-    // Check if the specified columnIndex corresponds to 'form_id' column
-    const expectedColumnName = 'form_id'; // Expected column name
-    const columnIndex = 1; // Fixed column index for the expectedColumnName ('form_id') column
-
-    // Get the column name for the specified column index
-    const columnName = XLSX.utils.encode_col(columnIndex);
-
-    // Check if the column name matches the expected column name
-    if (
-      sheet[columnName + '1'] &&
-      sheet[columnName + '1'].v !== expectedColumnName
-    ) {
-      throw new BadRequestException(
-        `Specified columnIndex #${columnIndex}, does not correspond to '${expectedColumnName}' column`,
-      );
-    }
-
-    // Iterate over each row in the 'settings' sheet
-    for (let row = range.s.r + 1; row <= range.e.r; row++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: columnIndex });
-      const cell = sheet[cellAddress];
-
-      if (cell && cell.v) {
-        // Modify the value of 'form_id'
-        const formId = cell.v;
-        cell.v = `${formId}_updated`;
-      }
-    }
-
-    // Write the modified workbook back to a buffer
-    return XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'buffer',
-    });
-  }
-
-  async createZip(buffer: Buffer, filename: string): Promise<Buffer> {
-    try {
-      // Create a new zip instance and add the buffer with the specified filename
-      const zip = new JSZip();
-      zip.file(filename, buffer);
-
-      // Generate the zip buffer and return it
-      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-      return zipBuffer;
-    } catch (error) {
-      // Log and rethrow any error that occurs during zip creation
-      this.logger.error('Failed to create zip file', error);
-      throw new BadRequestException('Failed to create zip file');
-    }
-  }
-  
+  }  
 }

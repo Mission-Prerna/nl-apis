@@ -15,7 +15,6 @@ import {
   Logger,
   InternalServerErrorException,
   UnsupportedMediaTypeException,
-  Response
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -39,8 +38,6 @@ import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssess
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { MentorClearCacheDto } from './dto/MentorInfoDto';
 import { MinioService } from 'src/minio/minio.service';
-import {FastifyReply} from "fastify";
-import { ZipFileUploadInterceptor } from 'src/interceptors/zip-file-upload.interceptor';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -255,32 +252,4 @@ export class AdminController {
       throw new InternalServerErrorException({ error: 'Failed to upload zip file', message: error.message });
     }
   }
-
-  @Post('update/zip-form-Id')
-  @Roles(Role.Admin)
-  @UseGuards(JwtAdminGuard)
-  @UseInterceptors(ZipFileUploadInterceptor)
-  @Throttle({ default: { limit: 100, ttl: 60000 } })
-  async editCsvZip(
-    @Request() request : any,
-    @Response() res :FastifyReply
-  ) {
-    try {
-      const file = await request.processedFile
-      const fileName = file.filename;
-      const buffer = await file.toBuffer();
-
-      const response = await this.service.modifyExcelSheet(buffer)
-      // Set response headers
-      res.header('Content-Type', 'application/zip');
-      res.header('Content-Disposition', `attachment; filename=${fileName}`);
-      
-      // Send the zip buffer as response
-      res.send(response);
-    } catch (error : any) {
-      this.logger.error(`Error updating zip file form: ${error.message}`, error);
-      throw new InternalServerErrorException({ error: 'Failed to update zip file form', message: error.message });
-    }
-  }
-
 }

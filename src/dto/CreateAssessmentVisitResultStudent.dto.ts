@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +11,7 @@ import {
 import { CreateAssessmentVisitResultStudentOdkResult } from './CreateAssessmentVisitResultsStudentOdkResult.dto';
 import { Type } from 'class-transformer';
 import { IsExist, RequiredWithoutAll } from '../auth/auth.validator';
+import { SubjectEnum } from 'src/enums';
 
 export class CreateAssessmentVisitResultStudent {
   @IsString()
@@ -17,6 +19,11 @@ export class CreateAssessmentVisitResultStudent {
 
   @IsInt()
   competency_id!: number;
+
+  @IsInt()
+  @IsOptional()
+  @IsIn([SubjectEnum.MATH, SubjectEnum.ENGLISH, SubjectEnum.HINDI])
+  subject_id?: number;
 
   @IsString()
   module!: string;

@@ -832,8 +832,11 @@ export class AppService {
       delete temp.districts;  
       delete temp.blocks;
     }
-    // @ts-ignore
-    await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
+    // Checking temp is not null to avoid cache error
+    if(temp){
+      // @ts-ignore
+      await this.cacheService.set(CacheKeyMentorDetail(phoneNumber), temp, { ttl: CacheConstants.TTL_MENTOR_FROM_TOKEN }); // Adding the mentor to cache
+    }
     return temp;
   }
 
@@ -878,6 +881,14 @@ export class AppService {
       home_overview: await this.getHomeScreenMetric(mentor, month, year),
       examiner_cycle_details: examinerCycleDetails,
     };
+  }
+
+  async clearMentorInsightV2Cache(phoneNumber: string) {
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
+    return await this.cacheService.del(
+      CacheKeyMentorMonthlyMetricsV2(phoneNumber, month, year),
+    );
   }
 
   async getMentorHomeScreenMetricV2(
@@ -1034,8 +1045,9 @@ export class AppService {
    }
 
 
-   async getMetadata() {
-    const cacheData = await this.cacheService.get(CacheKeyMetadata());
+   async getMetadata(headers: any) {
+    const appVersionCode = Number(headers['appversioncode']) || 0
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(appVersionCode));
     if (cacheData) return cacheData;
   
     const [
@@ -1044,7 +1056,6 @@ export class AppService {
       subjects,
       assessmentTypes,
       competencyMapping,
-      workflowRefIds
     ] = await Promise.all([
       this.prismaService.actors.findMany(),
       this.prismaService.designations.findMany({
@@ -1071,47 +1082,39 @@ export class AppService {
         orderBy: {
           learning_outcome: 'asc',
         },
-      }),
-      this.prismaService.workflow_refids_mapping.findMany({
-        select: {
-          competency_id: true,
-          grade: true,
-          is_active: true,
-          ref_ids: true,
-          subject_id: true,
-          type: true,
-          assessment_type_id: true,
-        },
-        where: {
-          is_active: true,
-        },
-      }),
+      })
     ]);
-  
+    
+    const workflow_ref_ids = await Promise.all(competencyMapping.map((item) => {
+      if(!item.competency_id) return;
+      return this.getWorkflowRefIdsMappingForCompetency(item.competency_id, appVersionCode)
+    }));
+
     const resp = {
       actors,
       designations,
       subjects,
       assessment_types: assessmentTypes,
       competency_mapping: competencyMapping,
-      workflow_ref_ids: workflowRefIds,
+      workflow_ref_ids: workflow_ref_ids,
     };
   
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(), resp, { ttl: CacheConstants.TTL_METADATA });
+    await this.cacheService.set(CacheKeyMetadata(appVersionCode), resp, { ttl: CacheConstants.TTL_METADATA });
     return resp;
   }
   
   // Method to fetch metadata including actors, designations, subjects, competency mappings, and workflow ref IDs
   async getMetadataV2(headers: any) {    
-    // Retrieve the actor ID based on headers
+    // Retrieve the actor ID and minAppVersionCode based on headers
+    const minAppVersionCode =  Number(headers['appversioncode']) || 0
     const actorId = await this.getActorId(headers);
 
     // Check if metadata is available in cache, return cached data if present
-    const cacheData = await this.cacheService.get(CacheKeyMetadata(actorId));
+    const cacheData = await this.cacheService.get(CacheKeyMetadata(minAppVersionCode, actorId));
     if (cacheData) return cacheData;
 
-    // Fetch competency mappings based on actor ID
+    // Fetch competency mappings based on actor ID and minAppVersionCode
     const competencyMappings = await this.getCompetencyMappings(actorId);
 
     // Extract unique, non-null, and non-undefined competency IDs
@@ -1124,9 +1127,10 @@ export class AppService {
     );
 
     // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
-    let workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
+    const workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
       actorId,
       uniqueCompetencyIds,
+      minAppVersionCode
     );
 
     // Fetch additional metadata in parallel using Promise.all
@@ -1154,7 +1158,7 @@ export class AppService {
 
     // Store the response in cache
     // @ts-ignore
-    await this.cacheService.set(CacheKeyMetadata(actorId), response, {
+    await this.cacheService.set(CacheKeyMetadata(minAppVersionCode, actorId), response, {
       ttl: CacheConstants.TTL_METADATA,
     });
 
@@ -1223,48 +1227,49 @@ export class AppService {
     });
   }
 
+  private async getWorkflowRefIdsMappingForCompetency(competency_id: number, min_app_version_code: number) {
+    const validAppVersion = await this.prismaService.workflow_refids_mapping.findFirst({
+      orderBy: {
+        min_app_version_code: 'desc'
+      },
+      select: {
+        min_app_version_code: true
+      },
+      where : {
+        competency_id: competency_id,
+        min_app_version_code: {
+          lte: min_app_version_code
+        },
+        is_active: true
+      },
+    })
+    if(!validAppVersion) return []
+    return await this.prismaService.workflow_refids_mapping.findFirst({
+      where: {
+        competency_id: competency_id,
+        min_app_version_code: validAppVersion.min_app_version_code,
+        is_active: true
+      },
+      select: {
+        competency_id: true,
+        grade: true,
+        ref_ids: true,
+        subject_id: true,
+        type: true,
+        assessment_type_id: true,
+      }
+    });
+  }
   // Method to get workflow ref IDs mapping based on actor ID and competency mappings
   private async getWorkflowRefIdsMapping(
     actorId: ActorEnum,
     uniqueCompetencyIds: number[],
+    minAppVersionCode:number
   ) {
-    let workflowRefIdsMapping: any[] = [];
+      const promises = uniqueCompetencyIds.map(competencyId => 
+        this.getWorkflowRefIdsMappingForCompetency(competencyId, minAppVersionCode));
 
-    // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
-    if (actorId !== ActorEnum.NULL) {
-      workflowRefIdsMapping =
-        await this.prismaService.workflow_refids_mapping.findMany({
-          select: {
-            competency_id: true,
-            grade: true,
-            is_active: true,
-            ref_ids: true,
-            subject_id: true,
-            type: true,
-            assessment_type_id: true,
-          },
-          where: {
-            is_active: true,
-            competency_id: { in: uniqueCompetencyIds },
-          },
-        });
-    } else {
-      workflowRefIdsMapping =
-        await this.prismaService.workflow_refids_mapping.findMany({
-          select: {
-            competency_id: true,
-            grade: true,
-            is_active: true,
-            ref_ids: true,
-            subject_id: true,
-            type: true,
-            assessment_type_id: true,
-          },
-          where: { is_active: true },
-        });
-    }
-
-    return workflowRefIdsMapping;
+      return await Promise.all(promises);
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
@@ -1473,7 +1478,7 @@ export class AppService {
     let assessments = [];
     for (const result of assessment.results) {
       assessments.push({
-        subject_id: assessment.subject_id,
+        subject_id: result.subject_id ??  assessment.subject_id,
         mentor_id: assessment.mentor_id,
         actor_id: assessment.actor_id,
         block_id: assessment.block_id,

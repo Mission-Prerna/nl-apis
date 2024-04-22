@@ -137,7 +137,6 @@ model assessment_visit_results {
   block_id         Int      @default(0)
   time_taken       Int      @default(0)
   actor_id         Int      @default(0) @db.SmallInt
-  is_valid         Boolean  @default(true)
 
   @@index([actor, block], map: "assessment_visit_result_actor_block_index")
   @@index([actor], map: "assessment_visit_result_actor_index")
@@ -222,6 +221,7 @@ model assessment_visit_results_v2 {
   @@index([subject_id])
   @@index([udise])
   @@index([submission_timestamp])
+  @@index([is_valid])
 }
 
 model auth_group {
@@ -583,6 +583,7 @@ model mentor {
   mentor_segmentation                            mentor_segmentation[]
   mentor_tokens                                  mentor_tokens?
   mentor_update_logs                             mentor_update_logs[]
+  school_results_fraud_reports                   school_results_fraud_reports[]
   teacher_school_list_mapping                    teacher_school_list_mapping[]
 
   @@index([actor_id], map: "mentor_actor_id_key")
@@ -625,44 +626,45 @@ model nyay_panchayats {
 }
 
 model school_list {
-  id                                       Int                                        @id @default(autoincrement())
-  district                                 String                                     @default("") @db.VarChar
-  area_type                                String                                     @db.VarChar
-  block                                    String                                     @default("") @db.VarChar
-  nypanchayat                              String                                     @db.VarChar
-  type                                     String?                                    @db.VarChar
-  category                                 String?                                    @db.VarChar
-  name                                     String?                                    @db.VarChar
-  udise_code                               String?                                    @unique @db.VarChar
-  total_student_registered                 Int?
-  is_sankul                                Boolean                                    @default(false)
-  district_id                              Int
-  block_id                                 Int
-  udise                                    BigInt                                     @unique @default(0)
-  nyay_panchayat_id                        Int?
-  lat                                      Decimal?                                   @db.Decimal
-  long                                     Decimal?                                   @db.Decimal
-  geo_fence_enabled                        Boolean                                    @default(true)
-  assessment_cycle_district_school_mapping assessment_cycle_district_school_mapping[]
-  assessment_cycle_school_nipun_results    assessment_cycle_school_nipun_results[]
-  assessment_survey_result_v2              assessment_survey_result_v2[]
-  assessment_visit_results_v2              assessment_visit_results_v2[]
-  assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
-  assessment_visit_results_v2_2023_jul_sep assessment_visit_results_v2_2023_jul_sep[]
-  assessment_visit_results_v2_2023_oct_dec assessment_visit_results_v2_2023_oct_dec[]
-  assessment_visit_results_v2_2024_apr_jun assessment_visit_results_v2_2024_apr_jun[]
-  assessment_visit_results_v2_2024_jan_mar assessment_visit_results_v2_2024_jan_mar[]
-  assessment_visit_results_v2_2024_jul_sep assessment_visit_results_v2_2024_jul_sep[]
-  assessment_visit_results_v2_2024_oct_dec assessment_visit_results_v2_2024_oct_dec[]
-  assessment_visit_results_v2_2025_apr_jun assessment_visit_results_v2_2025_apr_jun[]
-  assessment_visit_results_v2_2025_jan_mar assessment_visit_results_v2_2025_jan_mar[]
-  assessment_visit_results_v2_2025_jul_sep assessment_visit_results_v2_2025_jul_sep[]
-  assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
-  assessments                              assessments[]
-  blocks                                   blocks                                     @relation(fields: [block_id], references: [id])
-  districts                                districts                                  @relation(fields: [district_id], references: [id])
-  nyay_panchayats                          nyay_panchayats?                           @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
-  teacher_school_list_mapping              teacher_school_list_mapping[]
+  id                                           Int                                            @id @default(autoincrement())
+  district                                     String                                         @default("") @db.VarChar
+  area_type                                    String                                         @db.VarChar
+  block                                        String                                         @default("") @db.VarChar
+  nypanchayat                                  String                                         @db.VarChar
+  type                                         String?                                        @db.VarChar
+  category                                     String?                                        @db.VarChar
+  name                                         String?                                        @db.VarChar
+  udise_code                                   String?                                        @unique @db.VarChar
+  total_student_registered                     Int?
+  is_sankul                                    Boolean                                        @default(false)
+  district_id                                  Int
+  block_id                                     Int
+  udise                                        BigInt                                         @unique @default(0)
+  nyay_panchayat_id                            Int?
+  lat                                          Decimal?                                       @db.Decimal
+  long                                         Decimal?                                       @db.Decimal
+  geo_fence_enabled                            Boolean                                        @default(true)
+  assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
+  assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  assessment_survey_result_v2                  assessment_survey_result_v2[]
+  assessment_visit_results_v2                  assessment_visit_results_v2[]
+  assessment_visit_results_v2_2023_apr_jun     assessment_visit_results_v2_2023_apr_jun[]
+  assessment_visit_results_v2_2023_jul_sep     assessment_visit_results_v2_2023_jul_sep[]
+  assessment_visit_results_v2_2023_oct_dec     assessment_visit_results_v2_2023_oct_dec[]
+  assessment_visit_results_v2_2024_apr_jun     assessment_visit_results_v2_2024_apr_jun[]
+  assessment_visit_results_v2_2024_jan_mar     assessment_visit_results_v2_2024_jan_mar[]
+  assessment_visit_results_v2_2024_jul_sep     assessment_visit_results_v2_2024_jul_sep[]
+  assessment_visit_results_v2_2024_oct_dec     assessment_visit_results_v2_2024_oct_dec[]
+  assessment_visit_results_v2_2025_apr_jun     assessment_visit_results_v2_2025_apr_jun[]
+  assessment_visit_results_v2_2025_jan_mar     assessment_visit_results_v2_2025_jan_mar[]
+  assessment_visit_results_v2_2025_jul_sep     assessment_visit_results_v2_2025_jul_sep[]
+  assessment_visit_results_v2_2025_oct_dec     assessment_visit_results_v2_2025_oct_dec[]
+  assessments                                  assessments[]
+  blocks                                       blocks                                         @relation(fields: [block_id], references: [id])
+  districts                                    districts                                      @relation(fields: [district_id], references: [id])
+  nyay_panchayats                              nyay_panchayats?                               @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
+  school_results_fraud_reports                 school_results_fraud_reports[]
+  teacher_school_list_mapping                  teacher_school_list_mapping[]
 
   @@index([block, district], map: "sch_list_block_dist_index")
   @@index([district_id, block_id], map: "sch_list_block_id_dist_id_index")
@@ -729,20 +731,21 @@ model teacher_school_list_mapping {
 }
 
 model workflow_refids_mapping {
-  grade              Int
-  subject            String
-  competency_id      Int
-  type               String
-  is_active          Boolean           @default(true)
-  ref_ids            Json              @default("[]")
-  id                 Int               @id @unique @default(autoincrement())
-  assessment_type    String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
-  subject_id         Int
-  assessment_type_id Int?
-  assessment_types   assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
-  subjects           subjects          @relation(fields: [subject_id], references: [id])
+  grade                Int
+  subject              String
+  competency_id        Int
+  type                 String
+  is_active            Boolean           @default(true)
+  ref_ids              Json              @default("[]")
+  id                   Int               @id @unique @default(autoincrement())
+  assessment_type      String            @default(dbgenerated("TRIM(BOTH FROM ''::text)")) @db.Char
+  subject_id           Int
+  assessment_type_id   Int?
+  min_app_version_code Int               @default(0)
+  assessment_types     assessment_types? @relation(fields: [assessment_type_id], references: [id], onDelete: Restrict)
+  subjects             subjects          @relation(fields: [subject_id], references: [id])
 
-  @@unique([competency_id, type, grade, subject, assessment_type], map: "workflow_refids_mapping_competency_id_type_grade_subject_assess")
+  @@unique([subject, competency_id, type, assessment_type, grade, min_app_version_code], map: "workflow_refids_mapping_subject_competency_id_type_assessment_t")
   @@index([assessment_type_id], map: "workflow_refids_mapping_ass_type_id_idx")
   @@index([subject_id])
 }
@@ -867,7 +870,6 @@ model assessment_visit_results_students_2023_apr_jun {
   assessment_visit_results_student_odk_results_2023_apr_jun assessment_visit_results_student_odk_results_2023_apr_jun[]
   assessment_visit_results_v2_2023_apr_jun                  assessment_visit_results_v2_2023_apr_jun                    @relation(fields: [assessment_visit_results_v2_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_assessment_vi")
   mentor                                                    mentor?                                                     @relation(fields: [mentor_id], references: [id], onDelete: Cascade, map: "assessment_visit_results_students_2023_apr_jun_mentor_id_fke")
-  students                                                  students?                                                   @relation(fields: [student_id], references: [unique_id], map: "assessment_visit_results_students_2023_apr_jun_student_id_fk")
 
   @@unique([student_session, competency_id, assessment_visit_results_v2_id], map: "assessment_visit_results_students_2023_apr_jun_ss_com_avr_v2_id")
   @@index([created_at])
@@ -1273,6 +1275,7 @@ model assessment_visit_results_v2_2023_apr_jun {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_apr_jun_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
+  @@index([is_valid])
 }
 
 model assessment_visit_results_v2_2023_jul_sep {
@@ -1311,6 +1314,8 @@ model assessment_visit_results_v2_2023_jul_sep {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
+  @@index([is_valid])
+  @@index([mentor_id, submission_timestamp], map: "assessment_visit_results_v2_2023_jul_sep_mentor_id_submission_t")
 }
 
 model assessment_visit_results_v2_2023_oct_dec {
@@ -1349,6 +1354,7 @@ model assessment_visit_results_v2_2023_oct_dec {
   @@index([submission_timestamp], map: "assessment_visit_results_v2_2023_oct_dec_sbsn_tz_idx")
   @@index([subject_id])
   @@index([udise])
+  @@index([is_valid], map: "assessment_visit_results_v2_2023_oct_dec_is_valid")
 }
 
 model assessment_visit_results_v2_2024_apr_jun {
@@ -1728,7 +1734,6 @@ model students {
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   deleted_at                                     DateTime?                                        @db.Timestamptz(6)
-  assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
   assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
@@ -1747,11 +1752,6 @@ model students {
 }
 
 /// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
-/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
-/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
-/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
-/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
-
 model assessments {
   id                   Int          @default(autoincrement())
   created_at           DateTime     @default(now()) @db.Timestamptz(6)
@@ -1802,6 +1802,7 @@ model assessments {
   @@index([old_assessment_id])
   @@index([submitted_at(sort: Desc)])
   @@index([udise, submitted_at], map: "assessments_udise_comp_idx")
+  @@index([is_valid])
 }
 
 model student_update_logs {
@@ -1847,6 +1848,7 @@ model assessment_cycle_district_school_mapping {
   @@unique([cycle_id, udise])
   @@index([cycle_id])
   @@index([udise])
+  @@index([udise, cycle_id], map: "assessment_cycle_district_school_mapping_cycle_id_udise_idx")
 }
 
 model assessment_cycle_school_nipun_results {
@@ -1869,21 +1871,22 @@ model assessment_cycle_school_nipun_results {
 }
 
 model assessment_cycles {
-  id                                       Int                                        @id @default(autoincrement())
-  start_date                               DateTime                                   @db.Date
-  end_date                                 DateTime                                   @db.Date
-  class_1_students_count                   Int                                        @db.SmallInt
-  class_1_nipun_percentage                 Int                                        @db.SmallInt
-  class_2_students_count                   Int                                        @db.SmallInt
-  class_2_nipun_percentage                 Int                                        @db.SmallInt
-  class_3_students_count                   Int                                        @db.SmallInt
-  class_3_nipun_percentage                 Int                                        @db.SmallInt
-  name                                     String                                     @db.VarChar(255)
-  created_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  updated_at                               DateTime                                   @default(now()) @db.Timestamptz(6)
-  assessment_cycle_district_mentor_mapping assessment_cycle_district_mentor_mapping[]
-  assessment_cycle_district_school_mapping assessment_cycle_district_school_mapping[]
-  assessment_cycle_school_nipun_results    assessment_cycle_school_nipun_results[]
+  id                                           Int                                            @id @default(autoincrement())
+  start_date                                   DateTime                                       @db.Date
+  end_date                                     DateTime                                       @db.Date
+  class_1_students_count                       Int                                            @db.SmallInt
+  class_1_nipun_percentage                     Int                                            @db.SmallInt
+  class_2_students_count                       Int                                            @db.SmallInt
+  class_2_nipun_percentage                     Int                                            @db.SmallInt
+  class_3_students_count                       Int                                            @db.SmallInt
+  class_3_nipun_percentage                     Int                                            @db.SmallInt
+  name                                         String                                         @db.VarChar(255)
+  created_at                                   DateTime                                       @default(now()) @db.Timestamptz(6)
+  updated_at                                   DateTime                                       @default(now()) @db.Timestamptz(6)
+  assessment_cycle_district_mentor_mapping     assessment_cycle_district_mentor_mapping[]
+  assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
+  assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  school_results_fraud_reports                 school_results_fraud_reports[]
 
   @@index([end_date], map: "assessment_cycles_end_date")
   @@index([start_date], map: "assessment_cycles_start_date")
@@ -1899,14 +1902,31 @@ model android_actions {
 model app_actions {
   id                 Int             @id @default(autoincrement())
   android_actions_id Int
-  mentor_id          Int
-  actor_id           Int
+  mentor_id          Int?
+  actor_id           Int?
   created_at         DateTime        @default(now()) @db.Timestamptz(6)
   updated_at         DateTime        @default(now()) @db.Timestamptz(6)
   android_actions    android_actions @relation(fields: [android_actions_id], references: [id], onUpdate: Restrict)
 
   @@index([actor_id])
   @@index([mentor_id])
+}
+
+model school_results_fraud_reports {
+  id                Int               @id @default(autoincrement())
+  udise             BigInt
+  cycle_id          Int
+  mentor_id         BigInt
+  is_valid          Boolean
+  created_at        DateTime          @default(now()) @db.Timetz(6)
+  updated_at        DateTime          @default(now()) @db.Timetz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
+  mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)
+
+  @@index([cycle_id], map: "school_results_fraud_reports_cycle_id_key")
+  @@index([udise, cycle_id], map: "school_results_fraud_reports_udise_cycle_id_key")
+  @@index([udise], map: "school_results_fraud_reports_udise_key")
 }
 
 enum genders_enum {

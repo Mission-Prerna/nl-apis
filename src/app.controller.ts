@@ -92,6 +92,10 @@ export class AppController {
     @Request() { mentor }: { mentor: Mentor },
     ) {
     const mentorId = mentor.id as unknown as number;
+    // Remove insight cache for mentor
+    if (mentor.actor_id === ActorEnum.MENTOR) {
+      await this.appService.clearMentorInsightV2Cache(mentor.phone_no);
+    }
     if (this.useQueues) {
       for (const dto of body) { // iterate over objects & push to queue
         dto.mentor_id = mentorId; // assign logged in mentor to dto
@@ -255,8 +259,9 @@ export class AppController {
   }
 
   @Get('/api/metadata')
-  async getMetadata() {
-    return this.appService.getMetadata();
+  async getMetadata(@Request() request: any) {
+    const headers = request.headers;
+    return this.appService.getMetadata(headers);
   }
 
   @Get('/api/v2/metadata')

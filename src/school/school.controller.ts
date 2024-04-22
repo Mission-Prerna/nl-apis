@@ -1,9 +1,8 @@
 import {
-  BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
-  HttpStatus,
   Param,
   ParseArrayPipe,
   ParseIntPipe,
@@ -19,7 +18,7 @@ import {
 import { FastifyReply } from 'fastify';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { AppService } from '../app.service';
-import { CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
+import { ActorEnum, CacheConstants, CacheKeySchoolStudents, JobEnum, Mentor, QueueEnum, Role } from '../enums';
 import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { GetSchoolStudentsDto } from '../dto/GetSchoolStudents.dto';
 import { Response } from 'express';
@@ -161,5 +160,22 @@ export class SchoolController {
       msg: 'Queued!',
       data: null,
     };
+  }
+
+  @Post(':udise/result/report/fraud')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async reportSchoolResultFraud(
+    @Param('udise', ParseIntPipe) udise: number,
+    @Query() { cycle_id }: AssessmentCycleValidatorDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    if (!(mentor.actor_id === ActorEnum.EXAMINER)) {
+      throw new ForbiddenException(
+        'Only Examiners are allowed to access this endpoint.',
+      );
+    }
+    return await this.service.markSchoolResultFraud(mentor.id, udise, cycle_id);
   }
 }

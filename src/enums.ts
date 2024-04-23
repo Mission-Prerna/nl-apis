@@ -132,8 +132,9 @@ export interface CycleDistrictUdiseRow {
   udise: number;
 }
 
-export function CacheKeyMetadataAll() {
-  return `metadata*`;
+export function CacheKeyMetadataAll(actorId?: ActorEnum) {
+  if (actorId) return `metadata:${ActorEnum[actorId]}`;
+  return `metadata`;
 }
 
 export function CacheKeyMetadata(app_version_code: any, actorId?: ActorEnum) {

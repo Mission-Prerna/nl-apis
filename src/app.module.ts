@@ -1,4 +1,4 @@
-import { CacheModule, CacheStore, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -30,6 +30,7 @@ import { SchoolServiceV2 } from './school/school.service.v2';
 import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calculate-examiner-cycle-udise-result.processor';
 import { MinioModule } from './minio/minio.module';
 import { MinioService } from './minio/minio.service';
+import { CacheModule, CacheStore } from '@nestjs/cache-manager';
 
 @Module({
   imports: [ 

@@ -1,7 +1,8 @@
-import { CACHE_MANAGER, Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CacheConstants, CacheKeySchoolStudentsCount, Student } from '../enums';
 import { PrismaService } from '../prisma.service';
 import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class StudentService {

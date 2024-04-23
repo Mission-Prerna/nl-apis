@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma.service';
 import { AppService } from '../app.service';
-import { CacheModule } from '@nestjs/common';
 import { FusionauthService } from '../fusionauth.service';
 import { RedisHelperService } from '../RedisHelper.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
@@ -13,6 +12,7 @@ import { I18nModule } from 'nestjs-i18n';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { addMockStudentAssessmentData } from '../utils/test-utils';
 import { assessment_cycle_school_nipun_results } from '@prisma/client';
+import { CacheModule } from '@nestjs/cache-manager';
 
 class MockRedisService {
   getClient(): Promise<any> {

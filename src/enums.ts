@@ -133,8 +133,8 @@ export interface CycleDistrictUdiseRow {
 }
 
 export function CacheKeyMetadataAll(actorId?: ActorEnum) {
-  if (actorId) return `metadata:${ActorEnum[actorId]}`;
-  return `metadata`;
+  if (actorId) return `metadata:${ActorEnum[actorId]}*`;
+  return `metadata*`;
 }
 
 export function CacheKeyMetadata(app_version_code: any, actorId?: ActorEnum) {

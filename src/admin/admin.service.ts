@@ -632,22 +632,15 @@ export class AdminService {
   async clearAllMentorCache(mentorId: bigint) {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear() 
-    const actorId = await this.prismaService.mentor.findUniqueOrThrow({
-      where: {
-        id: mentorId,
-      },
-      select: {
-        actor_id: true,
-      },
-    });
 
     const keys = [
-      CacheKeyMetadata('*', actorId.actor_id), 
-      CacheKeyMetadataAll(), 
       CacheKeyMentorMonthlyVisitedSchools(mentorId, currentMonth, currentYear),
       CacheKeyMentorWeeklyMetrics(mentorId, currentMonth, currentYear),
       CacheKeyMentorMonthlyMetrics(mentorId, currentMonth, currentYear)
     ]
+    // remove metadata for all actors and all app-versions
+    keys.push(...await this.getCacheKeysByPattern(CacheKeyMetadataAll()))
+
     const promises = keys.map(key => this.cacheService.del(key))
     return Promise.all(promises)
   }
@@ -750,6 +743,12 @@ export class AdminService {
     return Promise.all(promises)
   }
 
+  async getCacheKeysByPattern(pattern: string): Promise<string[]> {
+    const allKeys = await this.cacheService.store.keys();
+    return allKeys.filter(key => key.startsWith(pattern));
+  }
+  
+
   async clearMentorCache(phoneNumbers: string[], actorIds: ActorEnum[]) {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
@@ -768,7 +767,21 @@ export class AdminService {
       return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
 
-  const metadataPromises = [this.cacheService.del(CacheKeyMetadataAll())];
+
+  const metadataKeys: string[] = [];
+  if (actorIds.length !== 0) {
+    for (const actorId of actorIds) {
+      const keys = await this.getCacheKeysByPattern(CacheKeyMetadataAll(actorId));
+      metadataKeys.push(...keys);
+    }
+  } else {
+    // remove metadata for all actors and all app-versions
+    metadataKeys.push(...await this.getCacheKeysByPattern(CacheKeyMetadataAll()));
+  }
+  
+  const metadataPromises = metadataKeys.map((key)=>{
+    return this.cacheService.del(key)
+  });
 
     try {
       await Promise.all([

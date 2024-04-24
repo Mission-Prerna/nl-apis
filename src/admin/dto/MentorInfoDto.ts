@@ -1,10 +1,7 @@
-import { IsNotEmpty } from 'class-validator';
-import { ActorEnum } from 'src/enums';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class MentorClearCacheDto {
   @IsNotEmpty()
-  readonly phoneNumbers!: string[];
-
-  @IsNotEmpty()
-  readonly actorIds: ActorEnum[];
+  @IsOptional()
+  readonly phoneNumbers?: string[];
 }

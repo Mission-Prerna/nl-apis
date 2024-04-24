@@ -744,12 +744,12 @@ export class AdminService {
   }
 
   async getCacheKeysByPattern(pattern: string): Promise<string[]> {
-    const allKeys = await this.cacheService.store.keys();
-    return allKeys.filter(key => key.startsWith(pattern));
+    const allKeys = await this.cacheService.store.keys(pattern);
+    return allKeys;
   }
   
 
-  async clearMentorCache(phoneNumbers: string[], actorIds: ActorEnum[]) {
+  async clearMentorCache(phoneNumbers: string[]) {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
 
@@ -767,19 +767,10 @@ export class AdminService {
       return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
 
-
-  const metadataKeys: string[] = [];
-  if (actorIds.length !== 0) {
-    for (const actorId of actorIds) {
-      const keys = await this.getCacheKeysByPattern(CacheKeyMetadataAll(actorId));
-      metadataKeys.push(...keys);
-    }
-  } else {
-    // remove metadata for all actors and all app-versions
+    const metadataKeys: string[] = [];
+      // remove metadata for all actors and all app-versions
     metadataKeys.push(...await this.getCacheKeysByPattern(CacheKeyMetadataAll()));
-  }
-  
-  const metadataPromises = metadataKeys.map((key)=>{
+    const metadataPromises = metadataKeys.map((key)=>{
     return this.cacheService.del(key)
   });
 

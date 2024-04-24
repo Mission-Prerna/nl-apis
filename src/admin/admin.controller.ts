@@ -227,8 +227,8 @@ export class AdminController {
   @UseGuards(JwtAdminGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async clearMentorCache(@Body() body: MentorClearCacheDto) {
-    const { actorIds, phoneNumbers } = body;
-    return this.service.clearMentorCache(phoneNumbers, actorIds);
+    const { phoneNumbers } = body;
+    return this.service.clearMentorCache(phoneNumbers || []);
   }
   
   @Post('/upload-forms-zip')

@@ -247,38 +247,72 @@ export class SchoolServiceV2 extends SchoolService {
         summary: summary,
       };
     }
+
     for (const item of monthsForQuery) {
       const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
       const endTime = moment(startTime).add(1, 'months')
 
       const query = `
-      select t.grade,
-        count(t.student_id)                                        as assessed,
-        count(case when t.is_passed is true then t.student_id end) as nipun,
-        max(t.submission_timestamp)                                as updated_at
-      from (
-        select distinct on (a.student_id) student_id,
-                                         a.grade,
-                                         a.submitted_at,
-                                         a.submission_timestamp,
-                                         a.is_passed
-        from assessments a
-        where a.student_id is not null
-          and a.udise = $1
-          and a.actor_id = ${ActorEnum.TEACHER}
-          and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-          and a.submitted_at between '${startTime.format('YYYY-MM-DD HH:mm:ss')}' and '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
-          and a.grade = ANY($2::smallint[])
-          and a.is_valid = true
-        order by a.student_id, a.submitted_at DESC
+      WITH assessed_counts AS (
+          SELECT 
+              student_id,
+              COUNT(*) AS total_assessments
+          FROM assessments
+          WHERE student_id IS NOT NULL
+              AND udise = $1
+              AND actor_id = ${ActorEnum.TEACHER}
+              AND student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
+              AND submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+              AND grade = ANY($2::smallint[])
+              AND is_valid = true
+          GROUP BY student_id
+      ),
+      failed_counts AS (
+          SELECT 
+              a.student_id
+          FROM assessments a
+          WHERE a.student_id IS NOT NULL
+              AND a.udise = $1
+              AND a.actor_id = ${ActorEnum.TEACHER}
+              AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
+              AND a.submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+              AND a.grade = ANY($2::smallint[])
+              AND a.is_valid = true
+              AND a.is_passed = false  -- Counting failed assessments
+          GROUP BY a.student_id
+      )
+      SELECT 
+          grade,
+          COUNT(DISTINCT t.student_id) AS assessed,
+          COUNT(DISTINCT t.student_id) - COUNT(failed_counts.student_id) AS nipun,
+          MAX(t.submission_timestamp) AS updated_at
+      FROM (
+          SELECT DISTINCT ON (a.student_id) 
+              a.student_id,
+              a.grade,
+              a.submitted_at,
+              a.submission_timestamp
+          FROM assessments a
+          WHERE a.student_id IS NOT NULL
+              AND a.udise = $1
+              AND a.actor_id = ${ActorEnum.TEACHER}
+              AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
+              AND a.submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+              AND a.grade = ANY($2::smallint[])
+              AND a.is_valid = true
+          ORDER BY a.student_id, a.submitted_at DESC
       ) t
-      group by grade`;
+      LEFT JOIN assessed_counts ON t.student_id = assessed_counts.student_id
+      LEFT JOIN failed_counts ON t.student_id = failed_counts.student_id
+      GROUP BY grade;
+      `;
       
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
-        query, 
-        udise, 
-        grades
-      );
+          query, 
+          udise, 
+          grades
+      );      
+
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].successful = row.nipun;

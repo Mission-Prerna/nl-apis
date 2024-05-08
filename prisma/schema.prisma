@@ -1373,6 +1373,8 @@ model assessment_visit_results_v2_2024_apr_jun {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1409,6 +1411,8 @@ model assessment_visit_results_v2_2024_jan_mar {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2024_jan_mar assessment_visit_results_students_2024_jan_mar[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1445,6 +1449,8 @@ model assessment_visit_results_v2_2024_jul_sep {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2024_jul_sep assessment_visit_results_students_2024_jul_sep[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1481,6 +1487,8 @@ model assessment_visit_results_v2_2024_oct_dec {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2024_oct_dec assessment_visit_results_students_2024_oct_dec[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1517,6 +1525,8 @@ model assessment_visit_results_v2_2025_apr_jun {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2025_apr_jun assessment_visit_results_students_2025_apr_jun[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1553,6 +1563,8 @@ model assessment_visit_results_v2_2025_jan_mar {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2025_jan_mar assessment_visit_results_students_2025_jan_mar[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1589,6 +1601,8 @@ model assessment_visit_results_v2_2025_jul_sep {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)
@@ -1625,6 +1639,8 @@ model assessment_visit_results_v2_2025_oct_dec {
   submission_timestamp                           BigInt                                           @default(0)
   app_version_code                               Int                                              @default(0)
   v                                              Int                                              @default(2) @db.SmallInt
+  is_valid                                       Boolean                                          @default(true)
+  updated_at                                     DateTime                                         @default(now()) @db.Timestamp(6)
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
   actors                                         actors                                           @relation(fields: [actor_id], references: [id])
   blocks                                         blocks?                                          @relation(fields: [block_id], references: [id], onDelete: Restrict)

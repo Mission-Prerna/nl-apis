@@ -253,60 +253,44 @@ export class SchoolServiceV2 extends SchoolService {
       const endTime = moment(startTime).add(1, 'months')
 
       const query = `
-      WITH assessed_counts AS (
-          SELECT 
-              student_id,
-              COUNT(*) AS total_assessments
-          FROM assessments
-          WHERE student_id IS NOT NULL
-              AND udise = $1
-              AND actor_id = ${ActorEnum.TEACHER}
-              AND student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
-              AND submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
-              AND grade = ANY($2::smallint[])
-              AND is_valid = true
-          GROUP BY student_id
-      ),
-      failed_counts AS (
-          SELECT 
-              a.student_id
-          FROM assessments a
-          WHERE a.student_id IS NOT NULL
-              AND a.udise = $1
-              AND a.actor_id = ${ActorEnum.TEACHER}
-              AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
-              AND a.submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
-              AND a.grade = ANY($2::smallint[])
-              AND a.is_valid = true
-              AND a.is_passed = false  -- Counting failed assessments
-          GROUP BY a.student_id
-      )
-      SELECT 
-          grade,
-          COUNT(DISTINCT t.student_id) AS assessed,
-          COUNT(DISTINCT t.student_id) - COUNT(failed_counts.student_id) AS nipun,
-          MAX(t.submission_timestamp) AS updated_at
-      FROM (
-          SELECT DISTINCT ON (a.student_id) 
-              a.student_id,
-              a.grade,
-              a.submitted_at,
-              a.submission_timestamp
-          FROM assessments a
-          WHERE a.student_id IS NOT NULL
-              AND a.udise = $1
-              AND a.actor_id = ${ActorEnum.TEACHER}
-              AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
-              AND a.submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
-              AND a.grade = ANY($2::smallint[])
-              AND a.is_valid = true
-          ORDER BY a.student_id, a.submitted_at DESC
-      ) t
-      LEFT JOIN assessed_counts ON t.student_id = assessed_counts.student_id
-      LEFT JOIN failed_counts ON t.student_id = failed_counts.student_id
-      GROUP BY grade;
-      `;
-      
+      WITH latest_assessments AS (
+        SELECT 
+            DISTINCT ON (student_id) 
+            student_id,
+            grade,
+            submitted_at,
+            submission_timestamp,        
+            COUNT(*) AS total_assessments
+        FROM assessments
+        WHERE student_id IS NOT NULL
+            AND udise = $1
+            AND actor_id = ${ActorEnum.TEACHER}
+            AND student_id NOT IN ('-1', '-2', '-3')
+            AND submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+            AND grade = ANY($2::smallint[])
+            AND is_valid = true
+        GROUP BY student_id, grade, submitted_at, submission_timestamp
+        ORDER BY student_id, submission_timestamp DESC
+    ),
+    failed_counts AS (
+        SELECT 
+            a.student_id
+        FROM assessments a
+        JOIN latest_assessments la ON a.student_id = la.student_id AND a.submission_timestamp = la.submission_timestamp
+        WHERE a.is_valid = true
+            AND a.is_passed = false
+        GROUP BY a.student_id
+    )
+    SELECT 
+        latest_assessments.grade,
+        COUNT(DISTINCT latest_assessments.student_id) AS assessed,
+        COUNT(DISTINCT latest_assessments.student_id) - COUNT(failed_counts.student_id) AS nipun,
+        MAX(latest_assessments.submission_timestamp) AS updated_at
+    FROM latest_assessments
+    LEFT JOIN failed_counts ON latest_assessments.student_id = failed_counts.student_id
+    GROUP BY latest_assessments.grade;    
+    `
+
       const result: Array<Record<string, number>> = await this.prismaService.$queryRawUnsafe(
           query, 
           udise, 

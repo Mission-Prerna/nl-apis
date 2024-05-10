@@ -1,0 +1,265 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: nl-apis
+    url: http://host.docker.internal:3000
+    # url: http://localhost:3000
+    plugins:
+      - name: prometheus
+        config:
+          per_consumer: false
+          # per_route_metrics: true
+          status_code_metrics: true
+          latency_metrics: true
+          bandwidth_metrics: true
+          upstream_health_metrics: true
+
+routes:
+  - name: health
+    methods:
+      - GET
+    paths:
+      - /health
+    strip_path: false
+    service: nl-apis
+
+  - name: upload-school-CSV
+    methods:
+      - POST
+    paths:
+      - /api/school/upload
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-students
+    methods:
+      - GET
+    paths:
+      - /api/school/*/students
+    strip_path: false
+    service: nl-apis
+
+  - name: get-school-status
+    methods:
+      - GET
+    paths:
+      - /api/school/status
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-students-result
+    methods:
+      - GET
+    paths:
+      - /api/school/*/students/result
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-students-result-summary
+    methods:
+      - GET
+    paths:
+      - /api/school/*/students/result/summary
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-teacher-performance-insights
+    methods:
+      - GET
+    paths:
+      - /api/school/*/teacher/performance/insights
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-result-calculate
+    methods:
+      - POST
+    paths:
+      - /api/school/*/result/calculate
+    strip_path: false
+    service: nl-apis
+
+  - name: school-udise-result-report-fraud
+    methods:
+      - POST
+    paths:
+      - /api/school/*/result/report/fraud
+    strip_path: false
+    service: nl-apis
+
+  - name: assessment-visit-results
+    methods:
+      - POST
+    paths:
+      - /api/assessment-visit-results
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-schools-list
+    methods:
+      - GET
+    paths:
+      - /api/mentor/schools
+    strip_path: false
+    service: nl-apis
+
+  - name: create-assessment-survey-results
+    methods:
+      - POST
+    paths:
+      - /api/assessment-survey-results
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-dashboard-overview
+    methods:
+      - GET
+    paths:
+      - /api/mentor/dashboard-overview
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-details
+    methods:
+      - GET
+    paths:
+      - /api/mentor/details
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-details-v2
+    methods:
+      - GET
+    paths:
+      - /api/v2/mentor/details
+    strip_path: false
+    service: nl-apis
+
+  - name: v2-mentor-performance-insights
+    methods:
+      - GET
+    paths:
+      - /api/v2/mentor/performance/insights
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-actions
+    methods:
+      - GET
+    paths:
+      - /api/actions
+    strip_path: false
+    service: nl-apis
+
+  - name: metadata
+    methods:
+      - GET
+    paths:
+      - /api/metadata
+    strip_path: false
+    service: nl-apis
+
+  - name: metadata-v2
+    methods:
+      - GET
+    paths:
+      - /api/v2/metadata
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-pin
+    methods:
+      - PATCH
+    paths:
+      - /api/mentor/pin
+    strip_path: false
+    service: nl-apis
+
+  - name: actor-dashboard-overview
+    methods:
+      - GET
+    paths:
+      - /api/actor/dashboard-overview
+    strip_path: false
+    service: nl-apis
+
+  - name: create-mentor
+    methods:
+      - POST
+    paths:
+      - /api/mentor
+    strip_path: false
+    service: nl-apis
+
+  - name: create-mentor-segment
+    methods:
+      - POST
+    paths:
+      - /api/mentor/segment
+    strip_path: false
+    service: nl-apis
+
+  - name: create-mentor-old
+    methods:
+      - POST
+    paths:
+      - /api/mentor/old
+    strip_path: false
+    service: nl-apis
+
+  - name: update-mentor-token
+    methods:
+      - POST
+    paths:
+      - /api/mentor/token
+    strip_path: false
+    service: nl-apis
+
+  - name: set-mentor-token
+    methods:
+      - PUT
+    paths:
+      - /api/mentor/token
+    strip_path: false
+    service: nl-apis
+
+  - name: set-mentor-bot-telemetry
+    methods:
+      - POST
+    paths:
+      - /api/mentor/bot/telemetry
+    strip_path: false
+    service: nl-apis
+
+  - name: get-mentor-bot-telemetry
+    methods:
+      - GET
+    paths:
+      - /api/mentor/bot/telemetry
+    strip_path: false
+    service: nl-apis
+
+  - name: mentor-bot
+    methods:
+      - GET
+    paths:
+      - /api/mentor/bot
+    strip_path: false
+    service: nl-apis
+
+  - name: examiner-performance-insights
+    methods:
+      - GET
+    paths:
+      - /api/examiner/performance/insights
+    strip_path: false
+    service: nl-apis
+
+  - name: api-bhashini
+    methods:
+      - POST
+    paths:
+      - /api/bhashini*
+    strip_path: false
+    service: nl-apis

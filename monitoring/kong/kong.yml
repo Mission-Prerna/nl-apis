@@ -9,7 +9,6 @@ services:
       - name: prometheus
         config:
           per_consumer: false
-          # per_route_metrics: true
           status_code_metrics: true
           latency_metrics: true
           bandwidth_metrics: true
@@ -36,7 +35,7 @@ routes:
     methods:
       - GET
     paths:
-      - /api/school/*/students
+      - /api/school/:udise/students
     strip_path: false
     service: nl-apis
 
@@ -52,7 +51,7 @@ routes:
     methods:
       - GET
     paths:
-      - /api/school/*/students/result
+      - /api/school/:udise/students/result
     strip_path: false
     service: nl-apis
 
@@ -60,7 +59,7 @@ routes:
     methods:
       - GET
     paths:
-      - /api/school/*/students/result/summary
+      - /api/school/:udise/students/result/summary
     strip_path: false
     service: nl-apis
 
@@ -68,7 +67,7 @@ routes:
     methods:
       - GET
     paths:
-      - /api/school/*/teacher/performance/insights
+      - /api/school/:udise/teacher/performance/insights
     strip_path: false
     service: nl-apis
 
@@ -76,7 +75,7 @@ routes:
     methods:
       - POST
     paths:
-      - /api/school/*/result/calculate
+      - /api/school/:udise/result/calculate
     strip_path: false
     service: nl-apis
 
@@ -84,7 +83,7 @@ routes:
     methods:
       - POST
     paths:
-      - /api/school/*/result/report/fraud
+      - /api/school/:udise/result/report/fraud
     strip_path: false
     service: nl-apis
 
@@ -253,13 +252,5 @@ routes:
       - GET
     paths:
       - /api/examiner/performance/insights
-    strip_path: false
-    service: nl-apis
-
-  - name: api-bhashini
-    methods:
-      - POST
-    paths:
-      - /api/bhashini*
     strip_path: false
     service: nl-apis

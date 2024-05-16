@@ -19,6 +19,8 @@ async function bootstrap() {
     new FastifyAdapter({ bodyLimit: 1024 * 1024 * 20})
   );
 
+  app.enableCors()
+
   await app.register(fastifyMultipart);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));

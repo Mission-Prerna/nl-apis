@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  CACHE_MANAGER,
   HttpException,
   HttpStatus,
   Inject,
@@ -49,6 +48,7 @@ import { SchoolServiceV2 } from './school/school.service.v2';
 import { JwtService } from '@nestjs/jwt';
 import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 const moment = require('moment');
 

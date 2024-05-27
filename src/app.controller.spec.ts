@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma.service';
 import { ConfigModule } from '@nestjs/config';
-import { CacheModule } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { PrismaHealthIndicator } from './prisma.health';
 import { AssessmentVisitResultsProcessor } from './processors/assessment-visit-results.processor';
@@ -17,6 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { FusionauthService } from './fusionauth.service';
 import { RedisHelperService } from './RedisHelper.service';
 import { AdminService } from './admin/admin.service';
+import { CacheModule } from '@nestjs/cache-manager';
 
 class MockRedisService {
   getClient(): Promise<any> {

@@ -2,12 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SchoolService } from './school.service';
 import { PrismaService } from '../prisma.service';
 import { AppService } from '../app.service';
-import { CacheModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { FusionauthService } from '../fusionauth.service';
 import { RedisHelperService } from '../RedisHelper.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { JwtService } from '@nestjs/jwt';
+import { CacheModule } from '@nestjs/cache-manager';
 
 class MockRedisService {
   getClient(): Promise<any> {

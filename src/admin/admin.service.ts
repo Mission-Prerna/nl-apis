@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  CACHE_MANAGER,
   Inject,
   Injectable,
   Logger,
@@ -27,6 +26,7 @@ import { Cache } from 'cache-manager';
 import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.dto';
 import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateStudentsResponse.dto';
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class AdminService {

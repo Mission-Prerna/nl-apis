@@ -3,7 +3,6 @@ import { SchoolController } from './school.controller';
 import { AppService } from '../app.service';
 import { EtagService } from '../modules/etag/etag.service';
 import { EtagModule } from '../modules/etag/etag.module';
-import { CacheModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../prisma.service';
 import { FusionauthService } from '../fusionauth.service';
@@ -11,6 +10,7 @@ import { RedisHelperService } from '../RedisHelper.service';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { SchoolService } from './school.service';
+import { CacheModule } from '@nestjs/cache-manager';
 
 class MockRedisService {
   getClient(): Promise<any> {

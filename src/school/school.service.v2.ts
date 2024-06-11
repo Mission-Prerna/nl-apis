@@ -316,35 +316,56 @@ export class SchoolServiceV2 extends SchoolService {
     udise: number,
     firstDayTimestamp: number,
     lastDayTimestamp: number
-): Promise<TypeTeacherHomeOverview | null> {
+  ): Promise<TypeTeacherHomeOverview | null> {
     try {
         const query = `
+        WITH latest_assessments AS (
             SELECT 
-                COUNT(DISTINCT student_id) AS assessments_total,
-                COUNT(DISTINCT CASE WHEN passed_assessments = total_assessments THEN student_id END) AS nipun_total,
-                MAX(submitted_at) AS updated_at,
-                STRING_AGG(DISTINCT student_id::TEXT, ',') AS assessed_student_ids,
-                STRING_AGG(DISTINCT CASE WHEN passed_assessments = total_assessments THEN student_id::TEXT END, ',') AS nipun_student_ids
-            FROM (
-                SELECT 
-                    student_id,
-                    COUNT(*) AS total_assessments,
-                    COUNT(*) FILTER (WHERE is_passed = true) AS passed_assessments,
-                    MAX(submitted_at) AS submitted_at
-                FROM assessments
-                WHERE mentor_id = $1
-                    AND udise = $2
-                    AND actor_id = ${ActorEnum.TEACHER}
-                    AND assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-                    AND student_id IS NOT NULL
-                    AND student_id NOT IN ('-1', '-2', '-3') -- We don't want anonymous students
-                    AND submission_timestamp BETWEEN $3 AND $4
-                GROUP BY student_id
-            ) AS student_assessments;
+                DISTINCT ON (a.student_id, a.competency_id) 
+                a.student_id,
+                a.competency_id,
+                a.submitted_at,
+                a.submission_timestamp,        
+                a.is_valid,
+                a.is_passed
+            FROM assessments a
+            WHERE a.mentor_id = $1
+                AND a.udise = $2
+                AND a.actor_id = ${ActorEnum.TEACHER}
+                AND a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                AND a.student_id IS NOT NULL
+                AND a.student_id NOT IN ('-1', '-2', '-3')
+                AND a.submission_timestamp BETWEEN $3 AND $4
+            ORDER BY a.student_id, a.competency_id, a.submission_timestamp DESC
+        ),
+        assessed_students AS (
+            SELECT 
+                la.student_id,
+                COUNT(*) AS total_assessments,
+                COUNT(CASE WHEN la.is_passed THEN 1 END) AS passed_assessments
+            FROM latest_assessments la
+            WHERE la.is_valid = true
+            GROUP BY la.student_id
+        ),
+        passed_students AS (
+            SELECT 
+                ast.student_id
+            FROM assessed_students ast
+            WHERE ast.total_assessments = ast.passed_assessments
+        )
+        SELECT 
+            COUNT(DISTINCT ast.student_id) AS assessments_total,
+            COUNT(DISTINCT ps.student_id) AS nipun_total,
+            MAX(la.submitted_at) AS updated_at,
+            STRING_AGG(DISTINCT ast.student_id::TEXT, ',') AS assessed_student_ids,
+            STRING_AGG(DISTINCT ps.student_id::TEXT, ',') AS nipun_student_ids
+        FROM latest_assessments la
+        LEFT JOIN assessed_students ast ON la.student_id = ast.student_id
+        LEFT JOIN passed_students ps ON ast.student_id = ps.student_id
         `;
-        
+
         const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, udise, firstDayTimestamp, lastDayTimestamp);
-        
+
         if (result.length > 0) {
             return {
                 assessments_total: result[0].assessments_total,
@@ -361,7 +382,8 @@ export class SchoolServiceV2 extends SchoolService {
         this.appService.handleRequestError(e);
         return null;
     }
-}
+  }
+
 
   async getSchoolTeacherPerformance(mentor: Mentor, udise: number) {
     // @TODO: to be redone using Continuous Aggregates

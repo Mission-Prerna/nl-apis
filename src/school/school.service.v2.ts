@@ -249,8 +249,8 @@ export class SchoolServiceV2 extends SchoolService {
     }
 
     for (const item of monthsForQuery) {
-      const startTime = moment().month(item.month).year(item.year).date(1).startOf('day')
-      const endTime = moment(startTime).add(1, 'months')
+      const startTime = moment().month(item.month).year(item.year).date(1).startOf('day').valueOf();
+      const endTime = moment(startTime).add(1, 'months').valueOf();
 
       const query = `
       WITH latest_assessments AS (
@@ -266,7 +266,7 @@ export class SchoolServiceV2 extends SchoolService {
             AND udise = $1
             AND actor_id = ${ActorEnum.TEACHER}
             AND student_id NOT IN ('-1', '-2', '-3')
-            AND submitted_at BETWEEN '${startTime.format('YYYY-MM-DD HH:mm:ss')}' AND '${endTime.format('YYYY-MM-DD HH:mm:ss')}'
+            AND submission_timestamp BETWEEN ${startTime} AND ${endTime}
             AND grade = ANY($2::smallint[])
             AND is_valid = true
         GROUP BY student_id, grade, submitted_at, submission_timestamp
@@ -295,7 +295,7 @@ export class SchoolServiceV2 extends SchoolService {
           query, 
           udise, 
           grades
-      );      
+          );      
 
       for (const row of result) {
         gradeWiseSummary[row.grade.toString()].summary[moment().month(item.month).year(item.year).date(1).format('MMMM')].assessed = row.assessed;
@@ -315,43 +315,75 @@ export class SchoolServiceV2 extends SchoolService {
     mentor: Mentor,
     udise: number,
     firstDayTimestamp: number,
-    lastDayTimestamp: number): Promise<TypeTeacherHomeOverview | null> {
+    lastDayTimestamp: number
+  ): Promise<TypeTeacherHomeOverview | null> {
     try {
-      const query = `
-        select count(distinct student_id)                                               as assessments_total,
-          count(distinct case when is_passed = true then student_id end)           as nipun_total,
-          max(submitted_at)                                                        as updated_at,
-          string_agg(distinct student_id, ',')                                     as assessed_student_ids,
-          string_agg(distinct case when is_passed = true then student_id end, ',') as nipun_student_ids
-        from (
-          select distinct on (student_id) a.student_id,
-                                         a.submitted_at,
-                                         a.is_passed
-          from assessments a
-          where a.mentor_id = $1
-            and a.is_valid = true
-            and a.actor_id = ${ActorEnum.TEACHER}
-            and a.udise = $2
-            and a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
-            and a.student_id is not null
-            and a.student_id not in ('-1', '-2', '-3') --// we don't want anonymous students
-            and a.submission_timestamp between $3 and $4
-          order by student_id, submitted_at DESC
-        ) t`;
+        const query = `
+        WITH latest_assessments AS (
+            SELECT 
+                DISTINCT ON (a.student_id, a.competency_id) 
+                a.student_id,
+                a.competency_id,
+                a.submitted_at,
+                a.submission_timestamp,        
+                a.is_valid,
+                a.is_passed
+            FROM assessments a
+            WHERE a.mentor_id = $1
+                AND a.udise = $2
+                AND a.actor_id = ${ActorEnum.TEACHER}
+                AND a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
+                AND a.student_id IS NOT NULL
+                AND a.student_id NOT IN ('-1', '-2', '-3')
+                AND a.submission_timestamp BETWEEN $3 AND $4
+            ORDER BY a.student_id, a.competency_id, a.submission_timestamp DESC
+        ),
+        assessed_students AS (
+            SELECT 
+                la.student_id,
+                COUNT(*) AS total_assessments,
+                COUNT(CASE WHEN la.is_passed THEN 1 END) AS passed_assessments
+            FROM latest_assessments la
+            WHERE la.is_valid = true
+            GROUP BY la.student_id
+        ),
+        passed_students AS (
+            SELECT 
+                ast.student_id
+            FROM assessed_students ast
+            WHERE ast.total_assessments = ast.passed_assessments
+        )
+        SELECT 
+            COUNT(DISTINCT ast.student_id) AS assessments_total,
+            COUNT(DISTINCT ps.student_id) AS nipun_total,
+            MAX(la.submitted_at) AS updated_at,
+            STRING_AGG(DISTINCT ast.student_id::TEXT, ',') AS assessed_student_ids,
+            STRING_AGG(DISTINCT ps.student_id::TEXT, ',') AS nipun_student_ids
+        FROM latest_assessments la
+        LEFT JOIN assessed_students ast ON la.student_id = ast.student_id
+        LEFT JOIN passed_students ps ON ast.student_id = ps.student_id
+        `;
+
         const result: Array<TypeTeacherHomeOverview> = await this.prismaService.$queryRawUnsafe(query, mentor.id, udise, firstDayTimestamp, lastDayTimestamp);
-        return {
-        assessments_total: result[0].assessments_total,
-        nipun_total: result[0].nipun_total,
-        updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,
-        assessed_student_ids: result[0].assessed_student_ids,
-        nipun_student_ids: result[0].nipun_student_ids,
-      };
+
+        if (result.length > 0) {
+            return {
+                assessments_total: result[0].assessments_total,
+                nipun_total: result[0].nipun_total,
+                updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,
+                assessed_student_ids: result[0].assessed_student_ids,
+                nipun_student_ids: result[0].nipun_student_ids,
+            };
+        } else {
+            return null;
+        }
     } catch (e) {
-      this.logger.error(`Error occurred: ${e}`);
-      this.appService.handleRequestError(e);
+        this.logger.error(`Error occurred: ${e}`);
+        this.appService.handleRequestError(e);
+        return null;
     }
-    return null;
   }
+
 
   async getSchoolTeacherPerformance(mentor: Mentor, udise: number) {
     // @TODO: to be redone using Continuous Aggregates

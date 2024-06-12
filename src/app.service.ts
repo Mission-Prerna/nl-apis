@@ -1209,11 +1209,13 @@ export class AppService {
       case ActorEnum.EXAMINER:
         learningOutcomePrefix = 'Examiner:';
         break;
-      case ActorEnum.DIET_MENTOR:
       case ActorEnum.TEACHER:
-      case ActorEnum.MENTOR:
       case ActorEnum.PARENT:
         learningOutcomePrefix = 'Nipun Lakshya:';
+        break;      
+      case ActorEnum.DIET_MENTOR:
+      case ActorEnum.MENTOR:
+        learningOutcomePrefix = 'Mentor:';
         break;
       default:
         break;

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ import { CreateMentorSegmentRequest } from 'src/dto/CreateMentorSegmentRequest.d
 import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateStudentsResponse.dto';
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import * as Sentry from '@sentry/minimal';
 
 @Injectable()
 export class AdminService {
@@ -413,26 +415,44 @@ export class AdminService {
   }
 
   async createStudents(students: CreateStudent[]) {
-    // @ts-ignore
-    return this.prismaService.students.createMany({
-      // @ts-ignore
-      data: students.map(student => {
-        return {
-          name: student.name,
-          gender: student.gender,
-          roll_no: student.roll_no,
-          unique_id: student.unique_id,
-          grade: student.grade,
-          udise: student.udise,
-          dob: (student?.dob ? new Date(student.dob) : null) ?? null,
-          admission_date: (student?.admission_date ? new Date(student.admission_date) : null) ?? null,
-          father_name: student.father_name ?? '',
-          mother_name: student.mother_name ?? '',
-          section: student.section ?? '',
-        };
-      }),
-      skipDuplicates: true,
+    const studentsData = students.map((student) => {
+      return {
+        name: student.name,
+        gender: student.gender,
+        roll_no: student.roll_no,
+        unique_id: student.unique_id,
+        grade: student.grade,
+        udise: student.udise,
+        dob: (student?.dob ? new Date(student.dob) : null) ?? null,
+        admission_date:
+          (student?.admission_date ? new Date(student.admission_date) : null) ??
+          null,
+        father_name: student.father_name ?? '',
+        mother_name: student.mother_name ?? '',
+        section: student.section ?? '',
+      };
     });
+    this.logger.debug(
+      `Initiated transaction to create #${studentsData.length} new students `,
+    );
+    try {
+      const response = await this.prismaService.students.createMany({
+        // @ts-ignore
+        data: studentsData,
+        skipDuplicates: true,
+      });
+
+    this.logger.debug(`Transaction successful to create #${students.length} students`);
+    return response
+    } catch (error: any) {
+      const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+      this.logger.debug('Transaction failed to create students', error);
+
+      Sentry.captureException(error);
+      throw new InternalServerErrorException(
+        errorMessage || 'Failed to create students',
+      );
+    }
   }
 
   async updateStudents(
@@ -440,6 +460,8 @@ export class AdminService {
   ): Promise<StudentsUpdateResponseDto> {
     const failedStudentUpdates: StudentsUpdateResponse[] = [];
     const successStudentUpdates: StudentsUpdateResponse[] = [];
+
+    this.logger.debug(`Initiated updating #${students.length} students `);
 
     await Promise.all(
       students.map(async (student: UpdateStudent) => {
@@ -456,13 +478,20 @@ export class AdminService {
             // @ts-ignore
             data: student,
           });
-          
+
           successStudentUpdates.push({
             unique_id: student.unique_id,
             message: 'Successfully updated',
           });
         } catch (error: any) {
           const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+
+          Sentry.captureMessage(errorMessage, {
+            extra: {
+              student_unique_id: student.unique_id,
+            },
+          });
+
           failedStudentUpdates.push({
             unique_id: student.unique_id,
             message: errorMessage,
@@ -470,6 +499,13 @@ export class AdminService {
         }
       }),
     );
+
+    this.logger.debug(
+      `Successfully updated #${successStudentUpdates.length} students out of #${
+        successStudentUpdates.length + failedStudentUpdates.length
+      }`,
+    );
+
     return {
       message: `Successfully updated ${
         successStudentUpdates.length
@@ -482,16 +518,33 @@ export class AdminService {
   }
 
   async deleteStudents(students: DeleteStudent[]) {
-    return this.prismaService.students.updateMany({
-      data: {
-        deleted_at: new Date(),
-      },
-      where: {
-        unique_id: {
-          in: students.map(student => student.unique_id),
+    try {
+      this.logger.debug(
+        `Initiated transaction for deleting #${this.deleteStudents.length} students`,
+      );
+
+      const response = await this.prismaService.students.updateMany({
+        data: {
+          deleted_at: new Date(),
         },
-      },
-    });
+        where: {
+          unique_id: {
+            in: students.map((student) => student.unique_id),
+          },
+        },
+      });
+
+    this.logger.debug(`Transaction successful to delete #${students.length} students`);
+    return response
+    } catch (error: any) {
+      const { errorMessage } = getPrismaErrorStatusAndMessage(error);
+      this.logger.debug('Transaction failed to delete students', error);
+      Sentry.captureException(error);
+
+      throw new InternalServerErrorException(
+        errorMessage || 'Failed to delete students',
+      );
+    }
   }
 
   async createAssessmentCycle(cycleData: CreateAssessmentCycle) {

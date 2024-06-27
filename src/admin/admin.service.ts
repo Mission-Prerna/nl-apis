@@ -463,6 +463,7 @@ export class AdminService {
 
     this.logger.debug(`Initiated transaction for updating #${students.length} students`);
 
+
     await Promise.all(
       students.map(async (student: UpdateStudent) => {
         if (student.dob) {
@@ -502,6 +503,7 @@ export class AdminService {
 
     this.logger.debug(
       `transaction successful to updated #${successStudentUpdates.length} students out of #${
+
         successStudentUpdates.length + failedStudentUpdates.length
       }`,
     );

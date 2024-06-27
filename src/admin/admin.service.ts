@@ -442,13 +442,13 @@ export class AdminService {
         skipDuplicates: true,
       });
 
-    this.logger.debug(`Transaction successful to create #${students.length} students`);
+    this.logger.debug(`transaction successful to create #${students.length} new students`);
     return response
     } catch (error: any) {
       const { errorMessage } = getPrismaErrorStatusAndMessage(error);
-      this.logger.debug('Transaction failed to create students', error);
+      this.logger.debug(`transaction failed to create #${studentsData.length} new students`, error);
 
-      Sentry.captureException(error);
+      Sentry.captureMessage(errorMessage, { extra: error });
       throw new InternalServerErrorException(
         errorMessage || 'Failed to create students',
       );
@@ -461,7 +461,7 @@ export class AdminService {
     const failedStudentUpdates: StudentsUpdateResponse[] = [];
     const successStudentUpdates: StudentsUpdateResponse[] = [];
 
-    this.logger.debug(`Initiated updating #${students.length} students `);
+    this.logger.debug(`Initiated transaction for updating #${students.length} students`);
 
     await Promise.all(
       students.map(async (student: UpdateStudent) => {
@@ -501,7 +501,7 @@ export class AdminService {
     );
 
     this.logger.debug(
-      `Successfully updated #${successStudentUpdates.length} students out of #${
+      `transaction successful to updated #${successStudentUpdates.length} students out of #${
         successStudentUpdates.length + failedStudentUpdates.length
       }`,
     );
@@ -534,12 +534,12 @@ export class AdminService {
         },
       });
 
-    this.logger.debug(`Transaction successful to delete #${students.length} students`);
+    this.logger.debug(`transaction successful to delete #${students.length} students`);
     return response
     } catch (error: any) {
       const { errorMessage } = getPrismaErrorStatusAndMessage(error);
-      this.logger.debug('Transaction failed to delete students', error);
-      Sentry.captureException(error);
+      this.logger.debug('transaction failed to delete students', error);
+      Sentry.captureMessage(errorMessage, { extra: error });
 
       throw new InternalServerErrorException(
         errorMessage || 'Failed to delete students',

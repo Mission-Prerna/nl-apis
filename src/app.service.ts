@@ -692,7 +692,7 @@ export class AppService {
 
     try {
       const query = `
-          SELECT
+      SELECT
               (select count(DISTINCT udise)
                from ${tables.assessment_visit_results_v2} as avr2
                where avr2.mentor_id = $1
@@ -704,9 +704,9 @@ export class AppService {
               COUNT(DISTINCT CASE WHEN avrs.grade = 1 THEN avrs.student_session END) AS grade_1_assessments,
               COUNT(DISTINCT CASE WHEN avrs.grade = 2 THEN avrs.student_session END) AS grade_2_assessments,
               COUNT(DISTINCT CASE WHEN avrs.grade = 3 THEN avrs.student_session END) AS grade_3_assessments
-          FROM ${tables.assessment_visit_results_students} AS avrs
-          WHERE avrs.mentor_id = $1
-            AND avrs.submission_timestamp > $2
+        FROM ${tables.assessment_visit_results_students} AS avrs
+        WHERE avrs.mentor_id = $1
+          AND avrs.submission_timestamp > $2
             AND avrs.submission_timestamp < $3`;
 
       const result: Record<string, any> = await this.prismaService.$queryRawUnsafe(query, mentor.id, firstDayTimestamp, lastDayTimestamp);
@@ -964,6 +964,7 @@ export class AppService {
       month,
       year,
       updated_at: moment(insightDetails?.max_updated_at).valueOf(),  // changing value to epoch format
+      assessments_count: insightDetails.assessments_count
     };
   }
 
@@ -975,18 +976,25 @@ export class AppService {
       const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
         MAX(updated_at) AS max_updated_at,
-          COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
-          COALESCE(AVG(total_time_taken), 0)::int8 AS avg_time,  
-          -- Counting distinct student_id, not null, greater than 0, and not ending with ".0" to exclude anonymous students
-          COUNT(DISTINCT student_id) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS assessments_taken,
-          COUNT(DISTINCT CASE WHEN grade = 1 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_1_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 2 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_2_assessments,
-          COUNT(DISTINCT CASE WHEN grade = 3 THEN student_id END) FILTER (WHERE student_id NOT LIKE '%.0%' AND student_id IS NOT NULL AND student_id::int > 0) AS grade_3_assessments
+        COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+        COALESCE(
+          AVG(
+            ((end_time - start_time) / 1000)   -- Convert milliseconds to seconds and cast to integer
+          )::int, 0
+        ) AS avg_time,
+        COUNT(*) AS assessments_count,
+        COUNT(DISTINCT student_id) AS assessments_taken,
+        COUNT(DISTINCT CASE WHEN grade = 1 THEN student_id END) AS grade_1_assessments,
+        COUNT(DISTINCT CASE WHEN grade = 2 THEN student_id END) AS grade_2_assessments,
+        COUNT(DISTINCT CASE WHEN grade = 3 THEN student_id END) AS grade_3_assessments
       FROM assessments
       WHERE mentor_id = ${mentor.id}
-          AND submission_timestamp > ${firstDayTimestamp}
-          AND submission_timestamp < ${lastDayTimestamp}
-      `;
+        AND student_id NOT LIKE '%.0%' 
+        AND student_id IS NOT NULL 
+        AND student_id::int > 0
+        AND submission_timestamp > ${firstDayTimestamp}
+        AND submission_timestamp < ${lastDayTimestamp}
+    `;
 
       await this.cacheService.set(
         CacheKeyMentorMonthlyMetricsV2(mentor.phone_no, month, year),

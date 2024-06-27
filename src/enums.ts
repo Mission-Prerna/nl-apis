@@ -83,7 +83,7 @@ export enum CacheConstants {
   TTL_METADATA = 86400, // in seconds
   TTL_SCHOOL_STUDENTS = 86400, // in seconds
   TTL_SCHOOL_STUDENTS_COUNT = 86400, // in seconds
-  TTL_MENTOR_PERFORMANCE_INSIGHTS = 5 * 60 * 1000, // 5 minutes in milliseconds
+  TTL_MENTOR_PERFORMANCE_INSIGHTS = 5 * 60, // 5 minutes in seconds
 }
 
 export enum Role {

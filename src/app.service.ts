@@ -810,6 +810,29 @@ export class AppService {
     });
 
     let temp: any = mentor;
+
+    if (mentor?.teacher_school_list_mapping) {
+      for (let mapping of mentor.teacher_school_list_mapping) {
+        const actorSchoolBlacklist =
+          await this.prismaService.actor_school_blacklist.findUnique({
+            where: {
+              actor_id_udise: {
+                actor_id: mentor.actor_id,
+                udise: mapping.school_list.udise,
+              },
+            },
+            select: {
+              is_active: true,
+            },
+          });
+        //@ts-ignore
+        mapping.school_list['isActive'] =
+          actorSchoolBlacklist != null
+            ? !actorSchoolBlacklist?.is_active
+            : true;
+      }
+    } 
+
     if (mentor) {
       temp.district_name = mentor?.districts?.name ?? '';
       temp.block_town_name = mentor?.blocks?.name ?? '';

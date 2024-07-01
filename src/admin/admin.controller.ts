@@ -38,6 +38,7 @@ import { CreateAssessmentCycleDistrictExaminerMapping } from './dto/CreateAssess
 import { InvalidateExaminerCycleAssessmentsDto } from './dto/InvalidateExaminerCycleAssessments.dto';
 import { MentorClearCacheDto } from './dto/MentorInfoDto';
 import { MinioService } from 'src/minio/minio.service';
+import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -251,5 +252,41 @@ export class AdminController {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
       throw new InternalServerErrorException({ error: 'Failed to upload zip file', message: error.message });
     }
+  }
+
+  @Post('/school/blacklist')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createSchoolActorBlacklist(
+    @Body(
+      new MaxItemsPipe(500),
+      new ParseArrayPipe({ items: CreateUpdateSchoolBlacklistDto }),
+    )
+    body: CreateUpdateSchoolBlacklistDto[],
+  ) {
+    return this.service.createActorSchoolBlacklist(body);
+  }
+
+  @Patch('/school/blacklist')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async updateSchoolActorBlacklist(
+    @Body(
+      new MaxItemsPipe(500),
+      new ParseArrayPipe({ items: CreateUpdateSchoolBlacklistDto }),
+    )
+    body: CreateUpdateSchoolBlacklistDto[],
+  ) {
+    return this.service.updateActorSchoolBlacklist(body);
+  }
+
+  @Get('/school/blacklist')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async getSchoolActorBlacklist() {
+    return this.service.getActorSchoolBlacklist();
   }
 }

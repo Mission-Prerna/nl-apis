@@ -55,6 +55,7 @@ export class SentryInterceptor implements NestInterceptor {
 
           // capture exception; add user details if any
           Sentry.captureException(exception, {
+            //@ts-ignore
             user: user
           });
         }),

@@ -29,6 +29,7 @@ import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateS
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as Sentry from '@sentry/minimal';
+import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 
 @Injectable()
 export class AdminService {
@@ -841,4 +842,51 @@ export class AdminService {
     }
     return { status: 'Cache Cleared Successfully' };
   }  
+
+  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    return await this.prismaService.actor_school_blacklist.createMany({
+      data: body,
+      skipDuplicates: true,
+    });
+  }
+
+  async updateActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const updatePromises = body.map((data) => {
+      return this.prismaService.actor_school_blacklist.update({
+        where: {
+          actor_id_udise: {
+            actor_id: data.actor_id,
+            udise: data.udise,
+          },
+        },
+        data: {
+          is_active: data.is_active ?? false,
+        },
+      });
+    });
+
+    return await Promise.all(updatePromises);
+  }
+
+  async getActorSchoolBlacklist() {
+    return await this.prismaService.actor_school_blacklist.findMany();
+  }
+
+  async deleteActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const operations = body.map((data) => {
+      return this.prismaService.actor_school_blacklist.update({
+        where: {
+          actor_id_udise: {
+            actor_id: data.actor_id,
+            udise: data.udise,
+          },
+        },
+        data: {
+          is_active: false,
+        },
+      });
+    });
+
+    return await Promise.all(operations);
+  }
 }

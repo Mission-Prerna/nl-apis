@@ -871,4 +871,22 @@ export class AdminService {
   async getActorSchoolBlacklist() {
     return await this.prismaService.actor_school_blacklist.findMany();
   }
+
+  async deleteActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const operations = body.map((data) => {
+      return this.prismaService.actor_school_blacklist.update({
+        where: {
+          actor_id_udise: {
+            actor_id: data.actor_id,
+            udise: data.udise,
+          },
+        },
+        data: {
+          is_active: false,
+        },
+      });
+    });
+
+    return await Promise.all(operations);
+  }
 }

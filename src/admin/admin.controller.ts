@@ -289,4 +289,18 @@ export class AdminController {
   async getSchoolActorBlacklist() {
     return this.service.getActorSchoolBlacklist();
   }
+
+  @Delete('/school/blacklist')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async deleteSchoolActorBlacklist(
+    @Body(
+      new MaxItemsPipe(500),
+      new ParseArrayPipe({ items: CreateUpdateSchoolBlacklistDto }),
+    )
+    body: CreateUpdateSchoolBlacklistDto[],
+  ) {
+    return this.service.deleteActorSchoolBlacklist(body);
+  }
 }

@@ -572,37 +572,6 @@ export class AppService {
       this.handleRequestError(e);
     }
   }
-
-  async checkActiveUdiseActorAssessments(
-    assessmentsData: CreateAssessmentVisitResult,
-  ): Promise<Boolean> {
-    const isSchoolBlacklisted =
-      await this.prismaService.actor_school_blacklist.findUnique({
-        where: {
-          actor_id_udise: {
-            actor_id: assessmentsData.actor_id || 0,
-            udise: assessmentsData.udise,
-          },
-        },
-        select: {
-          is_active: true,
-          updated_at: true,
-        },
-      });
-
-    if (isSchoolBlacklisted?.is_active) {
-      const blacklistUpdatedAt = new Date(
-        isSchoolBlacklisted.updated_at,
-      ).getTime();
-
-      if (blacklistUpdatedAt <= assessmentsData.submission_timestamp) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
   
   async getMentorSchoolListIfHeHasVisited(
     mentor: Mentor,

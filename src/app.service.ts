@@ -326,8 +326,55 @@ export class AppService {
     }
   }
 
-  async checkIfAssessmentIsValid(createAssessmentVisitResultData: CreateAssessmentVisitResult)
-  {
+  async checkIfAssessmentIsValid(
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+  ) {
+    const isSchoolBlacklisted =
+      await this.prismaService.actor_school_blacklist.findUnique({
+        where: {
+          actor_id_udise: {
+            actor_id: createAssessmentVisitResultData.actor_id || 0,
+            udise: createAssessmentVisitResultData.udise,
+          },
+        },
+        select: {
+          is_active: true,
+          updated_at: true,
+        },
+      });
+
+    if (isSchoolBlacklisted?.is_active) {
+      const blacklistUpdatedAt = new Date(
+        isSchoolBlacklisted.updated_at,
+      ).getTime();
+
+      if (
+        blacklistUpdatedAt <=
+        createAssessmentVisitResultData.submission_timestamp
+      ) {
+        // this is a blacklisted udise submission; let's trigger Sentry event
+        Sentry.captureMessage(`udise is blacklisted for this actor`, {
+          user: {
+            id: createAssessmentVisitResultData.mentor_id + '',
+          },
+          extra: {
+            submission_timestamp:
+              createAssessmentVisitResultData.submission_timestamp,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            udise: createAssessmentVisitResultData.udise,
+          },
+        });
+
+        this.logger.log(
+          `udise:- #${createAssessmentVisitResultData.udise} is blacklisted for actor:- ${createAssessmentVisitResultData.actor_id}. Ignoring..`,
+        );
+
+        return false;
+      }
+    }
+
     if(createAssessmentVisitResultData.actor_id !== ActorEnum.EXAMINER) {
       return true;
     }
@@ -378,9 +425,13 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    // First check if for examiner the student submitted is in cycle
-    if(!await this.checkIfAssessmentIsValid(createAssessmentVisitResultData)) {
-      return {msg: "Subimssion is ignored, Bad Assessment submission request - student not found in cycle"}
+    // check if school is blacklisted for this actor or check if for examiner the student submitted is in cycle
+    if (
+      !(await this.checkIfAssessmentIsValid(createAssessmentVisitResultData))
+    ) {
+      return {
+        msg: 'Submission is ignored, Bad Assessment submission request - school is blacklisted or student not found in cycle',
+      };
     }
 
     let uniqueStudents: Record<string, number> = {};
@@ -390,7 +441,6 @@ export class AppService {
       submissionDate.getFullYear(),
       submissionDate.getMonth() + 1,
     ); // since getMonth() gives month's index
-
 
     try {
       // Checking if Assessment visit result already exist; if not we'll create it
@@ -512,7 +562,7 @@ export class AppService {
       }
       if(createAssessmentVisitResultData.actor_id == ActorEnum.EXAMINER)
       {
-        // Re-calculate Nipun Results due to Bug 
+        // Re-calculate Nipun Results due to Bug
         // https://github.com/Mission-Prerna/prerna-lakshya-app/issues/346
         await this.recalculateNipunResultsIfPresent(createAssessmentVisitResultData);
       }

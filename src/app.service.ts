@@ -326,8 +326,55 @@ export class AppService {
     }
   }
 
-  async checkIfAssessmentIsValid(createAssessmentVisitResultData: CreateAssessmentVisitResult)
-  {
+  async checkIfAssessmentIsValid(
+    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+  ) {
+    const isSchoolBlacklisted =
+      await this.prismaService.actor_school_blacklist.findUnique({
+        where: {
+          actor_id_udise: {
+            actor_id: createAssessmentVisitResultData.actor_id || 0,
+            udise: createAssessmentVisitResultData.udise,
+          },
+        },
+        select: {
+          is_active: true,
+          updated_at: true,
+        },
+      });
+
+    if (isSchoolBlacklisted?.is_active) {
+      const blacklistUpdatedAt = new Date(
+        isSchoolBlacklisted.updated_at,
+      ).getTime();
+
+      if (
+        blacklistUpdatedAt <=
+        createAssessmentVisitResultData.submission_timestamp
+      ) {
+        // this is a blacklisted udise submission; let's trigger Sentry event
+        Sentry.captureMessage(`udise is blacklisted for this actor`, {
+          user: {
+            id: createAssessmentVisitResultData.mentor_id + '',
+          },
+          extra: {
+            submission_timestamp:
+              createAssessmentVisitResultData.submission_timestamp,
+            mentor_id: createAssessmentVisitResultData.mentor_id,
+            grade: createAssessmentVisitResultData.grade,
+            subject_id: createAssessmentVisitResultData.subject_id,
+            udise: createAssessmentVisitResultData.udise,
+          },
+        });
+
+        this.logger.log(
+          `udise:- #${createAssessmentVisitResultData.udise} is blacklisted for actor:- ${createAssessmentVisitResultData.actor_id}. Ignoring..`,
+        );
+
+        return false;
+      }
+    }
+
     if(createAssessmentVisitResultData.actor_id !== ActorEnum.EXAMINER) {
       return true;
     }
@@ -378,39 +425,12 @@ export class AppService {
   async createAssessmentVisitResult(
     createAssessmentVisitResultData: CreateAssessmentVisitResult,
   ) {
-    // check if school is blacklisted for this actor
-    const isActiveUdiseActorAssessments =
-      await this.checkActiveUdiseActorAssessments(
-        createAssessmentVisitResultData,
-      );
-    if (!isActiveUdiseActorAssessments) {
-      // this is a blacklisted udise submission; let's trigger Sentry event
-      Sentry.captureMessage(`udise is blacklisted for this actor`, {
-        user: {
-          id: createAssessmentVisitResultData.mentor_id + '',
-        },
-        extra: {
-          submission_timestamp:
-            createAssessmentVisitResultData.submission_timestamp,
-          mentor_id: createAssessmentVisitResultData.mentor_id,
-          grade: createAssessmentVisitResultData.grade,
-          subject_id: createAssessmentVisitResultData.subject_id,
-          udise: createAssessmentVisitResultData.udise,
-        },
-      });
-      this.logger.log(
-        `udise:- #${createAssessmentVisitResultData.udise} is blacklisted for actor:- ${createAssessmentVisitResultData.actor_id}. Ignoring..`,
-      );
-      return {
-        msg: 'Submission is ignored, Bad Assessment submission request - udise is blacklisted for this actor',
-      };
-    }
-    // check if for examiner the student submitted is in cycle
+    // check if school is blacklisted for this actor or check if for examiner the student submitted is in cycle
     if (
       !(await this.checkIfAssessmentIsValid(createAssessmentVisitResultData))
     ) {
       return {
-        msg: 'Submission is ignored, Bad Assessment submission request - student not found in cycle',
+        msg: 'Submission is ignored, Bad Assessment submission request - school is blacklisted or student not found in cycle',
       };
     }
 

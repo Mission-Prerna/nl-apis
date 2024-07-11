@@ -49,6 +49,7 @@ import { JwtService } from '@nestjs/jwt';
 import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { StudentService } from './school/student.service';
 
 const moment = require('moment');
 
@@ -66,6 +67,7 @@ export class AppService {
     // Circular dependency to SchoolService
     @Inject(forwardRef(() => SchoolServiceV2))
     protected readonly schoolService: SchoolServiceV2,
+    protected readonly studentService: StudentService,
     private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRaw`
@@ -1821,4 +1823,164 @@ export class AppService {
     }
   }
 
+  async getMentorAssessmentSummary(mentor: Mentor) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+
+    const startOfWeek = moment().startOf('week').startOf('day').valueOf();
+    const endOfWeek = moment().endOf('week').endOf('day').valueOf();
+
+    const startOfLastMonth = moment()
+      .subtract(1, 'months')
+      .startOf('month')
+      .startOf('day')
+      .valueOf();
+    const endOfLastMonth = moment()
+      .subtract(1, 'months')
+      .endOf('month')
+      .endOf('day')
+      .valueOf();
+
+    // fetch the current week assessments
+    const currentWeekAssessments: any = await this.prismaService.$queryRaw`
+      WITH latest_assessments AS (
+        SELECT
+          a.grade,
+          a.student_id,
+          a.submission_timestamp,
+          a.is_passed,
+          ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+        FROM assessments a
+        JOIN students s ON a.student_id = s.unique_id
+        WHERE
+          a.mentor_id = ${mentor.id} AND
+          a.submission_timestamp >= ${startOfWeek} AND
+          a.submission_timestamp <= ${endOfWeek} AND
+          a.student_id IS NOT NULL AND
+          a.student_id > 0 AND                         -- filter out anonymous students
+          s.deleted_at IS NULL AND                     -- filter out deleted students
+          a.is_valid = true                            -- pick only valid assessments
+      )
+      SELECT
+        grade,
+        MAX(latest_submission_timestamp) AS latest_submission_timestamp,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL) AS student_ids,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
+        COUNT(DISTINCT student_id) AS total_assessments,
+        COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
+      FROM (
+        SELECT
+          grade,
+          student_id,
+          MAX(submission_timestamp) AS latest_submission_timestamp,
+          EVERY(is_passed) AS is_passed_all
+        FROM latest_assessments
+        WHERE rn = 1  -- Select only the latest assessment per student
+        GROUP BY grade, student_id
+      ) AS latest_assessments_summary
+      GROUP BY grade`;
+
+    // fetch the last month assessments
+    const lastMonthAssessments: any = await this.prismaService.$queryRaw`
+      WITH latest_assessments AS (
+        SELECT
+          a.grade,
+          a.student_id,
+          a.submission_timestamp,
+          a.is_passed,
+          ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+        FROM assessments a
+        JOIN students s ON a.student_id = s.unique_id
+        WHERE
+          a.mentor_id = ${mentor.id} AND
+          a.submission_timestamp >= ${startOfLastMonth} AND
+          a.submission_timestamp <= ${endOfLastMonth} AND
+          a.student_id IS NOT NULL AND
+          a.student_id > 0 AND                         -- filter out anonymous students
+          s.deleted_at IS NULL AND                     -- filter out deleted students
+          a.is_valid = true                            -- pick only valid assessments
+      )
+      SELECT
+        grade,
+        MAX(latest_submission_timestamp) AS latest_submission_timestamp,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL) AS student_ids,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
+        JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
+        COUNT(DISTINCT student_id) AS total_assessments,
+        COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
+      FROM (
+        SELECT
+          grade,
+          student_id,
+          MAX(submission_timestamp) AS latest_submission_timestamp,
+          EVERY(is_passed) AS is_passed_all
+        FROM latest_assessments
+        WHERE rn = 1  -- Select only the latest assessment per student
+        GROUP BY grade, student_id
+      ) AS latest_assessments_summary
+      GROUP BY grade`;
+
+    const formattedResponse: any = {};
+
+    currentWeekAssessments.forEach((assessment: any) => {
+      if (!formattedResponse[`grade_${assessment.grade}`]) {
+        formattedResponse[`grade_${assessment.grade}`] = {};
+      }
+      formattedResponse[`grade_${assessment.grade}`]['currentWeekAssessments'] =
+        {
+          label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
+          total_assessments: {
+            label: this.i18n.t(`common.TOTAL_ASSESSMENT`, { lang: lang }),
+            count: assessment.total_assessments,
+          },
+          nipun_students: {
+            label: this.i18n.t(`common.NIPUN_STUDENT`, { lang: lang }),
+            count: assessment.nipun_students,
+          },
+          latest_submission_timestamp: assessment.latest_submission_timestamp,
+          student_ids: assessment.student_ids,
+          nipun_student_ids: assessment.nipun_student_ids,
+          non_nipun_student_ids: assessment.non_nipun_student_ids,
+          grade: assessment.grade,
+        };
+    });
+
+    lastMonthAssessments.forEach((assessment: any) => {
+      if (!formattedResponse[`grade_${assessment.grade}`]) {
+        formattedResponse[`grade_${assessment.grade}`] = {};
+      }
+      formattedResponse[`grade_${assessment.grade}`]['lastMonthAssessments'] = {
+        label: this.i18n.t(`common.LAST_MONTH`, { lang: lang }),
+        total_assessments: {
+          label: this.i18n.t(`common.TOTAL_ASSESSMENT`, { lang: lang }),
+          count: assessment.total_assessments,
+        },
+        nipun_students: {
+          label: this.i18n.t(`common.NIPUN_STUDENT`, { lang: lang }),
+          count: assessment.nipun_students,
+        },
+        latest_submission_timestamp: assessment.latest_submission_timestamp,
+        student_ids: assessment.student_ids,
+        nipun_student_ids: assessment.nipun_student_ids,
+        non_nipun_student_ids: assessment.non_nipun_student_ids,
+        grade: assessment.grade,
+      };
+    });
+
+    return formattedResponse;
+  }
+
+  async getStudentAssessmentHistoryForMentor(
+    student_id: string,
+    mentor_id: number,
+    limit: number,
+    offset: number,
+  ) {
+    return this.studentService.getStudentAssessmentHistoryForMentor(
+      student_id,
+      mentor_id,
+      limit,
+      offset,
+    );
+  }
 }

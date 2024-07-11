@@ -15,5 +15,9 @@
   "COMPLETED_STUDENT_ASSESSMENTS": "छात्रों के आंकलन पूरे किये",
   "ASSESSMENTS_COMPLETED_IN_CLASS_1": "आंकलन कक्षा 1 में पूरे किये",
   "ASSESSMENTS_COMPLETED_IN_CLASS_2": "आंकलन कक्षा 2 में पूरे किये",
-  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "आंकलन कक्षा 3 में पूरे किये"
+  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "आंकलन कक्षा 3 में पूरे किये",
+  "CURRENT_WEEK_ASSESSMENT": "वर्तमान सप्ताह आँकलन",
+  "LAST_MONTH": "पिछला महीना",
+  "NIPUN_STUDENT": "निपुण विद्यार्थी",
+  "TOTAL_ASSESSMENT": "कुल आकलन"
 }

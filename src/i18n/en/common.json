@@ -15,5 +15,9 @@
   "COMPLETED_STUDENT_ASSESSMENTS": "Completed student assessments",
   "ASSESSMENTS_COMPLETED_IN_CLASS_1": "Assessments completed in class 1",
   "ASSESSMENTS_COMPLETED_IN_CLASS_2": "Assessments completed in class 2",
-  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "Assessments completed in class 3"
+  "ASSESSMENTS_COMPLETED_IN_CLASS_3": "Assessments completed in class 3",
+  "CURRENT_WEEK_ASSESSMENT": "Current week assessment",
+  "LAST_MONTH": "Last month",
+  "NIPUN_STUDENT": "Nipun student",
+  "TOTAL_ASSESSMENT": "Total assessment"
 }

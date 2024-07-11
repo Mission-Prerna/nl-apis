@@ -72,4 +72,47 @@ export class StudentService {
             (select jsonb_array_elements_text(dsm.class_1_students || dsm.class_2_students || dsm.class_3_students))    
     `, cycleId, udise, grades);
   }
+
+  async getStudentAssessmentHistoryForMentor(
+    student_id: string,
+    mentor_id: number,
+    limit: number,
+    offset: number,
+  ) {
+    return await this.prismaService.$queryRaw`
+    SELECT
+      main.submission_timestamp,
+      main.updated_at,
+      main.isNipun,
+      json_agg(
+        json_build_object(
+          'module', assessments.module,
+          'nipun', assessments.is_passed,
+          'achievement', assessments.achievement,
+          'statement', assessments.statement,
+          'result', assessments.results_json
+        )
+      ) AS history
+    FROM (
+      SELECT
+        a.submission_timestamp,
+        a.updated_at,
+        EVERY(a.is_passed) AS isNipun
+      FROM assessments a
+      JOIN students s ON a.student_id = s.unique_id
+      WHERE
+        a.student_id = ${student_id} AND
+        a.mentor_id = ${mentor_id} AND
+        a.is_valid = true AND  -- Pick only valid assessments
+        s.deleted_at IS NULL   -- filter out deleted students
+      GROUP BY a.submission_timestamp, a.updated_at
+      ORDER BY a.submission_timestamp DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    ) AS main
+    JOIN assessments ON main.submission_timestamp = assessments.submission_timestamp
+    GROUP BY main.submission_timestamp, main.updated_at, main.isNipun
+    ORDER BY main.submission_timestamp DESC
+  `;
+  }
 }

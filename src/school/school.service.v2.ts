@@ -96,6 +96,7 @@ export class SchoolServiceV2 extends SchoolService {
               COUNT(CASE WHEN a.is_passed = false THEN 1 END)                      AS failed,
               RANK() OVER (PARTITION BY a.student_id ORDER BY a.submitted_at DESC) AS rank
         FROM assessments a
+        JOIN students s ON a.student_id = s.unique_id
         WHERE a.student_id IS NOT NULL
          AND a.udise = $1
          AND a.is_valid = true
@@ -103,6 +104,7 @@ export class SchoolServiceV2 extends SchoolService {
          AND a.student_id NOT IN ('-1', '-2', '-3') --// we don't want anonymous students
          AND a.submission_timestamp BETWEEN $4 AND $5
          AND a.grade = ANY($3::smallint[])
+         AND s.deleted_at IS NULL   -- filter out deleted students assessments
         GROUP BY a.student_id, a.submitted_at
       ) ss  
       WHERE rank = 1`;
@@ -262,8 +264,10 @@ export class SchoolServiceV2 extends SchoolService {
             submission_timestamp,        
             COUNT(*) AS total_assessments
         FROM assessments
+        JOIN students s ON a.student_id = s.unique_id
         WHERE student_id IS NOT NULL
             AND udise = $1
+            and s.deleted_at IS NULL   -- filter out deleted students assessments
             AND actor_id = ${ActorEnum.TEACHER}
             AND student_id NOT IN ('-1', '-2', '-3')
             AND submission_timestamp BETWEEN ${startTime} AND ${endTime}
@@ -329,8 +333,10 @@ export class SchoolServiceV2 extends SchoolService {
                 a.is_valid,
                 a.is_passed
             FROM assessments a
+            JOIN students s ON a.student_id = s.unique_id
             WHERE a.mentor_id = $1
                 AND a.udise = $2
+                AND s.deleted_at IS NULL   -- filter out deleted students assessments
                 AND a.actor_id = ${ActorEnum.TEACHER}
                 AND a.assessment_type_id = ${AssessmentTypeEnum.NIPUN_ABHYAS}
                 AND a.student_id IS NOT NULL

@@ -1712,7 +1712,9 @@ export class AppService {
       select a.grade, count(distinct a.student_id) as assessed,
         (EXTRACT(EPOCH FROM max(a.submitted_at)) * 1000) as updated_at
       from assessments a
+      JOIN students s ON a.student_id = s.unique_id
       where a.mentor_id = $1
+        and s.deleted_at IS NULL   -- filter out deleted students assessments
         and a.actor_id = ${ActorEnum.EXAMINER}
         and a.is_valid = true
         and a.student_id in (

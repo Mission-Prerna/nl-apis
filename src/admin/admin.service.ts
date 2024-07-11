@@ -645,6 +645,7 @@ export class AdminService {
         FROM students
         WHERE udise = ANY($1) and
         grade in (1, 2, 3)
+        and deleted_at IS null
     ) AS ranked
     WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
     GROUP BY udise, grade;`
@@ -779,6 +780,7 @@ export class AdminService {
       if(data.reset_all) {
         // reset assessment_cycle_school_nipun_results to recreate new student mappings
         const assessmentCycledistrictSchoolMappings = data.udises.map(udise => { return {udise: udise} as CreateAssessmentCycleDistrictSchoolMapping})
+        //@ts-ignore
         res.push(await this.createAssessmentCycleDistrictSchoolMapping(cycle.id, assessmentCycledistrictSchoolMappings))
       }
       return res;

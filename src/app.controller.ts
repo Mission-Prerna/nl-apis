@@ -46,6 +46,7 @@ import { GetAppActionsDto } from './dto/AppActions.dto';
 import { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
 import { StudentCertificateQueryDto } from './school/dto/StudentCertificateQuery.dto';
+import { MentorAssessmentSummaryParamsDto } from './dto/MentorAssessmentSummaryParams.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -422,8 +423,11 @@ export class AppController {
   @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(MentorInterceptor)
-  async getMentorAssessmentSummary(@Request() { mentor }: { mentor: Mentor }) {
-    return this.appService.getMentorAssessmentSummary(mentor);
+  async getMentorAssessmentSummary(
+    @Request() { mentor }: { mentor: Mentor },
+    @Query() queryParam: MentorAssessmentSummaryParamsDto,
+  ) {
+    return this.appService.getMentorAssessmentSummary(mentor, queryParam);
   }
 
   @Get('api/student-assessment-history/:studentId')

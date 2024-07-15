@@ -50,6 +50,7 @@ import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { StudentService } from './school/student.service';
+import { MentorAssessmentSummaryParamsDto } from './dto/MentorAssessmentSummaryParams.dto';
 
 const moment = require('moment');
 
@@ -1823,148 +1824,221 @@ export class AppService {
     }
   }
 
-  async getMentorAssessmentSummary(mentor: Mentor) {
+  async getMentorAssessmentSummary(
+    mentor: Mentor,
+    queryParam: MentorAssessmentSummaryParamsDto,
+  ) {
     const lang: string = I18nContext?.current()?.lang ?? 'en';
+
+    const currentMonth = queryParam.month ?? moment().month() + 1; // months are 0-indexed in moment.js
+    const currentYear = queryParam.year ?? moment().year();
+    const selectedGrade = queryParam?.grade?.split(',').map((grade) => parseInt(grade.trim()));
 
     const startOfWeek = moment().startOf('week').startOf('day').valueOf();
     const endOfWeek = moment().endOf('week').endOf('day').valueOf();
 
-    const startOfLastMonth = moment()
-      .subtract(1, 'months')
+    const startOfCurrentMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 1)
       .startOf('month')
       .startOf('day')
       .valueOf();
+
+    const endOfCurrentMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 1)
+      .endOf('month')
+      .endOf('day')
+      .valueOf();
+
+    const startOfLastMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 2)
+      .startOf('month')
+      .startOf('day')
+      .valueOf();
+
     const endOfLastMonth = moment()
-      .subtract(1, 'months')
+      .year(currentYear)
+      .month(currentMonth - 2)
       .endOf('month')
       .endOf('day')
       .valueOf();
 
     // fetch the current week assessments
     const currentWeekAssessments: any = await this.prismaService.$queryRaw`
-      WITH latest_assessments AS (
-        SELECT
-          a.grade,
-          a.student_id,
-          a.submission_timestamp,
-          a.is_passed,
-          ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
-        FROM assessments a
-        JOIN students s ON a.student_id = s.unique_id
-        WHERE
-          a.mentor_id = ${mentor.id} AND
-          a.submission_timestamp >= ${startOfWeek} AND
-          a.submission_timestamp <= ${endOfWeek} AND
-          a.student_id IS NOT NULL AND
-          a.student_id > 0 AND                         -- filter out anonymous students
-          s.deleted_at IS NULL AND                     -- filter out deleted students
-          a.is_valid = true                            -- pick only valid assessments
-      )
-      SELECT
-        grade,
-        MAX(latest_submission_timestamp) AS latest_submission_timestamp,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL) AS student_ids,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
-        COUNT(DISTINCT student_id) AS total_assessments,
-        COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
-      FROM (
+        WITH latest_assessments AS (
+          SELECT
+            a.grade,
+            a.student_id,
+            a.submission_timestamp,
+            a.is_passed,
+            ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+          FROM assessments a
+          JOIN students s ON a.student_id = s.unique_id
+          WHERE
+            a.mentor_id = ${mentor.id} AND
+            a.submission_timestamp >= ${startOfWeek} AND
+            a.submission_timestamp <= ${endOfWeek} AND
+            a.student_id IS NOT NULL AND
+            a.student_id::int > 0 AND                         -- filter out anonymous students
+            s.deleted_at IS NULL AND                          -- filter out deleted students
+            a.is_valid = true AND                             -- pick only valid assessments
+            a.grade = ANY(${selectedGrade}::smallint[])
+        )
         SELECT
           grade,
-          student_id,
-          MAX(submission_timestamp) AS latest_submission_timestamp,
-          EVERY(is_passed) AS is_passed_all
-        FROM latest_assessments
-        WHERE rn = 1  -- Select only the latest assessment per student
-        GROUP BY grade, student_id
+          MAX(latest_submission_timestamp) AS latest_submission_timestamp,
+          JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
+          JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
+          COUNT(DISTINCT student_id) AS total_assessments,
+          COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
+        FROM (
+          SELECT
+            grade,
+            student_id,
+            MAX(submission_timestamp) AS latest_submission_timestamp,
+            EVERY(is_passed) AS is_passed_all
+          FROM latest_assessments
+          WHERE rn = 1                  -- Select only the latest assessment per student
+          GROUP BY grade, student_id
+        ) AS latest_assessments_summary
+        GROUP BY grade`;
+
+    // fetch the current month nipun students count
+    const currentMonthNipunCount: any = await this.prismaService.$queryRaw`
+      WITH latest_assessments AS (
+          SELECT
+              a.student_id,
+              a.submission_timestamp,
+              a.is_passed,
+              ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+          FROM assessments a
+          JOIN students s ON a.student_id = s.unique_id
+          WHERE
+              a.mentor_id = ${mentor.id} AND
+              a.submission_timestamp >= ${startOfCurrentMonth} AND
+              a.submission_timestamp <= ${endOfCurrentMonth} AND
+              a.student_id IS NOT NULL AND
+              s.deleted_at IS NULL AND
+              a.is_valid = true
+      )
+      SELECT
+          COUNT(DISTINCT student_id) AS nipun_students
+      FROM (
+          SELECT
+              student_id,
+              EVERY(is_passed) AS is_passed_all
+          FROM latest_assessments
+          WHERE rn = 1                 -- Select only the latest assessment per student
+          GROUP BY student_id
       ) AS latest_assessments_summary
-      GROUP BY grade`;
+      WHERE is_passed_all = true;      -- Only count nipun students
+  `;
 
     // fetch the last month assessments
     const lastMonthAssessments: any = await this.prismaService.$queryRaw`
-      WITH latest_assessments AS (
-        SELECT
-          a.grade,
-          a.student_id,
-          a.submission_timestamp,
-          a.is_passed,
-          ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
-        FROM assessments a
-        JOIN students s ON a.student_id = s.unique_id
-        WHERE
-          a.mentor_id = ${mentor.id} AND
-          a.submission_timestamp >= ${startOfLastMonth} AND
-          a.submission_timestamp <= ${endOfLastMonth} AND
-          a.student_id IS NOT NULL AND
-          a.student_id > 0 AND                         -- filter out anonymous students
-          s.deleted_at IS NULL AND                     -- filter out deleted students
-          a.is_valid = true                            -- pick only valid assessments
-      )
-      SELECT
-        grade,
-        MAX(latest_submission_timestamp) AS latest_submission_timestamp,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE student_id IS NOT NULL) AS student_ids,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
-        JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
-        COUNT(DISTINCT student_id) AS total_assessments,
-        COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
-      FROM (
+        WITH latest_assessments AS (
+          SELECT
+            a.grade,
+            a.student_id,
+            a.submission_timestamp,
+            a.is_passed,
+            ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+          FROM assessments a
+          JOIN students s ON a.student_id = s.unique_id
+          WHERE
+            a.mentor_id = ${mentor.id} AND
+            a.submission_timestamp >= ${startOfLastMonth} AND
+            a.submission_timestamp <= ${endOfLastMonth} AND
+            a.student_id IS NOT NULL AND
+            a.student_id::int > 0 AND                         -- filter out anonymous students
+            s.deleted_at IS NULL AND                          -- filter out deleted students
+            a.is_valid = true  AND                            -- pick only valid assessments
+            a.grade = ANY(${selectedGrade}::smallint[])
+        )
         SELECT
           grade,
-          student_id,
-          MAX(submission_timestamp) AS latest_submission_timestamp,
-          EVERY(is_passed) AS is_passed_all
-        FROM latest_assessments
-        WHERE rn = 1  -- Select only the latest assessment per student
-        GROUP BY grade, student_id
-      ) AS latest_assessments_summary
-      GROUP BY grade`;
+          MAX(latest_submission_timestamp) AS latest_submission_timestamp,
+          JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
+          JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
+          COUNT(DISTINCT student_id) AS total_assessments,
+          COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
+        FROM (
+          SELECT
+            grade,
+            student_id,
+            MAX(submission_timestamp) AS latest_submission_timestamp,
+            EVERY(is_passed) AS is_passed_all
+          FROM latest_assessments
+          WHERE rn = 1  -- Select only the latest assessment per student
+          GROUP BY grade, student_id
+        ) AS latest_assessments_summary
+        GROUP BY grade`;
 
-    const formattedResponse: any = {};
+    const totalNipunCount = currentMonthNipunCount[0]?.nipun_students || 0;
+
+    const formattedResponse: any = {
+      month: currentMonth,
+      year: currentYear,
+      total_nipun_count: totalNipunCount,
+      month_label: this.i18n.t(
+        `months.${moment(currentMonth, 'M').format('MMMM')}`,
+        { lang: lang },
+      ),
+      data: [],
+    };
 
     currentWeekAssessments.forEach((assessment: any) => {
-      if (!formattedResponse[`grade_${assessment.grade}`]) {
-        formattedResponse[`grade_${assessment.grade}`] = {};
+      const grade = this.i18n.t(`grades.${assessment.grade}`, { lang: lang });
+      if (!formattedResponse.data.some((item: any) => item.grade === grade)) {
+        formattedResponse.data.push({ grade, cards: [] });
       }
-      formattedResponse[`grade_${assessment.grade}`]['currentWeekAssessments'] =
-        {
-          label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
-          total_assessments: {
-            label: this.i18n.t(`common.TOTAL_ASSESSMENT`, { lang: lang }),
-            count: assessment.total_assessments,
-          },
-          nipun_students: {
-            label: this.i18n.t(`common.NIPUN_STUDENT`, { lang: lang }),
-            count: assessment.nipun_students,
-          },
-          latest_submission_timestamp: assessment.latest_submission_timestamp,
-          student_ids: assessment.student_ids,
-          nipun_student_ids: assessment.nipun_student_ids,
-          non_nipun_student_ids: assessment.non_nipun_student_ids,
-          grade: assessment.grade,
-        };
-    });
-
-    lastMonthAssessments.forEach((assessment: any) => {
-      if (!formattedResponse[`grade_${assessment.grade}`]) {
-        formattedResponse[`grade_${assessment.grade}`] = {};
-      }
-      formattedResponse[`grade_${assessment.grade}`]['lastMonthAssessments'] = {
-        label: this.i18n.t(`common.LAST_MONTH`, { lang: lang }),
+      const gradeData = formattedResponse.data.find(
+        (item: any) => item.grade === grade,
+      );
+      gradeData.cards.push({
+        identifier: 'currentWeekAssessments',
+        label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
         total_assessments: {
           label: this.i18n.t(`common.TOTAL_ASSESSMENT`, { lang: lang }),
-          count: assessment.total_assessments,
+          count: assessment.total_assessments || 0,
         },
         nipun_students: {
           label: this.i18n.t(`common.NIPUN_STUDENT`, { lang: lang }),
-          count: assessment.nipun_students,
+          count: assessment.nipun_students || 0,
         },
-        latest_submission_timestamp: assessment.latest_submission_timestamp,
-        student_ids: assessment.student_ids,
-        nipun_student_ids: assessment.nipun_student_ids,
-        non_nipun_student_ids: assessment.non_nipun_student_ids,
-        grade: assessment.grade,
-      };
+        metadata: {
+          nipun_student_ids: assessment.nipun_student_ids || [],
+          non_nipun_student_ids: assessment.non_nipun_student_ids || [],
+        },
+      });
+    });
+
+    lastMonthAssessments.forEach((assessment: any) => {
+      const grade = this.i18n.t(`grades.${assessment.grade}`, { lang: lang });
+      if (!formattedResponse.data.some((item: any) => item.grade === grade)) {
+        formattedResponse.data.push({ grade, cards: [] });
+      }
+      const gradeData = formattedResponse.data.find(
+        (item: any) => item.grade === grade,
+      );
+      gradeData.cards.push({
+        identifier: 'lastMonthAssessments',
+        label: this.i18n.t(`common.LAST_MONTH`, { lang: lang }),
+        total_assessments: {
+          label: this.i18n.t(`common.TOTAL_ASSESSMENT`, { lang: lang }),
+          count: assessment.total_assessments || 0,
+        },
+        nipun_students: {
+          label: this.i18n.t(`common.NIPUN_STUDENT`, { lang: lang }),
+          count: assessment.nipun_students || 0,
+        },
+        metadata: {
+          nipun_student_ids: assessment.nipun_student_ids || [],
+          non_nipun_student_ids: assessment.non_nipun_student_ids || [],
+        },
+      });
     });
 
     return formattedResponse;

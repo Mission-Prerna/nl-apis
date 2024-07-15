@@ -257,24 +257,24 @@ export class SchoolServiceV2 extends SchoolService {
       const query = `
       WITH latest_assessments AS (
         SELECT 
-            DISTINCT ON (student_id) 
-            student_id,
-            grade,
-            submitted_at,
-            submission_timestamp,        
+            DISTINCT ON (a.student_id) 
+            a.student_id,
+            a.grade,
+            a.submitted_at,
+            a.submission_timestamp,        
             COUNT(*) AS total_assessments
-        FROM assessments
+        FROM assessments a
         JOIN students s ON a.student_id = s.unique_id
         WHERE student_id IS NOT NULL
-            AND udise = $1
+            AND a.udise = $1
             and s.deleted_at IS NULL   -- filter out deleted students assessments
-            AND actor_id = ${ActorEnum.TEACHER}
-            AND student_id NOT IN ('-1', '-2', '-3')
-            AND submission_timestamp BETWEEN ${startTime} AND ${endTime}
-            AND grade = ANY($2::smallint[])
-            AND is_valid = true
-        GROUP BY student_id, grade, submitted_at, submission_timestamp
-        ORDER BY student_id, submission_timestamp DESC
+            AND a.actor_id = ${ActorEnum.TEACHER}
+            AND a.student_id NOT IN ('-1', '-2', '-3')
+            AND a.submission_timestamp BETWEEN ${startTime} AND ${endTime}
+            AND a.grade = ANY($2::smallint[])
+            AND a.is_valid = true
+        GROUP BY a.student_id, a.grade, a.submitted_at, a.submission_timestamp
+        ORDER BY a.student_id, a.submission_timestamp DESC
     ),
     failed_counts AS (
         SELECT 

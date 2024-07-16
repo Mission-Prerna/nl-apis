@@ -10,6 +10,7 @@ datasource db {
 model actors {
   id                                       Int                                        @id @default(autoincrement())
   name                                     String                                     @unique @db.Char
+  actor_school_blacklist                   actor_school_blacklist[]
   assessment_survey_result_v2              assessment_survey_result_v2[]
   assessment_visit_results_v2              assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun assessment_visit_results_v2_2023_apr_jun[]
@@ -644,6 +645,7 @@ model school_list {
   lat                                          Decimal?                                       @db.Decimal
   long                                         Decimal?                                       @db.Decimal
   geo_fence_enabled                            Boolean                                        @default(true)
+  actor_school_blacklist                       actor_school_blacklist[]
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
   assessment_survey_result_v2                  assessment_survey_result_v2[]
@@ -1943,6 +1945,19 @@ model school_results_fraud_reports {
   @@index([cycle_id], map: "school_results_fraud_reports_cycle_id_key")
   @@index([udise, cycle_id], map: "school_results_fraud_reports_udise_cycle_id_key")
   @@index([udise], map: "school_results_fraud_reports_udise_key")
+}
+
+model actor_school_blacklist {
+  id          Int         @id @default(autoincrement())
+  actor_id    Int
+  udise       BigInt
+  is_active   Boolean     @default(true)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  actors      actors      @relation(fields: [actor_id], references: [id], onDelete: Cascade)
+  school_list school_list @relation(fields: [udise], references: [udise], onDelete: Cascade)
+
+  @@unique([actor_id, udise])
 }
 
 enum genders_enum {

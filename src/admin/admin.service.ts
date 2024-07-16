@@ -29,6 +29,7 @@ import { StudentsUpdateResponse, StudentsUpdateResponseDto } from './dto/UpdateS
 import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as Sentry from '@sentry/minimal';
+import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 
 @Injectable()
 export class AdminService {
@@ -644,6 +645,7 @@ export class AdminService {
         FROM students
         WHERE udise = ANY($1) and
         grade in (1, 2, 3)
+        and deleted_at IS null
     ) AS ranked
     WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
     GROUP BY udise, grade;`
@@ -778,6 +780,7 @@ export class AdminService {
       if(data.reset_all) {
         // reset assessment_cycle_school_nipun_results to recreate new student mappings
         const assessmentCycledistrictSchoolMappings = data.udises.map(udise => { return {udise: udise} as CreateAssessmentCycleDistrictSchoolMapping})
+        //@ts-ignore
         res.push(await this.createAssessmentCycleDistrictSchoolMapping(cycle.id, assessmentCycledistrictSchoolMappings))
       }
       return res;
@@ -841,4 +844,51 @@ export class AdminService {
     }
     return { status: 'Cache Cleared Successfully' };
   }  
+
+  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    return await this.prismaService.actor_school_blacklist.createMany({
+      data: body,
+      skipDuplicates: true,
+    });
+  }
+
+  async updateActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const updatePromises = body.map((data) => {
+      return this.prismaService.actor_school_blacklist.update({
+        where: {
+          actor_id_udise: {
+            actor_id: data.actor_id,
+            udise: data.udise,
+          },
+        },
+        data: {
+          is_active: data.is_active ?? false,
+        },
+      });
+    });
+
+    return await Promise.all(updatePromises);
+  }
+
+  async getActorSchoolBlacklist() {
+    return await this.prismaService.actor_school_blacklist.findMany();
+  }
+
+  async deleteActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const operations = body.map((data) => {
+      return this.prismaService.actor_school_blacklist.update({
+        where: {
+          actor_id_udise: {
+            actor_id: data.actor_id,
+            udise: data.udise,
+          },
+        },
+        data: {
+          is_active: false,
+        },
+      });
+    });
+
+    return await Promise.all(operations);
+  }
 }

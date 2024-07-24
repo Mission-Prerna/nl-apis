@@ -17,7 +17,17 @@
   "ASSESSMENTS_COMPLETED_IN_CLASS_2": "Assessments completed in class 2",
   "ASSESSMENTS_COMPLETED_IN_CLASS_3": "Assessments completed in class 3",
   "CURRENT_WEEK_ASSESSMENT": "Current week assessment",
-  "LAST_MONTH": "Last month",
-  "NIPUN_STUDENT": "Nipun student",
-  "TOTAL_ASSESSMENT": "Total assessment"
+  "LAST_MONTH_ASSESSMENT": "Last month assessment",
+  "NIPUN_STUDENT": "{students_count} Nipun student",
+  "TOTAL_ASSESSMENT": "{assessments_count} Total assessment",
+  "MENTOR_HOME_SCREEN_BADGE_TEXT": "{student_count} of your students are nipun in {month_name} 🎉",
+  "READING_SPEED": "Reading speed",
+  "WPM_ACHIEVEMENT": "{wpm} word/minute",
+  "SCORE_ACHIEVEMENT": "{score}/{max_score} correct",
+  "SUBJECT_QUESTION": "{subject} questions",
+  "HINDI": "Hindi",
+  "ENGLISH": "English",
+  "MATH": "Math",
+  "LIST_OF_WORDS": "List of words",
+  "LIST_OF_QUESTIONS": "List of questions"
 }

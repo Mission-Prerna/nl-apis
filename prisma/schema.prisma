@@ -1804,6 +1804,7 @@ model assessments {
   student_id           String?      @db.VarChar(15)
   is_valid             Boolean      @default(true)
   updated_at           DateTime     @default(now()) @db.Timestamp(6)
+  player_results       Json?        @default(dbgenerated("jsonb_build_object()"))
   actors               actors       @relation(fields: [actor_id], references: [id])
   blocks               blocks?      @relation(fields: [block_id], references: [id], onDelete: Restrict)
   mentor               mentor?      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)

@@ -1592,6 +1592,7 @@ export class AppService {
         old_student_id: 0,
         results_json: result.odk_results,
         student_id: result.student_id ?? null,
+        player_results: result?.player_results ?? {}
       });
     }
 

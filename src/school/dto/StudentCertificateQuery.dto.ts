@@ -6,7 +6,7 @@ export class StudentCertificateQueryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  limit: number = 5;
+  limit: number = 6;
 
   @Type(() => Number)
   @IsOptional()

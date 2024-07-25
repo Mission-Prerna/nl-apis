@@ -181,8 +181,8 @@ export class StudentService {
               track,
               type,
               achievement,
-              transcript: playerResults?.results?.transcript || [],
               title,
+              transcript: playerResults?.results?.transcript || [],
               result: questionAnswers,
             };
           }),
@@ -210,14 +210,14 @@ export class StudentService {
     // Fetch question details for all unique question IDs
     const questions = await fetchQuestionsByIds(questionIds);
 
-    // Create a map for quick lookup of question details by ID
-    const questionMap = new Map(questions.map((q: any) => [q.id, q]));
-
     // Map results to question details
     return results
       .map((result: any) => {
-        const question: any = questionMap.get(result.question);
+        const question = questions[result.question];
         if (!question) return null;
+
+        // Find the choice that matches the answer ID (use this once answer id starts coming)
+        // const choice = question.choices.find((c: any) => c.id === result.answer);
 
         // Get choice text and score based on the answer
         const choiceIndex = parseInt(result.answer, 10) - 1;

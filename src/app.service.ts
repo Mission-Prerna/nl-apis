@@ -1923,10 +1923,11 @@ export class AppService {
       studentCountText = `${studentCountText}+`;
     }
 
-    let badging = {
-      text: '',
-      level: '',
-      image_url: '',
+    const formattedResponse: any = {
+      year: currentYear,
+      month: currentMonth,
+      month_label: monthName,
+      data: [],
     };
 
     if (mentor.actor_id === ActorEnum.TEACHER) {
@@ -1945,20 +1946,13 @@ export class AppService {
       const totalStudents: number = mentorStudents[0]?.count || 0;
       const totalNipunStudents: number = currentMonthNipunCount[0]?.nipun_students || 0;
 
-      badging = this.getMentorBadge(
+     const badging = this.getMentorBadge(
         Number(totalStudents),
         Number(totalNipunStudents),
         currentMonth,
       );
+      formattedResponse['badging'] = badging
     }
-
-    const formattedResponse: any = {
-      year: currentYear,
-      month: currentMonth,
-      month_label: monthName,
-      badging,
-      data: [],
-    };
 
     currentWeekAssessments.forEach((assessment: any) => {
       if (

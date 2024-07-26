@@ -134,8 +134,7 @@ export class StudentService {
         json_agg(
           json_build_object(
             'is_passed', assessments.is_passed,
-            'player_results', assessments.player_results,
-            'result', assessments.results_json
+            'player_results', assessments.player_results
           )
         ) AS competency_results
       FROM (
@@ -216,12 +215,8 @@ export class StudentService {
         const question = questions[result.question];
         if (!question) return null;
 
-        // Find the choice that matches the answer ID (use this once answer id starts coming)
-        // const choice = question.choices.find((c: any) => c.id === result.answer);
-
-        // Get choice text and score based on the answer
-        const choiceIndex = parseInt(result.answer, 10) - 1;
-        const choice = question.choices[choiceIndex];
+        // Find the choice that matches the answer ID
+        const choice = question.choices.find((c: any) => c.id === result.answer_id);
         const choiceText = choice ? choice.text : '';
         const score = choice ? choice.score : 0;
 

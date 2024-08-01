@@ -995,6 +995,10 @@ export class AppService {
       this.getMentorInsightsV2(mentor, month, year);
     }
 
+    const grade1StudentIds = insightDetails.grade_1_unique_student_ids || [];
+    const grade2StudentIds = insightDetails.grade_2_unique_student_ids || [];
+    const grade3StudentIds = insightDetails.grade_3_unique_student_ids || [];
+
     return {
       totalInsights: [
         {
@@ -1006,6 +1010,11 @@ export class AppService {
           type: 'student',
           label: this.i18n.t(`common.COMPLETED_STUDENT_ASSESSMENTS`, { lang: lang }),
           count: Number(insightDetails?.assessments_taken),
+          student_ids: [
+            ...grade1StudentIds,
+            ...grade2StudentIds,
+            ...grade3StudentIds,
+          ],
         },
         {
           type: 'time',
@@ -1022,6 +1031,7 @@ export class AppService {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_1_assessments) || 0,
+          student_ids: grade1StudentIds,
         },
         {
           type: `grade_2`,
@@ -1029,6 +1039,7 @@ export class AppService {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_2_assessments) || 0,
+          student_ids: grade2StudentIds,
         },
         {
           type: `grade_3`,
@@ -1036,41 +1047,47 @@ export class AppService {
             lang: lang,
           }),
           count: Number(insightDetails?.grade_3_assessments) || 0,
+          student_ids: grade3StudentIds,
         },
       ],
       month,
       year,
-      updated_at: moment(insightDetails?.max_updated_at).valueOf(),  // changing value to epoch format
-      assessments_count: insightDetails.assessments_count
+      updated_at: moment(insightDetails?.max_updated_at).valueOf(), // changing value to epoch format
+      assessments_count: insightDetails.assessments_count,
     };
   }
 
   async getMentorInsightsV2(mentor: Mentor, month: number, year: number) {
     const firstDayTimestamp = Date.UTC(year, month - 1, 1, 0, 0, 0); // first day of current month
     const lastDayTimestamp = Date.UTC(year, month, 1, 0, 0, 0); // 1st day of next month
-
+  
     try {
       const result: Record<string, any> = await this.prismaService.$queryRaw`
       SELECT
-        MAX(updated_at) AS max_updated_at,
-        COUNT(DISTINCT CASE WHEN udise > 0 THEN udise END) AS schools_visited,
+        MAX(a.updated_at) AS max_updated_at,
+        COUNT(DISTINCT CASE WHEN a.udise > 0 THEN a.udise END) AS schools_visited,
         COALESCE(
           AVG(
-            ((end_time - start_time) / 1000)   -- Convert milliseconds to seconds and cast to integer
+            ((a.end_time - a.start_time) / 1000)   -- Convert milliseconds to seconds and cast to integer
           )::int, 0
         ) AS avg_time,
         COUNT(*) AS assessments_count,
-        COUNT(DISTINCT student_id) AS assessments_taken,
-        COUNT(DISTINCT CASE WHEN grade = 1 THEN student_id END) AS grade_1_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 2 THEN student_id END) AS grade_2_assessments,
-        COUNT(DISTINCT CASE WHEN grade = 3 THEN student_id END) AS grade_3_assessments
-      FROM assessments
-      WHERE mentor_id = ${mentor.id}
-        AND student_id NOT LIKE '%.0%' 
-        AND student_id IS NOT NULL 
-        AND student_id::int > 0
-        AND submission_timestamp > ${firstDayTimestamp}
-        AND submission_timestamp < ${lastDayTimestamp}
+        COUNT(DISTINCT a.student_id) AS assessments_taken,
+        COUNT(DISTINCT CASE WHEN a.grade = 1 THEN a.student_id END) AS grade_1_assessments,
+        COUNT(DISTINCT CASE WHEN a.grade = 2 THEN a.student_id END) AS grade_2_assessments,
+        COUNT(DISTINCT CASE WHEN a.grade = 3 THEN a.student_id END) AS grade_3_assessments,
+        ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 1 AND a.student_id IS NOT NULL) AS grade_1_unique_student_ids,
+        ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 2 AND a.student_id IS NOT NULL) AS grade_2_unique_student_ids,
+        ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 3 AND a.student_id IS NOT NULL) AS grade_3_unique_student_ids
+      FROM assessments a
+      JOIN students s ON a.student_id = s.unique_id
+      WHERE a.mentor_id = ${mentor.id}
+        AND a.student_id NOT LIKE '%.0%' 
+        AND a.student_id IS NOT NULL 
+        AND a.student_id::int > 0
+        AND a.submission_timestamp > ${firstDayTimestamp}
+        AND a.submission_timestamp < ${lastDayTimestamp}
+        AND s.deleted_at IS NULL
     `;
 
       await this.cacheService.set(

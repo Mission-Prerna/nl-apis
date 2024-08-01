@@ -49,6 +49,9 @@ import { JwtService } from '@nestjs/jwt';
 import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { StudentService } from './school/student.service';
+import { MentorAssessmentSummaryParamsDto } from './dto/MentorAssessmentSummaryParams.dto';
+import { CONSTANTS } from './utils/constants';
 
 const moment = require('moment');
 
@@ -66,6 +69,7 @@ export class AppService {
     // Circular dependency to SchoolService
     @Inject(forwardRef(() => SchoolServiceV2))
     protected readonly schoolService: SchoolServiceV2,
+    protected readonly studentService: StudentService,
     private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRaw`
@@ -1588,6 +1592,7 @@ export class AppService {
         old_student_id: 0,
         results_json: result.odk_results,
         student_id: result.student_id ?? null,
+        player_results: result?.player_results ?? {}
       });
     }
 
@@ -1823,4 +1828,326 @@ export class AppService {
     }
   }
 
+  async getMentorAssessmentSummary(
+    mentor: Mentor,
+    queryParam: MentorAssessmentSummaryParamsDto,
+  ) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+
+    const currentMonth = queryParam.month ?? moment().month() + 1; // months are 0-indexed in moment.js
+    const currentYear = queryParam.year ?? moment().year();
+    const selectedGrade = queryParam?.grade?.split(',').map((grade) => parseInt(grade.trim()));
+
+    const startOfWeek = moment().startOf('week').startOf('day').valueOf();
+    const endOfWeek = moment().endOf('week').endOf('day').valueOf();
+
+    const startOfCurrentMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 1)
+      .startOf('month')
+      .startOf('day')
+      .valueOf();
+
+    const endOfCurrentMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 1)
+      .endOf('month')
+      .endOf('day')
+      .valueOf();
+
+    const startOfLastMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 2)
+      .startOf('month')
+      .startOf('day')
+      .valueOf();
+
+    const endOfLastMonth = moment()
+      .year(currentYear)
+      .month(currentMonth - 2)
+      .endOf('month')
+      .endOf('day')
+      .valueOf();
+
+    const mentorId = mentor.id as unknown as number;
+    // fetch the current week assessments
+    const currentWeekAssessments: any =
+      await this.getAssessmentsDataForMentorHomeScreen(
+        mentorId,
+        startOfWeek,
+        endOfWeek,
+        selectedGrade,
+      );
+
+    // fetch the last month assessments
+    const lastMonthAssessments: any =
+      await this.getAssessmentsDataForMentorHomeScreen(
+        mentorId,
+        startOfLastMonth,
+        endOfLastMonth,
+        selectedGrade,
+      );
+
+    // fetch the current month nipun students count
+    const currentMonthNipunCount: any = await this.prismaService.$queryRaw`
+      WITH latest_assessments AS (
+          SELECT
+              a.student_id,
+              a.submission_timestamp,
+              a.is_passed,
+              ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+          FROM assessments a
+          JOIN students s ON a.student_id = s.unique_id
+          WHERE
+              a.mentor_id = ${mentor.id} AND
+              a.submission_timestamp >= ${startOfCurrentMonth} AND
+              a.submission_timestamp <= ${endOfCurrentMonth} AND
+              a.student_id IS NOT NULL AND
+              s.deleted_at IS NULL AND
+              a.is_valid = true
+      )
+      SELECT
+          COUNT(DISTINCT student_id) AS nipun_students
+      FROM (
+          SELECT
+              student_id,
+              EVERY(is_passed) AS is_passed_all
+          FROM latest_assessments
+          WHERE rn = 1                 -- Select only the latest assessment per student
+          GROUP BY student_id
+      ) AS latest_assessments_summary
+      WHERE is_passed_all = true;      -- Only count nipun students
+  `;
+
+    const monthName = this.i18n.t(`months.${moment(currentMonth, 'M').format('MMMM')}`, { lang: lang });
+    let studentCountText = currentMonthNipunCount[0]?.nipun_students || 0;
+    if (studentCountText > 50) {
+      studentCountText = `${studentCountText}+`;
+    }
+
+    const formattedResponse: any = {
+      year: currentYear,
+      month: currentMonth,
+      month_label: monthName,
+      data: [],
+    };
+
+    if (mentor.actor_id === ActorEnum.TEACHER) {
+      const mentorStudents: any = await this.prismaService.$queryRaw`
+        SELECT COUNT(*)
+        FROM students
+        WHERE udise IN (
+          SELECT sl.udise
+          FROM teacher_school_list_mapping AS tsl
+          JOIN school_list AS sl ON sl.id = tsl.school_list_id
+          WHERE tsl.mentor_id = ${mentor.id}
+        )
+        AND deleted_at IS NULL
+        AND unique_id::int > 0
+      `;
+      const totalStudents: number = mentorStudents[0]?.count || 0;
+      const totalNipunStudents: number = currentMonthNipunCount[0]?.nipun_students || 0;
+
+     const badging = this.getMentorBadge(
+        Number(totalStudents),
+        Number(totalNipunStudents),
+        currentMonth,
+      );
+      formattedResponse['badging'] = badging
+    }
+
+    currentWeekAssessments.forEach((assessment: any) => {
+      if (
+        !formattedResponse.data.some(
+          (item: any) => item.grade === assessment.grade,
+        )
+      ) {
+        formattedResponse.data.push({
+          grade: assessment.grade,
+          grade_label: this.i18n.t(`grades.${assessment.grade}`, {
+            lang: lang,
+          }),
+          cards: [],
+        });
+      }
+      const gradeData = formattedResponse.data.find(
+        (item: any) => item.grade === assessment.grade,
+      );
+      gradeData.cards.push({
+        identifier: 'currentWeekAssessments',
+        label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
+        data: [
+          {
+            identifier: `assessedStudents`,
+            text: this.i18n
+              .t(`common.TOTAL_ASSESSMENT`, { lang: lang })
+              .replace(
+                '{assessments_count}',
+                assessment.total_assessments || 0,
+              ),
+            count: assessment.total_assessments || 0,
+          },
+          {
+            identifier: `nipunStudents`,
+            text: this.i18n
+              .t(`common.NIPUN_STUDENT`, { lang: lang })
+              .replace('{students_count}', assessment.nipun_students || 0),
+            count: assessment.nipun_students || 0,
+          },
+        ],
+        metadata: {
+          nipun_student_ids: assessment.nipun_student_ids || [],
+          non_nipun_student_ids: assessment.non_nipun_student_ids || [],
+        },
+      });
+    });
+
+    lastMonthAssessments.forEach((assessment: any) => {
+      if (
+        !formattedResponse.data.some(
+          (item: any) => item.grade === assessment.grade,
+        )
+      ) {
+        formattedResponse.data.push({
+          grade: assessment.grade,
+          grade_label: this.i18n.t(`grades.${assessment.grade}`, {
+            lang: lang,
+          }),
+          cards: [],
+        });
+      }
+      const gradeData = formattedResponse.data.find(
+        (item: any) => item.grade === assessment.grade,
+      );
+      gradeData.cards.push({
+        identifier: 'lastMonthAssessments',
+        label: this.i18n.t(`common.LAST_MONTH_ASSESSMENT`, { lang: lang }),
+        month_label: this.i18n.t(
+          `months.${moment(currentMonth - 1, 'M').format('MMMM')}`,
+          { lang: lang },
+        ),
+        data: [
+          {
+            identifier: `assessedStudents`,
+            text: this.i18n
+              .t(`common.TOTAL_ASSESSMENT`, { lang: lang })
+              .replace(
+                '{assessments_count}',
+                assessment.total_assessments || 0,
+              ),
+            count: assessment.total_assessments || 0,
+          },
+          {
+            identifier: `nipunStudents`,
+            text: this.i18n
+              .t(`common.NIPUN_STUDENT`, { lang: lang })
+              .replace('{students_count}', assessment.nipun_students || 0),
+            count: assessment.nipun_students || 0,
+          },
+        ],
+        metadata: {
+          nipun_student_ids: assessment.nipun_student_ids || [],
+          non_nipun_student_ids: assessment.non_nipun_student_ids || [],
+        },
+      });
+    });
+
+    return formattedResponse;
+  }
+
+  async getAssessmentsDataForMentorHomeScreen(
+    mentor_id: number,
+    startTimestamp: number,
+    endTimestamp: number,
+    selectedGrade: number[],
+  ) {
+    return await this.prismaService.$queryRaw`
+    WITH latest_assessments AS (
+      SELECT
+        a.grade,
+        a.student_id,
+        a.submission_timestamp,
+        a.is_passed,
+        ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+      FROM assessments a
+      JOIN students s ON a.student_id = s.unique_id
+      WHERE
+        a.mentor_id = ${mentor_id} AND
+        a.submission_timestamp >= ${startTimestamp} AND
+        a.submission_timestamp <= ${endTimestamp} AND
+        a.student_id IS NOT NULL AND
+        a.student_id::int > 0 AND                         -- filter out anonymous students
+        s.deleted_at IS NULL AND                          -- filter out deleted students
+        a.is_valid = true  AND                            -- pick only valid assessments
+        a.grade = ANY(${selectedGrade}::smallint[])
+    )
+    SELECT
+      grade,
+      MAX(latest_submission_timestamp) AS latest_submission_timestamp,
+      JSON_AGG(DISTINCT student_id) FILTER (WHERE is_passed_all AND student_id IS NOT NULL) AS nipun_student_ids,
+      JSON_AGG(DISTINCT student_id) FILTER (WHERE NOT is_passed_all AND student_id IS NOT NULL) AS non_nipun_student_ids,
+      COUNT(DISTINCT student_id) AS total_assessments,
+      COUNT(DISTINCT CASE WHEN is_passed_all THEN student_id END) AS nipun_students
+    FROM (
+      SELECT
+        grade,
+        student_id,
+        MAX(submission_timestamp) AS latest_submission_timestamp,
+        EVERY(is_passed) AS is_passed_all
+      FROM latest_assessments
+      WHERE rn = 1                              -- Select only the latest assessment per student
+      GROUP BY grade, student_id
+    ) AS latest_assessments_summary
+    GROUP BY grade`;
+  }
+
+  getMentorBadge(totalStudents: number, nipunStudents: number, month?: number) {
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+    const currentMonth = month ?? moment().month() + 1; // months are 0-indexed in moment.js
+    const threshold = CONSTANTS.BADGE_LEVEL_THRESHOLD;
+
+    const percentage = (nipunStudents / totalStudents) * 100;
+
+    let level: string = CONSTANTS.BADGE_LEVEL.BRONZE;
+
+    if (percentage >= threshold.GOLD.min && percentage <= threshold.GOLD.max) {
+      level = CONSTANTS.BADGE_LEVEL.GOLD;
+    } else if (
+      percentage >= threshold.SILVER.min &&
+      percentage <= threshold.SILVER.max
+    ) {
+      level = CONSTANTS.BADGE_LEVEL.SILVER;
+    }
+
+    //@ts-ignore
+    const badgeImageUrl = CONSTANTS.BADGE_IMAGE[level];
+
+    const monthName = this.i18n.t(
+      `months.${moment(currentMonth, 'M').format('MMMM')}`,
+      { lang: lang },
+    );
+
+    return {
+      level,
+      text: this.i18n
+        .t(`common.MENTOR_HOME_SCREEN_BADGE_TEXT`, { lang })
+        .replace('{month_name}', monthName)
+        .replace('{student_count}', `${nipunStudents}`),
+      image_url: badgeImageUrl,
+    };
+  }
+
+  async getStudentAssessmentHistoryForMentor(
+    student_id: string,
+    mentor_id: number,
+    limit: number,
+    offset: number,
+  ) {
+    return this.studentService.getStudentAssessmentHistoryForMentor(
+      student_id,
+      mentor_id,
+      limit,
+      offset,
+    );
+  }
 }

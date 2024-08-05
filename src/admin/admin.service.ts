@@ -158,11 +158,24 @@ export class AdminService {
         });
       }
 
-      //TODO: Remove this. Temporary fix.
       if (data.actor_id == ActorEnum.EXAMINER) {
-        const default_cycle_id = parseInt(this.configService.getOrThrow('DEFAULT_EXAMINER_CYCLE_ID'));
-        await this.createAssessmentCycleDistrictExaminerMapping(default_cycle_id, 
-          [{ district_id: Number(mentor.district_id), mentor_id: Number(mentor.id) }]);
+        const latest_assessment_cycle =
+          await this.prismaService.assessment_cycles.findFirstOrThrow({
+            select: {
+              id: true,
+            },
+            orderBy: { end_date: 'desc' },
+          });
+
+        await this.createAssessmentCycleDistrictExaminerMapping(
+          latest_assessment_cycle.id,
+          [
+            {
+              district_id: Number(mentor.district_id),
+              mentor_id: Number(mentor.id),
+            },
+          ],
+        );
       }
       return mentor;
     }

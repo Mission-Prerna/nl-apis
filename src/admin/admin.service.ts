@@ -84,6 +84,20 @@ export class AdminService {
     if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
       throw new BadRequestException(['udise is needed when actor is "Teacher".']);
     }
+
+    const latest_assessment_cycle =
+      await this.prismaService.assessment_cycles.findFirst({
+        select: {
+          id: true,
+        },
+        orderBy: { end_date: 'desc' },
+      });
+
+    if (data.actor_id == ActorEnum.EXAMINER && !latest_assessment_cycle) {
+      throw new BadRequestException([
+        'Assessment cycle is needed when actor is "Examiner".',
+      ]);
+    }
     /*
       It's a 2-step process:
       1. Create a user on Fusion auth if not already exists.
@@ -158,15 +172,7 @@ export class AdminService {
         });
       }
 
-      if (data.actor_id == ActorEnum.EXAMINER) {
-        const latest_assessment_cycle =
-          await this.prismaService.assessment_cycles.findFirstOrThrow({
-            select: {
-              id: true,
-            },
-            orderBy: { end_date: 'desc' },
-          });
-
+      if (data.actor_id == ActorEnum.EXAMINER && latest_assessment_cycle) {
         await this.createAssessmentCycleDistrictExaminerMapping(
           latest_assessment_cycle.id,
           [

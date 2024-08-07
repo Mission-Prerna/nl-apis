@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -81,6 +82,7 @@ export class AdminService {
   }
 
   async createMentor(data: CreateMentorDto) {
+    try {
     if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
       throw new BadRequestException(['udise is needed when actor is "Teacher".']);
     }
@@ -191,6 +193,21 @@ export class AdminService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  } catch (error) {
+    this.logger.error(
+      `Failed to create mentor with phone no. ${data.phone_no}`,
+      error,
+    );
+    const { errorMessage, statusCode } =
+      getPrismaErrorStatusAndMessage(error);
+    throw new HttpException(
+      {
+        error_message: errorMessage,
+        error_code: statusCode,
+      },
+      statusCode,
+    );
+  }
   }
 
   async createMentorSegment(data: CreateMentorSegmentRequest) {

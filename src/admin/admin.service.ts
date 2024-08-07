@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -81,8 +82,23 @@ export class AdminService {
   }
 
   async createMentor(data: CreateMentorDto) {
+    try {
     if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
       throw new BadRequestException(['udise is needed when actor is "Teacher".']);
+    }
+
+    const latest_assessment_cycle =
+      await this.prismaService.assessment_cycles.findFirst({
+        select: {
+          id: true,
+        },
+        orderBy: { end_date: 'desc' },
+      });
+
+    if (data.actor_id == ActorEnum.EXAMINER && !latest_assessment_cycle) {
+      throw new BadRequestException([
+        'Assessment cycle is needed when actor is "Examiner".',
+      ]);
     }
     /*
       It's a 2-step process:
@@ -158,11 +174,16 @@ export class AdminService {
         });
       }
 
-      //TODO: Remove this. Temporary fix.
-      if (data.actor_id == ActorEnum.EXAMINER) {
-        const default_cycle_id = parseInt(this.configService.getOrThrow('DEFAULT_EXAMINER_CYCLE_ID'));
-        await this.createAssessmentCycleDistrictExaminerMapping(default_cycle_id, 
-          [{ district_id: Number(mentor.district_id), mentor_id: Number(mentor.id) }]);
+      if (data.actor_id == ActorEnum.EXAMINER && latest_assessment_cycle) {
+        await this.createAssessmentCycleDistrictExaminerMapping(
+          latest_assessment_cycle.id,
+          [
+            {
+              district_id: Number(mentor.district_id),
+              mentor_id: Number(mentor.id),
+            },
+          ],
+        );
       }
       return mentor;
     }
@@ -172,6 +193,21 @@ export class AdminService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  } catch (error) {
+    this.logger.error(
+      `Failed to create mentor with phone no. ${data.phone_no}`,
+      error,
+    );
+    const { errorMessage, statusCode } =
+      getPrismaErrorStatusAndMessage(error);
+    throw new HttpException(
+      {
+        error_message: errorMessage,
+        error_code: statusCode,
+      },
+      statusCode,
+    );
+  }
   }
 
   async createMentorSegment(data: CreateMentorSegmentRequest) {

@@ -546,6 +546,7 @@ model mentor {
   actor_id                                       Int                                              @default(1)
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  is_active                                      Boolean                                          @default(true)
   assessment_cycle_district_mentor_mapping       assessment_cycle_district_mentor_mapping[]
   assessment_cycle_school_nipun_results          assessment_cycle_school_nipun_results[]
   assessment_survey_result_v2                    assessment_survey_result_v2[]
@@ -589,6 +590,8 @@ model mentor {
 
   @@index([actor_id], map: "mentor_actor_id_key")
   @@index([designation_id], map: "mentor_designation_id_key")
+  @@index([actor_id, is_active], map: "mentor_actor_id_is_active_key")
+  @@index([is_active], map: "mentor_is_active_key")
 }
 
 model mentor_segmentation {
@@ -1937,8 +1940,8 @@ model school_results_fraud_reports {
   cycle_id          Int
   mentor_id         BigInt
   is_valid          Boolean
-  created_at        DateTime          @default(now()) @db.Timetz(6)
-  updated_at        DateTime          @default(now()) @db.Timetz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
   assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
   mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
   school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)

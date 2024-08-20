@@ -109,6 +109,7 @@ export class StudentService {
   async getStudentDetails(student_id: string, mentor_id: number) {
     const studentDetail: any = await this.prismaService.$queryRaw`
       SELECT
+        s.unique_id as student_id,
         s.name,
         s.udise,
         sl.district,
@@ -120,7 +121,7 @@ export class StudentService {
        AND s.deleted_at IS NULL
        AND a.mentor_id = ${mentor_id}
        AND a.is_valid = true
-      GROUP BY s.name, s.udise, sl.district
+      GROUP BY s.unique_id, s.name, s.udise, sl.district
     `;
     return studentDetail?.[0] || {};
   }

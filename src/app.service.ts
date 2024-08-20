@@ -2167,4 +2167,33 @@ export class AppService {
       offset,
     );
   }
+
+  async getTeacherPhoneByActorIdAndUdise(actor_id: number, udise: number) {
+    const school = await this.prismaService.school_list.findFirst({
+      where: { udise: udise },
+      select: { id: true },
+    });
+
+    if (!school) {
+      throw new Error('School not found for the given UDISE');
+    }
+
+    const mentor = await this.prismaService.mentor.findFirst({
+      where: {
+        actor_id: actor_id,
+        is_active: true,
+        teacher_school_list_mapping: {
+          some: {
+            school_list_id: school.id,
+          },
+        },
+      },
+      select: {
+        phone_no: true,
+      },
+    });
+
+    return mentor?.phone_no;
+  }
+
 }

@@ -857,10 +857,6 @@ export class AdminService {
       ]);
   });
 
-    const mentorDetailPromises = phoneNumbers.map((phoneNumber) => {
-      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
-    });
-
     const metadataKeys: string[] = [];
       // remove metadata for all actors and all app-versions
     metadataKeys.push(...await this.getCacheKeysByPattern(CacheKeyMetadataAll()));
@@ -869,8 +865,9 @@ export class AdminService {
   });
 
     try {
+      // remove mentor details and other cache
       await Promise.all([
-        ...mentorDetailPromises,
+        this.clearMentorDetailCache(phoneNumbers),
         ...metadataPromises,
         ...mentorCachePromises
       ]);
@@ -881,11 +878,39 @@ export class AdminService {
     return { status: 'Cache Cleared Successfully' };
   }  
 
-  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
-    return await this.prismaService.actor_school_blacklist.createMany({
-      data: body,
-      skipDuplicates: true,
+  async clearMentorDetailCache(phoneNo: string[]) {
+    const mentorDetailPromises = phoneNo.map((phoneNumber) => {
+      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
+    return await Promise.all(mentorDetailPromises);
+  }
+
+  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const response = await this.prismaService.actor_school_blacklist.createMany(
+      {
+        data: body,
+        skipDuplicates: true,
+      },
+    );
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist creation
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
+
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // Return create response
+    return response;
   }
 
   async updateActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
@@ -902,8 +927,26 @@ export class AdminService {
         },
       });
     });
+    const response = await Promise.all(updatePromises);
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist updating
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
 
-    return await Promise.all(updatePromises);
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // return update response
+    return response;
   }
 
   async getActorSchoolBlacklist() {
@@ -924,7 +967,25 @@ export class AdminService {
         },
       });
     });
+    const response = await Promise.all(operations);
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist deleting
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
 
-    return await Promise.all(operations);
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // return delete response
+    return response;
   }
 }

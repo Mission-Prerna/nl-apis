@@ -155,7 +155,7 @@ export class SchoolServiceV2 extends SchoolService {
         gradeStudents[grade].students.push({
           id: id,
           status: assessedStudent.is_passed ? StudentMonthlyAssessmentStatus.PASS : StudentMonthlyAssessmentStatus.FAIL,
-          last_assessment_date: moment(assessedStudent.last_assessment_date).unix() * 1000,
+          last_assessment_date: moment(assessedStudent.last_assessment_date).valueOf(),
         });
       } else {
         gradeStudents[grade].students.push({
@@ -376,7 +376,7 @@ export class SchoolServiceV2 extends SchoolService {
             return {
                 assessments_total: result[0].assessments_total,
                 nipun_total: result[0].nipun_total,
-                updated_at: result[0].updated_at ? (moment(result[0].updated_at).unix() * 1000) : 0,
+                updated_at: result[0].updated_at ? (moment(result[0].updated_at).valueOf()) : 0,
                 assessed_student_ids: result[0].assessed_student_ids,
                 nipun_student_ids: result[0].nipun_student_ids,
             };

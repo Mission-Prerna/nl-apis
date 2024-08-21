@@ -866,8 +866,8 @@ export class AdminService {
 
     try {
       // remove mentor details and other cache
-      await this.clearMentorDetailCache(phoneNumbers)
       await Promise.all([
+        this.clearMentorDetailCache(phoneNumbers),
         ...metadataPromises,
         ...mentorCachePromises
       ]);

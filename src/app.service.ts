@@ -1993,6 +1993,7 @@ export class AppService {
       gradeData.cards.push({
         identifier: 'currentWeekAssessments',
         label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
+        updated_at: assessment.latest_submission_timestamp,
         data: [
           {
             identifier: `assessedStudents`,
@@ -2039,6 +2040,7 @@ export class AppService {
       gradeData.cards.push({
         identifier: 'lastMonthAssessments',
         label: this.i18n.t(`common.LAST_MONTH_ASSESSMENT`, { lang: lang }),
+        updated_at: assessment.latest_submission_timestamp,
         month_label: this.i18n.t(
           `months.${moment(currentMonth - 1, 'M').format('MMMM')}`,
           { lang: lang },

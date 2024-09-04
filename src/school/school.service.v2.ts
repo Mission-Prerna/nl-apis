@@ -534,7 +534,7 @@ export class SchoolServiceV2 extends SchoolService {
 
   async calculateExaminerCycleUdiseResult(mentorID: number, cycleId: number, udise: number) {
     // find out cycle details, students list & nipun percentage for the udise
-    const cycleDetails: Array<Record<string, number | string | Array<string>>> = await this.prismaService.$queryRawUnsafe(`
+    const cycleDetails: any = await this.prismaService.$queryRawUnsafe(`
       select 
         c.id,
         c.start_date,
@@ -551,75 +551,116 @@ export class SchoolServiceV2 extends SchoolService {
                         and c.id = $2
       group by c.id
       limit 1`, udise, cycleId);
+
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
       this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentorID})`);
       return true;  // returning true so that the queue job just terminate gracefully
     }
 
-    // @ts-ignore prepare list of student ids
-    const studentIds = [...cycleDetails[0].class_1_students[0], ...cycleDetails[0].class_2_students[0], ...cycleDetails[0].class_3_students[0]];
-    // @ts-ignore
-    const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 10;
-    // @ts-ignore
-    const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 10;
-    // @ts-ignore
-    const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 10;
+    // prepare list of student ids
+    const studentIds = [
+      ...cycleDetails[0].class_1_students[0],
+      ...cycleDetails[0].class_2_students[0],
+      ...cycleDetails[0].class_3_students[0],
+    ];
+
+    const grade1Count = [...cycleDetails[0].class_1_students[0]].length ?? 0;
+
+    const grade2Count = [...cycleDetails[0].class_2_students[0]].length ?? 0;
+
+    const grade3Count = [...cycleDetails[0].class_3_students[0]].length ?? 0;
 
     // find the grade wise nipun percentage
     const query = `
-      select grade,
-             (
-                 case
-                     when t.grade = 1 then (count(t.student_id) * 100) / ${grade1Count}
-                     when t.grade = 2 then (count(t.student_id) * 100) / ${grade2Count}
-                     when t.grade = 3 then (count(t.student_id) * 100) / ${grade3Count}
-                     else 0
-                     end
-                 )::int as percentage
-      from (     
-              select                             
-              a.student_id,
-              a.grade,
-              bool_and(a.is_passed) is_passed
-              from assessments a
-              where a.student_id = ANY($3::text[])
-              and udise = $1
-              and grade in (1,2,3)
-              and mentor_id = $2
-              and a.submitted_at between '${moment(cycleDetails[0].start_date).format('YYYY-MM-DD')}' and '${moment(cycleDetails[0].end_date).format('YYYY-MM-DD')}'
-              and a.is_valid = true
-              group by a.student_id, a.grade 
-            ) t
-      where t.is_passed = true
-      group by t.grade    
+      select g.grade,
+          coalesce(
+              case
+                  when g.grade = 1 then 
+                      case when ${grade1Count} > 0 then (count(t.student_id) * 100) / ${grade1Count} else 0 end
+                  when g.grade = 2 then 
+                      case when ${grade2Count} > 0 then (count(t.student_id) * 100) / ${grade2Count} else 0 end
+                  when g.grade = 3 then 
+                      case when ${grade3Count} > 0 then (count(t.student_id) * 100) / ${grade3Count} else 0 end
+                  else 0
+              end, 0
+          )::int as percentage
+      from (
+            select unnest(array[1, 2, 3]) as grade
+         ) g
+      left join (
+            select
+            a.student_id,
+            a.grade,
+            bool_and(a.is_passed) as is_passed
+            from assessments a
+            where a.student_id = ANY($3::text[])
+            and a.udise = $1
+            and a.grade in (1,2,3)
+            and a.mentor_id = $2
+            and a.submitted_at between '${moment(
+              cycleDetails[0].start_date,
+            ).format('YYYY-MM-DD')}' and '${moment(
+      cycleDetails[0].end_date,
+    ).format('YYYY-MM-DD')}'
+            and a.is_valid = true
+            group by a.student_id, a.grade
+          ) t on g.grade = t.grade and t.is_passed = true
+      group by g.grade
+      order by g.grade;
     `;
+
     this.logger.debug(query)
-    const gradeWisePercentage: Array<{ grade: number, percentage: number }> = await this.prismaService.$queryRawUnsafe(
-      query, udise, mentorID, studentIds
-    );
+
+    const gradeWisePercentage: Array<{ grade: number; percentage: number }> =
+      await this.prismaService.$queryRawUnsafe(
+        query,
+        udise,
+        mentorID,
+        studentIds,
+      );
+
     this.logger.debug("Gradewise percentage for students", gradeWisePercentage)
-    // the school will be nipun if all 3 grades are nipun
+
+    // Define the minimum required percentages and student counts for each grade
+    const gradeRequirements = [
+      {
+        grade: 1,
+        minPercentage: Number(cycleDetails[0].class_1_nipun_percentage),
+        studentCount: grade1Count,
+      },
+      {
+        grade: 2,
+        minPercentage: Number(cycleDetails[0].class_2_nipun_percentage),
+        studentCount: grade2Count,
+      },
+      {
+        grade: 3,
+        minPercentage: Number(cycleDetails[0].class_3_nipun_percentage),
+        studentCount: grade3Count,
+      },
+    ];
+
+    // the school will be nipun if all 3 grades with students > 0 are nipun
     let isNipun = true;
-    if (gradeWisePercentage.length != 3) {
-      // i.e. not all class assessments has been done (OR) no Nipun student percentage - the school is NOT_NIPUN
-      isNipun = false;
-    } else if (gradeWisePercentage.filter((item:any) => {
-      return item.grade == 1 && item.percentage < cycleDetails[0].class_1_nipun_percentage;
-    }).length) {
-      // i.e. grade 1 % < cycle defined percentage
-      isNipun = false;
-    } else if (gradeWisePercentage.filter((item:any) => {
-      return item.grade == 2 && item.percentage < cycleDetails[0].class_2_nipun_percentage;
-    }).length) {
-      // i.e. grade 2 % < cycle defined percentage
-      isNipun = false;
-    } else if (gradeWisePercentage.filter((item:any) => {
-      return item.grade == 3 && item.percentage < cycleDetails[0].class_3_nipun_percentage;
-    }).length) {
-      // i.e. grade 3 % < cycle defined percentage
-      isNipun = false;
+    // Iterate over each grade requirement and check conditions
+    for (const requirement of gradeRequirements) {
+      // Skip grades with zero students
+      if (requirement.studentCount === 0) {
+        continue;
+      }
+
+      const gradeData = gradeWisePercentage.find(
+        (item: any) => item.grade === requirement.grade,
+      );
+
+      // Check if the grade data is missing or if the percentage is below the required threshold
+      if (!gradeData || gradeData.percentage < requirement.minPercentage) {
+        isNipun = false;
+        break; // No need to check further if one condition fails
+      }
     }
+
     this.logger.debug(`School Nipun status: ${isNipun}`);
 
     return this.prismaService.assessment_cycle_school_nipun_results.upsert({
@@ -635,9 +676,10 @@ export class SchoolServiceV2 extends SchoolService {
         udise: udise,
         mentor_id: mentorID,
         is_nipun: isNipun,
-      }, update: {
+      },
+      update: {
         is_nipun: isNipun,
-        updated_at: new Date()
+        updated_at: new Date(),
       },
     });
   }

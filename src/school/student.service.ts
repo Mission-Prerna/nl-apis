@@ -112,17 +112,32 @@ export class StudentService {
         s.unique_id as student_id,
         s.name,
         s.udise,
-        sl.district,
-        COALESCE(MAX(a.submission_timestamp), null) AS last_assessment
+        sl.district
       FROM students s
       LEFT JOIN school_list sl ON s.udise = sl.udise
-      LEFT JOIN assessments a ON s.unique_id = a.student_id
       WHERE s.unique_id = ${student_id}
        AND s.deleted_at IS NULL
-       AND a.mentor_id = ${mentor_id}
-       AND a.is_valid = true
       GROUP BY s.unique_id, s.name, s.udise, sl.district
     `;
+
+    if (studentDetail) {
+      const last_assessment = await this.prismaService.assessments.findFirst({
+        where: {
+          student_id,
+          mentor_id,
+          is_valid: true,
+        },
+        orderBy: {
+          submission_timestamp: 'desc',
+        },
+        select: {
+          submission_timestamp: true,
+        },
+      });
+
+      studentDetail['last_assessment'] =
+        last_assessment?.submission_timestamp || 0;
+    }
     return studentDetail?.[0] || {};
   }
 

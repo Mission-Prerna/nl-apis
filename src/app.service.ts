@@ -1949,29 +1949,30 @@ export class AppService {
       data: [],
     };
 
-    if (mentor.actor_id === ActorEnum.TEACHER) {
-      const mentorStudents: any = await this.prismaService.$queryRaw`
-        SELECT COUNT(*)
-        FROM students
-        WHERE udise IN (
-          SELECT sl.udise
-          FROM teacher_school_list_mapping AS tsl
-          JOIN school_list AS sl ON sl.id = tsl.school_list_id
-          WHERE tsl.mentor_id = ${mentor.id}
-        )
-        AND deleted_at IS NULL
-        AND unique_id::int > 0
-      `;
-      const totalStudents: number = mentorStudents[0]?.count || 0;
-      const totalNipunStudents: number = currentMonthNipunCount[0]?.nipun_students || 0;
+    // Teacher badging removed form mentor assessment history for now 
+    // if (mentor.actor_id === ActorEnum.TEACHER) {
+    //   const mentorStudents: any = await this.prismaService.$queryRaw`
+    //     SELECT COUNT(*)
+    //     FROM students
+    //     WHERE udise IN (
+    //       SELECT sl.udise
+    //       FROM teacher_school_list_mapping AS tsl
+    //       JOIN school_list AS sl ON sl.id = tsl.school_list_id
+    //       WHERE tsl.mentor_id = ${mentor.id}
+    //     )
+    //     AND deleted_at IS NULL
+    //     AND unique_id::int > 0
+    //   `;
+    //   const totalStudents: number = mentorStudents[0]?.count || 0;
+    //   const totalNipunStudents: number = currentMonthNipunCount[0]?.nipun_students || 0;
 
-     const badging = this.getMentorBadge(
-        Number(totalStudents),
-        Number(totalNipunStudents),
-        currentMonth,
-      );
-      formattedResponse['badging'] = badging
-    }
+    //  const badging = this.getMentorBadge(
+    //     Number(totalStudents),
+    //     Number(totalNipunStudents),
+    //     currentMonth,
+    //   );
+    //   formattedResponse['badging'] = badging
+    // }
 
     currentWeekAssessments.forEach((assessment: any) => {
       if (
@@ -2083,11 +2084,12 @@ export class AppService {
     return await this.prismaService.$queryRaw`
     WITH latest_assessments AS (
       SELECT
+        DISTINCT ON (a.student_id, a.competency_id) 
         a.grade,
         a.student_id,
+        a.competency_id,
         a.submission_timestamp,
-        a.is_passed,
-        ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.submission_timestamp DESC) AS rn
+        a.is_passed
       FROM assessments a
       JOIN students s ON a.student_id = s.unique_id
       WHERE
@@ -2099,6 +2101,7 @@ export class AppService {
         s.deleted_at IS NULL AND                          -- filter out deleted students
         a.is_valid = true  AND                            -- pick only valid assessments
         a.grade = ANY(${selectedGrade}::smallint[])
+    ORDER BY a.student_id, a.competency_id, a.submission_timestamp DESC
     )
     SELECT
       grade,
@@ -2114,10 +2117,10 @@ export class AppService {
         MAX(submission_timestamp) AS latest_submission_timestamp,
         EVERY(is_passed) AS is_passed_all
       FROM latest_assessments
-      WHERE rn = 1                              -- Select only the latest assessment per student
       GROUP BY grade, student_id
     ) AS latest_assessments_summary
-    GROUP BY grade`;
+    GROUP BY grade;
+    `;
   }
 
   getMentorBadge(totalStudents: number, nipunStudents: number, month?: number) {

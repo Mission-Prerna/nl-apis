@@ -120,7 +120,7 @@ export class StudentService {
       GROUP BY s.unique_id, s.name, s.udise, sl.district
     `;
 
-    if (studentDetail) {
+    if (studentDetail && studentDetail.length > 0) {
       const last_assessment = await this.prismaService.assessments.findFirst({
         where: {
           student_id,
@@ -135,9 +135,10 @@ export class StudentService {
         },
       });
 
-      studentDetail['last_assessment'] =
+      studentDetail[0]['last_assessment'] =
         last_assessment?.submission_timestamp || 0;
     }
+
     return studentDetail?.[0] || {};
   }
 

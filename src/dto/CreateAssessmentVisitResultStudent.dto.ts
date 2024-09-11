@@ -89,5 +89,5 @@ export class CreateAssessmentVisitResultStudent {
 
   @IsObject()
   @IsOptional()
-  player_results?: object;
+  result_details?: object;
 }

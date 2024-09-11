@@ -112,12 +112,13 @@ export class StudentService {
         s.unique_id as student_id,
         s.name,
         s.udise,
+        s.grade,
         sl.district
       FROM students s
       LEFT JOIN school_list sl ON s.udise = sl.udise
       WHERE s.unique_id = ${student_id}
        AND s.deleted_at IS NULL
-      GROUP BY s.unique_id, s.name, s.udise, sl.district
+      GROUP BY s.unique_id, s.name, s.udise, sl.district, s.grade
     `;
 
     if (studentDetail && studentDetail.length > 0) {
@@ -187,14 +188,19 @@ export class StudentService {
         const competencyResults = await Promise.all(
           result.competency_results.map(async (assessment: any) => {
             const playerResults = assessment.player_results || {};
+            let assessmentResult = playerResults?.results;
+            if (assessmentResult) {
+              assessmentResult = JSON.parse(assessmentResult);
+            }
+
             const track = playerResults?.track || '';
             const type = playerResults?.assessment_type || '';
             const title = this.getCompetencyTitle(type, track);
-            const wpm = playerResults?.results?.wpm || 0;
-            const score = playerResults?.results?.scored || 0;
-            const maxScore = playerResults?.results?.maxScore || 0;
+            const wpm = assessmentResult?.wpm || 0;
+            const score = assessmentResult?.scored || 0;
+            const maxScore = assessmentResult?.maxScore || 0;
             const achievement = this.getAchievement(type, score, maxScore, wpm);
-            const result = playerResults?.results?.results || [];
+            const result = assessmentResult?.results || [];
             const questionAnswers = await this.getQuestionAnswerMapping(result);
 
             return {
@@ -203,7 +209,9 @@ export class StudentService {
               type,
               achievement,
               title,
-              transcript: playerResults?.results?.transcript || [],
+              transcript: assessmentResult?.transcription
+                ? JSON.parse(assessmentResult?.transcription)
+                : [],
               result: questionAnswers,
             };
           }),

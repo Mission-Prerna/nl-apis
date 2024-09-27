@@ -1939,12 +1939,13 @@ export class AppService {
         month: currentMonth,
         year: currentYear,
         month_label: monthName,
-        data: {
+        data: [{
           cards: [
             getAssessmentSummaryCard(mentorCurrentMonthAssessmentSummary, 'common.ASSESSMENTS_SUMMARY', 'currentMonthAssessments'),
             getAssessmentSummaryCard(mentorLastMonthAssessmentSummary, 'common.LAST_MONTH_ASSESSMENT', 'lastMonthAssessments'),
           ],
         },
+        ],
       };
     }
 

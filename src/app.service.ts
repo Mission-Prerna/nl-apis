@@ -1852,6 +1852,8 @@ export class AppService {
     const lang: string = I18nContext?.current()?.lang ?? 'en';
 
     const currentMonth = queryParam.month ?? moment().month() + 1; // months are 0-indexed in moment.js
+    const monthName = this.i18n.t(`months.${moment(currentMonth, 'M').format('MMMM')}`, { lang: lang });
+
     const currentYear = queryParam.year ?? moment().year();
     const selectedGrade = queryParam?.grade?.split(',').map((grade) => parseInt(grade.trim()));
 
@@ -1887,6 +1889,63 @@ export class AppService {
       .valueOf();
 
     const mentorId = mentor.id as unknown as number;
+    const actor_id = mentor.actor_id
+
+    if ([ActorEnum.DIET_MENTOR, ActorEnum.MENTOR].includes(actor_id)) {
+      const insightDetails = await this.getMentorInsightsV2(
+        mentor,
+        currentMonth,
+        currentYear,
+      );
+      const grade1StudentIds = insightDetails.grade_1_unique_student_ids || [];
+      const grade2StudentIds = insightDetails.grade_2_unique_student_ids || [];
+      const grade3StudentIds = insightDetails.grade_3_unique_student_ids || [];
+
+      return {
+        month: currentMonth,
+        year: currentYear,
+        month_label: monthName,
+        data: {
+          cards: [
+            {
+              identifier: 'currentMonthAssessments',
+              label: this.i18n.t(`common.ASSESSMENTS_SUMMARY`, { lang: lang }),
+              type: 'metric',
+              updated_at: moment(insightDetails?.max_updated_at).valueOf(), // changing value to epoch format
+              data: [
+                {
+                  identifier: 'assessedSchools',
+                  text: this.i18n.t(`common.Assessed schools`, { lang: lang }),
+                  count: Number(insightDetails?.schools_visited),
+                },
+                {
+                  identifier: 'assessedStudents',
+                  text: this.i18n.t(`common.COMPLETED_STUDENT_ASSESSMENTS`, {
+                    lang: lang,
+                  }),
+                  count: Number(insightDetails?.assessments_taken),
+                },
+                {
+                  identifier: 'assessmentMinutes',
+                  text: this.i18n.t(`common.AVERAGE_TIME_PER_ASSESSMENT`, {
+                    lang: lang,
+                  }),
+                  count: Number(insightDetails?.avg_time),
+                },
+              ],
+              metadata: {
+                student_ids: [
+                  ...grade1StudentIds,
+                  ...grade2StudentIds,
+                  ...grade3StudentIds,
+                ],
+              },
+            },
+          ],
+        },
+      };
+    }
+
     // fetch the current week assessments
     const currentWeekAssessments: any =
       await this.getAssessmentsDataForMentorHomeScreen(
@@ -1936,7 +1995,6 @@ export class AppService {
       WHERE is_passed_all = true;      -- Only count nipun students
   `;
 
-    const monthName = this.i18n.t(`months.${moment(currentMonth, 'M').format('MMMM')}`, { lang: lang });
     let studentCountText = currentMonthNipunCount[0]?.nipun_students || 0;
     if (studentCountText > 50) {
       studentCountText = `${studentCountText}+`;
@@ -1993,6 +2051,7 @@ export class AppService {
       );
       gradeData.cards.push({
         identifier: 'currentWeekAssessments',
+        type: "pie_chart",
         label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
         updated_at: assessment.latest_submission_timestamp,
         data: [
@@ -2040,6 +2099,7 @@ export class AppService {
       );
       gradeData.cards.push({
         identifier: 'lastMonthAssessments',
+        type: "pie_chart",
         label: this.i18n.t(`common.LAST_MONTH_ASSESSMENT`, { lang: lang }),
         updated_at: assessment.latest_submission_timestamp,
         month_label: this.i18n.t(

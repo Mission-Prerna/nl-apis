@@ -1852,6 +1852,8 @@ export class AppService {
     const lang: string = I18nContext?.current()?.lang ?? 'en';
 
     const currentMonth = queryParam.month ?? moment().month() + 1; // months are 0-indexed in moment.js
+    const monthName = this.i18n.t(`months.${moment(currentMonth, 'M').format('MMMM')}`, { lang: lang });
+
     const currentYear = queryParam.year ?? moment().year();
     const selectedGrade = queryParam?.grade?.split(',').map((grade) => parseInt(grade.trim()));
 
@@ -1887,6 +1889,70 @@ export class AppService {
       .valueOf();
 
     const mentorId = mentor.id as unknown as number;
+    const actor_id = mentor.actor_id
+
+    if ([ActorEnum.DIET_MENTOR, ActorEnum.MENTOR].includes(actor_id)) {
+
+      // Helper function to process the assessment summary data
+      const getAssessmentSummaryCard = (summary:any, label:string, updatedAtLabel:string) => {
+        const grade1StudentIds = summary?.grade_1_unique_student_ids || [];
+        const grade2StudentIds = summary?.grade_2_unique_student_ids || [];
+        const grade3StudentIds = summary?.grade_3_unique_student_ids || [];
+        
+        return {
+          identifier: updatedAtLabel,   // 'currentMonthAssessments' or 'lastMonthAssessments'
+          label: this.i18n.t(label, { lang: lang }),
+          type: 'metric',
+          updated_at: moment(summary?.max_updated_at).valueOf(), // Convert to epoch
+          data: [
+            {
+              identifier: 'assessedSchools',
+              text: this.i18n.t('common.Assessed schools', { lang: lang }),
+              count: Number(summary?.schools_visited),
+            },
+            {
+              identifier: 'assessedStudents',
+              text: this.i18n.t('common.COMPLETED_STUDENT_ASSESSMENTS', { lang: lang }),
+              count: Number(summary?.assessments_taken),
+            },
+            {
+              identifier: 'assessmentMinutes',
+              text: this.i18n.t('common.AVERAGE_TIME_PER_ASSESSMENT', { lang: lang }),
+              count: Number(summary?.avg_time),
+            },
+          ],
+          metadata: {
+            student_ids: [...grade1StudentIds, ...grade2StudentIds, ...grade3StudentIds],
+            school_udise: summary?.schools || [],  // Handle undefined case
+          },
+        };
+      };
+    
+      // Fetch current and last month summaries in parallel for efficiency
+      const [mentorCurrentMonthAssessmentSummary, mentorLastMonthAssessmentSummary] = await Promise.all([
+        this.getMentorAssessmentSummaryData(mentor, startOfCurrentMonth, endOfCurrentMonth),
+        this.getMentorAssessmentSummaryData(mentor, startOfLastMonth, endOfLastMonth),
+      ]);
+    
+      // Prepare the final result
+      return {
+        month: currentMonth,
+        year: currentYear,
+        month_label: monthName,
+        data: {
+          cards: [
+            getAssessmentSummaryCard(mentorCurrentMonthAssessmentSummary, 'common.ASSESSMENTS_SUMMARY', 'currentMonthAssessments'),
+            getAssessmentSummaryCard(mentorLastMonthAssessmentSummary, 'common.LAST_MONTH_ASSESSMENT', 'lastMonthAssessments'),
+          ],
+        },
+      };
+    }
+
+    // Check grades for teachers
+    if (!selectedGrade || selectedGrade.length < 1) {
+      throw new BadRequestException('Allowed grades are 1, 2, 3.');
+    }
+
     // fetch the current week assessments
     const currentWeekAssessments: any =
       await this.getAssessmentsDataForMentorHomeScreen(
@@ -1936,7 +2002,6 @@ export class AppService {
       WHERE is_passed_all = true;      -- Only count nipun students
   `;
 
-    const monthName = this.i18n.t(`months.${moment(currentMonth, 'M').format('MMMM')}`, { lang: lang });
     let studentCountText = currentMonthNipunCount[0]?.nipun_students || 0;
     if (studentCountText > 50) {
       studentCountText = `${studentCountText}+`;
@@ -1993,6 +2058,7 @@ export class AppService {
       );
       gradeData.cards.push({
         identifier: 'currentWeekAssessments',
+        type: "pie_chart",
         label: this.i18n.t(`common.CURRENT_WEEK_ASSESSMENT`, { lang: lang }),
         updated_at: assessment.latest_submission_timestamp,
         data: [
@@ -2040,6 +2106,7 @@ export class AppService {
       );
       gradeData.cards.push({
         identifier: 'lastMonthAssessments',
+        type: "pie_chart",
         label: this.i18n.t(`common.LAST_MONTH_ASSESSMENT`, { lang: lang }),
         updated_at: assessment.latest_submission_timestamp,
         month_label: this.i18n.t(
@@ -2073,6 +2140,43 @@ export class AppService {
     });
 
     return formattedResponse;
+  }
+
+  async getMentorAssessmentSummaryData(
+    mentor: Mentor,
+    firstDayTimestamp: number,
+    lastDayTimestamp: number,
+  ) {
+    const result: Record<string, any> = await this.prismaService.$queryRaw`
+    SELECT
+      MAX(a.updated_at) AS max_updated_at,
+      COUNT(DISTINCT CASE WHEN a.udise > 0 THEN a.udise END) AS schools_visited,
+      ARRAY_AGG(DISTINCT a.udise) FILTER (WHERE a.udise IS NOT NULL AND a.udise > 0) AS schools,  -- Added this line
+      COALESCE(
+        AVG(
+          ((a.end_time - a.start_time) / 1000)   -- Convert milliseconds to seconds and cast to integer
+        )::int, 0
+      ) AS avg_time,
+      COUNT(*) AS assessments_count,
+      COUNT(DISTINCT a.student_id) AS assessments_taken,
+      COUNT(DISTINCT CASE WHEN a.grade = 1 THEN a.student_id END) AS grade_1_assessments,
+      COUNT(DISTINCT CASE WHEN a.grade = 2 THEN a.student_id END) AS grade_2_assessments,
+      COUNT(DISTINCT CASE WHEN a.grade = 3 THEN a.student_id END) AS grade_3_assessments,
+      ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 1 AND a.student_id IS NOT NULL) AS grade_1_unique_student_ids,
+      ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 2 AND a.student_id IS NOT NULL) AS grade_2_unique_student_ids,
+      ARRAY_AGG(DISTINCT a.student_id) FILTER (WHERE a.grade = 3 AND a.student_id IS NOT NULL) AS grade_3_unique_student_ids
+    FROM assessments a
+    JOIN students s ON a.student_id = s.unique_id
+    WHERE a.mentor_id = ${mentor.id}
+      AND a.student_id NOT LIKE '%.0%' 
+      AND a.student_id IS NOT NULL 
+      AND a.student_id::int > 0
+      AND a.submission_timestamp > ${firstDayTimestamp}
+      AND a.submission_timestamp < ${lastDayTimestamp}
+      AND s.deleted_at IS NULL
+  `;
+
+    return result?.[0] || {};
   }
 
   async getAssessmentsDataForMentorHomeScreen(

@@ -175,19 +175,19 @@ export class SchoolServiceV2 extends SchoolService {
         summary: [
           {
             label: this.i18n.t(`common.Nipun`, { lang: lang }),
-            colour: '#72BA86',
+            colour: '#06753C',
             count: gradeStudents[grade.toString()]?.nipun ?? 0,
             identifier: StudentMonthlyAssessmentStatus.PASS,
           },
           {
             label: this.i18n.t(`common.NotNipun`, { lang: lang }),
-            colour: '#C98A7A',
+            colour: '#892B2B',
             count: gradeStudents[grade.toString()]?.not_nipun ?? 0,
             identifier: StudentMonthlyAssessmentStatus.FAIL,
           },
           {
             label: this.i18n.t(`common.NotAssessed`, { lang: lang }),
-            colour: '#E2E2E2',
+            colour: '#B1AFAF',
             count: (gradeStudents[grade.toString()]?.students.length - gradeStudents[grade.toString()]?.nipun ?? 0 - gradeStudents[grade.toString()]?.not_nipun ?? 0),
             identifier: StudentMonthlyAssessmentStatus.PENDING,
           },

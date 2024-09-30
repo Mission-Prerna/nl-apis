@@ -1904,6 +1904,7 @@ export class AppService {
           label: this.i18n.t(label, { lang: lang }),
           type: 'metric',
           updated_at: moment(summary?.max_updated_at).valueOf(), // Convert to epoch
+          assessments_count: summary?.assessments_count || 0,
           data: [
             {
               identifier: 'assessedSchools',
@@ -1939,9 +1940,10 @@ export class AppService {
         month: currentMonth,
         year: currentYear,
         month_label: monthName,
+        label: this.i18n.t('common.ASSESSMENTS_SUMMARY', { lang: lang }),
         data: [{
           cards: [
-            getAssessmentSummaryCard(mentorCurrentMonthAssessmentSummary, 'common.ASSESSMENTS_SUMMARY', 'currentMonthAssessments'),
+            getAssessmentSummaryCard(mentorCurrentMonthAssessmentSummary, 'common.CURRENT_MONTH_ASSESSMENT', 'currentMonthAssessments'),
             getAssessmentSummaryCard(mentorLastMonthAssessmentSummary, 'common.LAST_MONTH_ASSESSMENT', 'lastMonthAssessments'),
           ],
         },

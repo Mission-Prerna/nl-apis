@@ -18,6 +18,7 @@
   "ASSESSMENTS_COMPLETED_IN_CLASS_3": "Assessments completed in class 3",
   "CURRENT_WEEK_ASSESSMENT": "Current week assessment",
   "LAST_MONTH_ASSESSMENT": "Last month assessment",
+  "CURRENT_MONTH_ASSESSMENT": "Current month assessment",
   "NIPUN_STUDENT": "{students_count} Nipun student",
   "TOTAL_ASSESSMENT": "{assessments_count} Total assessment",
   "MENTOR_HOME_SCREEN_BADGE_TEXT": "{student_count} of your students are nipun in {month_name} 🎉",

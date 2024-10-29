@@ -188,6 +188,7 @@ export class SchoolServiceV2 extends SchoolService {
           {
             label: this.i18n.t(`common.NotAssessed`, { lang: lang }),
             colour: '#B1AFAF',
+            //@ts-ignore
             count: (gradeStudents[grade.toString()]?.students.length - gradeStudents[grade.toString()]?.nipun ?? 0 - gradeStudents[grade.toString()]?.not_nipun ?? 0),
             identifier: StudentMonthlyAssessmentStatus.PENDING,
           },
@@ -872,26 +873,6 @@ export class SchoolServiceV2 extends SchoolService {
 
       if (endDate.isBefore(currentDate)) {
         return { status: false, message: `Assessment cycle has ended.` };
-      }
-
-      const schoolResult =
-        await this.prismaService.assessment_cycle_school_nipun_results.findUnique(
-          {
-            where: {
-              cycle_id_udise_mentor_id: {
-                cycle_id,
-                udise,
-                mentor_id,
-              },
-            },
-          },
-        );
-
-      if (!schoolResult) {
-        return {
-          status: false,
-          message: `School has not been accessed by you, in this assessment cycle.`,
-        };
       }
 
       await this.prismaService.school_results_fraud_reports.create({

@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger, Req } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { Request, query } from 'express';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -9,8 +10,10 @@ export class AuthService {
     private readonly FAApplicationID: string;
     private readonly FADefaultPassword: string;
     private readonly logger: Logger = new Logger(AuthService.name);
-
-    constructor(private readonly configService: ConfigService,
+    
+    constructor(
+        private readonly configService: ConfigService,
+        protected readonly prismaService: PrismaService,
         ) {
         this.userServiceBaseURL = configService.getOrThrow('USER_SERVICE_BASE_URL');
         this.FAApplicationID = configService.getOrThrow('FA_APPLICATION_ID');
@@ -38,6 +41,17 @@ export class AuthService {
     }
 
     async sendOTP(request: Request) {
+        const { phone } = request.query
+        const mentor = await this.prismaService.mentor.findUnique({
+            where:{
+                phone_no: phone as string
+            }
+        })
+
+        if(mentor && mentor.is_active == false){
+            throw new HttpException("Your account is inactive. Please contact the DC in your District's BSA office for further assistance.", HttpStatus.FORBIDDEN)
+        }
+        
         const endpoint = `/api/sendOTP`;
         return await this.callUserService(endpoint, request);
     }

@@ -45,8 +45,6 @@ import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto
 import { GetAppActionsDto } from './dto/AppActions.dto';
 import { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
-import { StudentCertificateQueryDto } from './school/dto/StudentCertificateQuery.dto';
-import { MentorAssessmentSummaryParamsDto } from './dto/MentorAssessmentSummaryParams.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -419,32 +417,4 @@ export class AppController {
     return this.appService.callBhashiniService(request);
   }
 
-  @Get('api/mentor/assessment-summary')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(MentorInterceptor)
-  async getMentorAssessmentSummary(
-    @Request() { mentor }: { mentor: Mentor },
-    @Query() queryParam: MentorAssessmentSummaryParamsDto,
-  ) {
-    return this.appService.getMentorAssessmentSummary(mentor, queryParam);
-  }
-
-  @Get('api/student-assessment-history/:studentId')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(MentorInterceptor)
-  async getStudentAssessmentHistoryForMentor(
-    @Query() query: StudentCertificateQueryDto,
-    @Param('studentId') studentId: string,
-    @Request() { mentor }: { mentor: Mentor },
-  ) {
-    const mentorId = mentor.id as unknown as number;
-    return await this.appService.getStudentAssessmentHistoryForMentor(
-      studentId,
-      mentorId,
-      query.limit,
-      query.offset,
-    );
-  }
 }

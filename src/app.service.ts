@@ -1180,6 +1180,8 @@ export class AppService {
           competency_id: true,
           flow_state: true,
           subject_id: true,
+          pass_percent: true,
+          metadata: true,
         },
         orderBy: {
           learning_outcome: 'asc',
@@ -1324,6 +1326,8 @@ export class AppService {
         competency_id: true,
         flow_state: true,
         subject_id: true,
+        pass_percent: true,
+        metadata: true,
       },
       orderBy: { learning_outcome: 'asc' },
     });

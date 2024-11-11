@@ -338,6 +338,8 @@ model competency_mapping {
   competency_id    Int?
   flow_state       Int      @default(1)
   subject_id       Int
+  pass_percent     Int      @default(75)
+  metadata         Json     @default(dbgenerated("jsonb_build_object()"))
   subjects         subjects @relation(fields: [subject_id], references: [id])
 
   @@index([learning_outcome], map: "competency_mapping_lo_index")

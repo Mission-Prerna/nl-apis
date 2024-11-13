@@ -31,6 +31,7 @@ import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as Sentry from '@sentry/minimal';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
+import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 
 @Injectable()
 export class AdminService {
@@ -987,5 +988,11 @@ export class AdminService {
 
     // return delete response
     return response;
+  }
+
+  async createCompetencies(body:CreateCompetencyDto[]){
+    return await this.prismaService.competency_mapping.createMany({
+      data:body
+    })
   }
 }

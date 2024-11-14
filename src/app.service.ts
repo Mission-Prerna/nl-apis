@@ -1180,6 +1180,10 @@ export class AppService {
           subject_id: true,
           pass_percent: true,
           metadata: true,
+          is_active: true,
+        },
+        where:{
+          is_active: true
         },
         orderBy: {
           learning_outcome: 'asc',
@@ -1317,6 +1321,7 @@ export class AppService {
     return await this.prismaService.competency_mapping.findMany({
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
+        is_active: true,
       },
       select: {
         grade: true,
@@ -1326,6 +1331,7 @@ export class AppService {
         subject_id: true,
         pass_percent: true,
         metadata: true,
+        is_active: true,
       },
       orderBy: { learning_outcome: 'asc' },
     });

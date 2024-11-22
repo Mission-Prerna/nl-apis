@@ -755,11 +755,34 @@ export class SchoolServiceV2 extends SchoolService {
           payload.district_id = district_id; // updating payload district_id value
 
           // Find block details
-          const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
-            where: { district_id_name: { district_id, name: block } },
+          // const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
+          //   where: { district_id_name: { district_id, name: block } },
+          // });
+          // const block_id = blockDetail?.id || -1;
+          // payload.block_id = block_id; // updating payload block_id value
+
+          const mappedSchoolsWithBlock = await this.prismaService.school_list.findMany({
+            where: {  
+              district_id,
+              block: {
+                equals: block,
+                mode: 'insensitive'
+              },
+            },
           });
-          const block_id = blockDetail?.id || -1;
-          payload.block_id = block_id; // updating payload block_id value
+
+          if (mappedSchoolsWithBlock.length == 0) {
+            throw new BadRequestException(
+              `No blocks found with name ${block}`
+            )
+          } else if (mappedSchoolsWithBlock.length > 1) {
+            throw new BadRequestException(
+              `Multiple mappings found for block with name ${block}`
+            )
+          }
+
+          const block_id = mappedSchoolsWithBlock[0].block_id;
+          payload.block_id = block_id;
 
           // Check for nypanchayat existence
           if (nypanchayat && district_id !== -1 && block_id !== -1) {

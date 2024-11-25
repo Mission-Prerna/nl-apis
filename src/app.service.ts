@@ -1379,7 +1379,10 @@ export class AppService {
       const promises = uniqueCompetencyIds.map(competencyId => 
         this.getWorkflowRefIdsMappingForCompetency(competencyId, minAppVersionCode));
 
-      return await Promise.all(promises);
+      // Filter out empty responses
+      return (await Promise.all(promises)).filter((response) => 
+        response && Object.keys(response).length > 0
+      );
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {

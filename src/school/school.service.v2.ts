@@ -755,50 +755,11 @@ export class SchoolServiceV2 extends SchoolService {
           payload.district_id = district_id; // updating payload district_id value
 
           // Find block details
-          // const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
-          //   where: { district_id_name: { district_id, name: block } },
-          // });
-          // const block_id = blockDetail?.id || -1;
-          // payload.block_id = block_id; // updating payload block_id value
-
-          const blockDistrictIdMapping = await this.prismaService.school_list.groupBy({
-            by: ['block_id', 'district_id'],
-            where: {  
-              district_id,
-              block: {
-                equals: block,
-                mode: 'insensitive'
-              },
-            },
+          const blockDetail = await this.prismaService.blocks.findUniqueOrThrow({
+            where: { district_id_name: { district_id, name: block } },
           });
-
-          if (blockDistrictIdMapping.length == 0) {
-            throw new BadRequestException(
-              `No blocks found with name ${block}`
-            )
-          } else if (blockDistrictIdMapping.length > 1) {
-            throw new BadRequestException(
-              `Multiple mappings found for block with name ${block}`
-            )
-          }
-
-          const block_id = blockDistrictIdMapping[0].block_id;
-          payload.block_id = block_id;
-
-          // Check for nypanchayat existence
-          if (nypanchayat && district_id !== -1 && block_id !== -1) {
-            const nypanchayatDetails =
-              await this.prismaService.nyay_panchayats.findUniqueOrThrow({
-                where: {
-                  name_district_id_block_id: {
-                    block_id,
-                    district_id,
-                    name: nypanchayat,
-                  },
-                },
-              });
-            payload.nyay_panchayat_id = nypanchayatDetails?.id; // updating payload nyay_panchayat_id value
-          }
+          const block_id = blockDetail?.id || -1;
+          payload.block_id = block_id; // updating payload block_id value
 
           // Upsert using prisma and handle success/failure cases
           const response: any = await this.prismaService.school_list.upsert({
@@ -860,8 +821,8 @@ export class SchoolServiceV2 extends SchoolService {
 
         // Convert 'district', 'block', 'area_type' and 'nypanchayat' properties to uppercase
         item.area_type = item?.area_type ? item.area_type.toUpperCase() : '';
-        item.district = item?.district ? item.district.toUpperCase() : '';
-        item.block = item?.block ? item.block.toUpperCase() : '';
+        item.district = item?.district ? item.district.toUpperCase().trim() : '';
+        item.block = item?.block ? item.block.trim() : '';
         item.nypanchayat = item?.nypanchayat
           ? item.nypanchayat.toUpperCase()
           : '';

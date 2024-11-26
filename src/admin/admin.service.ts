@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -30,6 +31,7 @@ import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as Sentry from '@sentry/minimal';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
+import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 
 @Injectable()
 export class AdminService {
@@ -81,8 +83,23 @@ export class AdminService {
   }
 
   async createMentor(data: CreateMentorDto) {
+    try {
     if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
       throw new BadRequestException(['udise is needed when actor is "Teacher".']);
+    }
+
+    const latest_assessment_cycle =
+      await this.prismaService.assessment_cycles.findFirst({
+        select: {
+          id: true,
+        },
+        orderBy: { end_date: 'desc' },
+      });
+
+    if (data.actor_id == ActorEnum.EXAMINER && !latest_assessment_cycle) {
+      throw new BadRequestException([
+        'Assessment cycle is needed when actor is "Examiner".',
+      ]);
     }
     /*
       It's a 2-step process:
@@ -158,11 +175,16 @@ export class AdminService {
         });
       }
 
-      //TODO: Remove this. Temporary fix.
-      if (data.actor_id == ActorEnum.EXAMINER) {
-        const default_cycle_id = parseInt(this.configService.getOrThrow('DEFAULT_EXAMINER_CYCLE_ID'));
-        await this.createAssessmentCycleDistrictExaminerMapping(default_cycle_id, 
-          [{ district_id: Number(mentor.district_id), mentor_id: Number(mentor.id) }]);
+      if (data.actor_id == ActorEnum.EXAMINER && latest_assessment_cycle) {
+        await this.createAssessmentCycleDistrictExaminerMapping(
+          latest_assessment_cycle.id,
+          [
+            {
+              district_id: Number(mentor.district_id),
+              mentor_id: Number(mentor.id),
+            },
+          ],
+        );
       }
       return mentor;
     }
@@ -172,6 +194,21 @@ export class AdminService {
       description = JSON.stringify(response);
     }
     throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  } catch (error) {
+    this.logger.error(
+      `Failed to create mentor with phone no. ${data.phone_no}`,
+      error,
+    );
+    const { errorMessage, statusCode } =
+      getPrismaErrorStatusAndMessage(error);
+    throw new HttpException(
+      {
+        error_message: errorMessage,
+        error_code: statusCode,
+      },
+      statusCode,
+    );
+  }
   }
 
   async createMentorSegment(data: CreateMentorSegmentRequest) {
@@ -821,10 +858,6 @@ export class AdminService {
       ]);
   });
 
-    const mentorDetailPromises = phoneNumbers.map((phoneNumber) => {
-      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
-    });
-
     const metadataKeys: string[] = [];
       // remove metadata for all actors and all app-versions
     metadataKeys.push(...await this.getCacheKeysByPattern(CacheKeyMetadataAll()));
@@ -833,8 +866,9 @@ export class AdminService {
   });
 
     try {
+      // remove mentor details and other cache
       await Promise.all([
-        ...mentorDetailPromises,
+        this.clearMentorDetailCache(phoneNumbers),
         ...metadataPromises,
         ...mentorCachePromises
       ]);
@@ -845,11 +879,39 @@ export class AdminService {
     return { status: 'Cache Cleared Successfully' };
   }  
 
-  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
-    return await this.prismaService.actor_school_blacklist.createMany({
-      data: body,
-      skipDuplicates: true,
+  async clearMentorDetailCache(phoneNo: string[]) {
+    const mentorDetailPromises = phoneNo.map((phoneNumber) => {
+      return this.cacheService.del(CacheKeyMentorDetail(phoneNumber));
     });
+    return await Promise.all(mentorDetailPromises);
+  }
+
+  async createActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
+    const response = await this.prismaService.actor_school_blacklist.createMany(
+      {
+        data: body,
+        skipDuplicates: true,
+      },
+    );
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist creation
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
+
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // Return create response
+    return response;
   }
 
   async updateActorSchoolBlacklist(body: CreateUpdateSchoolBlacklistDto[]) {
@@ -866,8 +928,26 @@ export class AdminService {
         },
       });
     });
+    const response = await Promise.all(updatePromises);
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist updating
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
 
-    return await Promise.all(updatePromises);
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // return update response
+    return response;
   }
 
   async getActorSchoolBlacklist() {
@@ -888,7 +968,31 @@ export class AdminService {
         },
       });
     });
+    const response = await Promise.all(operations);
+    // Clear teacher mentor-detail cache for all mentors of given actor after actor-school blacklist deleting
+    //@ts-ignore
+    const teacherPhoneNo: string[] = await Promise.all(
+      body.map((data) =>
+        this.appService.getTeacherPhoneByActorIdAndUdise(
+          data.actor_id,
+          data.udise,
+        ),
+      ),
+    );
 
-    return await Promise.all(operations);
+    // Filter out falsy values from the results
+    const actorPhoneNumbers = teacherPhoneNo.filter(Boolean);
+
+    // Clear cache using the filtered phone numbers
+    await this.clearMentorDetailCache(actorPhoneNumbers);
+
+    // return delete response
+    return response;
+  }
+
+  async createCompetencies(body:CreateCompetencyDto[]){
+    return await this.prismaService.competency_mapping.createMany({
+      data:body
+    })
   }
 }

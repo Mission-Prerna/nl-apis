@@ -3,6 +3,7 @@ import { CacheConstants, CacheKeySchoolStudentsCount, Student } from '../enums';
 import { PrismaService } from '../prisma.service';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class StudentService {
@@ -11,6 +12,7 @@ export class StudentService {
   constructor(
     protected readonly prismaService: PrismaService,
     @Inject(CACHE_MANAGER) private cacheService: Cache,
+    protected readonly i18n: I18nService,
   ) {
   }
 
@@ -77,4 +79,5 @@ export class StudentService {
         and s.deleted_at is null   
     `, cycleId, udise, grades);
   }
+
 }

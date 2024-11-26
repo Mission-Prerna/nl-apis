@@ -338,6 +338,9 @@ model competency_mapping {
   competency_id    Int?
   flow_state       Int      @default(1)
   subject_id       Int
+  pass_percent     Int      @default(75)
+  metadata         Json     @default(dbgenerated("jsonb_build_object()"))
+  is_active        Boolean  @default(true)
   subjects         subjects @relation(fields: [subject_id], references: [id])
 
   @@index([learning_outcome], map: "competency_mapping_lo_index")
@@ -546,6 +549,7 @@ model mentor {
   actor_id                                       Int                                              @default(1)
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
+  is_active                                      Boolean                                          @default(true)
   assessment_cycle_district_mentor_mapping       assessment_cycle_district_mentor_mapping[]
   assessment_cycle_school_nipun_results          assessment_cycle_school_nipun_results[]
   assessment_survey_result_v2                    assessment_survey_result_v2[]
@@ -589,6 +593,8 @@ model mentor {
 
   @@index([actor_id], map: "mentor_actor_id_key")
   @@index([designation_id], map: "mentor_designation_id_key")
+  @@index([actor_id, is_active], map: "mentor_actor_id_is_active_key")
+  @@index([is_active], map: "mentor_is_active_key")
 }
 
 model mentor_segmentation {
@@ -1804,6 +1810,7 @@ model assessments {
   student_id           String?      @db.VarChar(15)
   is_valid             Boolean      @default(true)
   updated_at           DateTime     @default(now()) @db.Timestamp(6)
+  player_results       Json?        @default(dbgenerated("jsonb_build_object()"))
   actors               actors       @relation(fields: [actor_id], references: [id])
   blocks               blocks?      @relation(fields: [block_id], references: [id], onDelete: Restrict)
   mentor               mentor?      @relation(fields: [mentor_id], references: [id], onDelete: Cascade)
@@ -1936,8 +1943,8 @@ model school_results_fraud_reports {
   cycle_id          Int
   mentor_id         BigInt
   is_valid          Boolean
-  created_at        DateTime          @default(now()) @db.Timetz(6)
-  updated_at        DateTime          @default(now()) @db.Timetz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
   assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
   mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
   school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)

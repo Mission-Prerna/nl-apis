@@ -49,6 +49,7 @@ import { JwtService } from '@nestjs/jwt';
 import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { StudentService } from './school/student.service';
 
 const moment = require('moment');
 
@@ -66,6 +67,7 @@ export class AppService {
     // Circular dependency to SchoolService
     @Inject(forwardRef(() => SchoolServiceV2))
     protected readonly schoolService: SchoolServiceV2,
+    protected readonly studentService: StudentService,
     private readonly jwtService: JwtService,
   ) {
     this.prismaService.$queryRaw`
@@ -1176,6 +1178,12 @@ export class AppService {
           competency_id: true,
           flow_state: true,
           subject_id: true,
+          pass_percent: true,
+          metadata: true,
+          is_active: true,
+        },
+        where:{
+          is_active: true
         },
         orderBy: {
           learning_outcome: 'asc',
@@ -1313,6 +1321,7 @@ export class AppService {
     return await this.prismaService.competency_mapping.findMany({
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
+        is_active: true,
       },
       select: {
         grade: true,
@@ -1320,6 +1329,9 @@ export class AppService {
         competency_id: true,
         flow_state: true,
         subject_id: true,
+        pass_percent: true,
+        metadata: true,
+        is_active: true,
       },
       orderBy: { learning_outcome: 'asc' },
     });
@@ -1367,7 +1379,10 @@ export class AppService {
       const promises = uniqueCompetencyIds.map(competencyId => 
         this.getWorkflowRefIdsMappingForCompetency(competencyId, minAppVersionCode));
 
-      return await Promise.all(promises);
+      // Filter out empty responses
+      return (await Promise.all(promises)).filter((response) => 
+        response && Object.keys(response).length > 0
+      );
   }
 
   async updateMentorPin(mentor: Mentor, pin: number) {
@@ -1605,6 +1620,7 @@ export class AppService {
         old_student_id: 0,
         results_json: result.odk_results,
         student_id: result.student_id ?? null,
+        player_results: result?.result_details ?? {}
       });
     }
 
@@ -1838,6 +1854,35 @@ export class AppService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+
+  async getTeacherPhoneByActorIdAndUdise(actor_id: number, udise: number) {
+    const school = await this.prismaService.school_list.findFirst({
+      where: { udise: udise },
+      select: { id: true },
+    });
+
+    if (!school) {
+      throw new Error('School not found for the given UDISE');
+    }
+
+    const mentor = await this.prismaService.mentor.findFirst({
+      where: {
+        actor_id: actor_id,
+        is_active: true,
+        teacher_school_list_mapping: {
+          some: {
+            school_list_id: school.id,
+          },
+        },
+      },
+      select: {
+        phone_no: true,
+      },
+    });
+
+    return mentor?.phone_no;
   }
 
 }

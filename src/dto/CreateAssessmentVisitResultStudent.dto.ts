@@ -3,9 +3,11 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
-  IsUUID, Validate,
+  IsUUID,
+  Validate,
   ValidateNested,
 } from 'class-validator';
 import { CreateAssessmentVisitResultStudentOdkResult } from './CreateAssessmentVisitResultsStudentOdkResult.dto';
@@ -84,4 +86,8 @@ export class CreateAssessmentVisitResultStudent {
   @ValidateNested({ each: true })
   @Type(() => CreateAssessmentVisitResultStudentOdkResult)
   odk_results!: CreateAssessmentVisitResultStudentOdkResult[];
+
+  @IsObject()
+  @IsOptional()
+  result_details?: object;
 }

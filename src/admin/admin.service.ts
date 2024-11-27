@@ -995,4 +995,13 @@ export class AdminService {
       data:body
     })
   }
+
+  async getAllSchoolUdises() {
+    return await this.prismaService.school_list.findMany({
+      select: {
+        udise: true,
+      },
+    });
+  }
+
 }

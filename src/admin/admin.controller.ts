@@ -16,6 +16,7 @@ import {
   InternalServerErrorException,
   UnsupportedMediaTypeException,
   ParseBoolPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -201,6 +202,11 @@ export class AdminController {
     @Query('allUdise', new ParseBoolPipe()) allUdise: boolean,
     @Body(new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
   ) {
+    // Throw an error if allUdise is true and body is not empty
+    if (allUdise && body.length > 0) {
+      throw new BadRequestException("Body must be empty when 'allUdise' query is true.");
+    }
+
     let data: CreateAssessmentCycleDistrictSchoolMapping[];
 
     if (allUdise) {

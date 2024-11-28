@@ -19,6 +19,9 @@ export class CreateCompetencyDto {
   @IsNotEmpty()
   competency_id: number;
 
+  @IsInt()
+  @IsOptional()
+  min_app_version_code?: number;
 
   @IsInt()
   @IsNotEmpty()

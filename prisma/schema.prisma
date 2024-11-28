@@ -331,17 +331,18 @@ model blocks {
 }
 
 model competency_mapping {
-  id               Int      @id @default(autoincrement())
-  grade            String   @db.VarChar
-  subject          String?  @db.VarChar
-  learning_outcome String?
-  competency_id    Int?
-  flow_state       Int      @default(1)
-  subject_id       Int
-  pass_percent     Int      @default(75)
-  metadata         Json     @default(dbgenerated("jsonb_build_object()"))
-  is_active        Boolean  @default(true)
-  subjects         subjects @relation(fields: [subject_id], references: [id])
+  id                   Int      @id @default(autoincrement())
+  grade                String   @db.VarChar
+  subject              String?  @db.VarChar
+  learning_outcome     String?
+  competency_id        Int?
+  flow_state           Int      @default(1)
+  subject_id           Int
+  pass_percent         Int      @default(75)
+  metadata             Json     @default(dbgenerated("jsonb_build_object()"))
+  is_active            Boolean  @default(true)
+  min_app_version_code Int      @default(0)
+  subjects             subjects @relation(fields: [subject_id], references: [id])
 
   @@index([learning_outcome], map: "competency_mapping_lo_index")
 }

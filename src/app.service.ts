@@ -1221,7 +1221,7 @@ export class AppService {
     if (cacheData) return cacheData;
 
     // Fetch competency mappings based on actor ID and minAppVersionCode
-    const competencyMappings = await this.getCompetencyMappings(actorId);
+    const competencyMappings = await this.getCompetencyMappings(actorId, minAppVersionCode);
 
     // Extract unique, non-null, and non-undefined competency IDs
     const uniqueCompetencyIds: number[] = Array.from(
@@ -1301,7 +1301,7 @@ export class AppService {
   }
 
   // Method to get competency mappings based on actor ID
-  private async getCompetencyMappings(actorId: ActorEnum) {
+  private async getCompetencyMappings(actorId: ActorEnum, minAppVersionCode:number) {
     let learningOutcomePrefix = '';
     switch (actorId) {
       case ActorEnum.EXAMINER:
@@ -1317,11 +1317,29 @@ export class AppService {
         break;
     }
 
+    const validAppVersion = await this.prismaService.competency_mapping.findFirst({
+      orderBy: {
+        min_app_version_code: 'desc'
+      },
+      select: {
+        min_app_version_code: true
+      },
+      where : {
+        learning_outcome: { startsWith: learningOutcomePrefix },
+        min_app_version_code: {
+          lte: minAppVersionCode
+        },
+        is_active: true
+      },
+    })
+    if(!validAppVersion) return []
+
     // Fetch competency mappings based on actor-specific learning outcome prefix
     return await this.prismaService.competency_mapping.findMany({
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
         is_active: true,
+        min_app_version_code: validAppVersion.min_app_version_code
       },
       select: {
         grade: true,

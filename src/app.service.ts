@@ -1333,7 +1333,7 @@ export class AppService {
         metadata: true,
         is_active: true,
       },
-      orderBy: { learning_outcome: 'asc' },
+      orderBy: { competency_id: 'asc' },
     });
   }
 

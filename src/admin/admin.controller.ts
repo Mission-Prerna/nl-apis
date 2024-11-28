@@ -15,6 +15,8 @@ import {
   Logger,
   InternalServerErrorException,
   UnsupportedMediaTypeException,
+  ParseBoolPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { SentryInterceptor } from '../interceptors/sentry.interceptor';
 import { QueueEnum, Role } from '../enums';
@@ -197,9 +199,26 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async createAssessmentCycleDistrictSchoolMapping(
     @Param() params: CycleIdValidateDto,
+    @Query('allUdise', new ParseBoolPipe()) allUdise: boolean,
     @Body(new ParseArrayPipe({ items: CreateAssessmentCycleDistrictSchoolMapping })) body: CreateAssessmentCycleDistrictSchoolMapping[],
   ) {
-    return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, body);
+    // Throw an error if allUdise is true and body is not empty
+    if (allUdise && body.length > 0) {
+      throw new BadRequestException("Body must be empty when 'allUdise' query is true.");
+    }
+
+    let data: CreateAssessmentCycleDistrictSchoolMapping[];
+
+    if (allUdise) {
+      // Fetch all UDISE values from the database
+      const allSchools = await this.service.getAllSchoolUdises();
+      data = allSchools.map(school => ({ udise: school.udise as unknown as number }));
+    } else {
+      // Use the provided body
+      data = body;
+    }
+  
+    return this.service.createAssessmentCycleDistrictSchoolMapping(params.cycle_id, data);
   }
 
   @Post('assessment-cycle/:cycle_id/district-examiner-mapping')

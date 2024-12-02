@@ -1221,7 +1221,7 @@ export class AppService {
     if (cacheData) return cacheData;
 
     // Fetch competency mappings based on actor ID and minAppVersionCode
-    const competencyMappings = await this.getCompetencyMappings(actorId);
+    const competencyMappings = await this.getCompetencyMappings(actorId, minAppVersionCode);
 
     // Extract unique, non-null, and non-undefined competency IDs
     const uniqueCompetencyIds: number[] = Array.from(
@@ -1301,7 +1301,7 @@ export class AppService {
   }
 
   // Method to get competency mappings based on actor ID
-  private async getCompetencyMappings(actorId: ActorEnum) {
+  private async getCompetencyMappings(actorId: ActorEnum, minAppVersionCode:number) {
     let learningOutcomePrefix = '';
     switch (actorId) {
       case ActorEnum.EXAMINER:
@@ -1316,25 +1316,53 @@ export class AppService {
       default:
         break;
     }
-
-    // Fetch competency mappings based on actor-specific learning outcome prefix
-    return await this.prismaService.competency_mapping.findMany({
+  
+    // Find distinct grades and their highest valid app version
+    const gradesWithVersions = await this.prismaService.competency_mapping.groupBy({
+      by: ['grade'],
       where: {
         learning_outcome: { startsWith: learningOutcomePrefix },
+        min_app_version_code: { lte: minAppVersionCode },
         is_active: true,
       },
-      select: {
-        grade: true,
-        learning_outcome: true,
-        competency_id: true,
-        flow_state: true,
-        subject_id: true,
-        pass_percent: true,
-        metadata: true,
-        is_active: true,
+      _max: {
+        min_app_version_code: true,
       },
-      orderBy: { learning_outcome: 'asc' },
     });
+  
+    if (!gradesWithVersions || gradesWithVersions.length === 0) {
+      return [];
+    }
+  
+    const competencyMappings = await Promise.all(
+      gradesWithVersions.map(async (gradeWithVersion) => {
+        const { grade, _max: { min_app_version_code = 0 } } = gradeWithVersion;
+  
+        return this.prismaService.competency_mapping.findMany({
+          where: {
+            grade: grade,
+            learning_outcome: { startsWith: learningOutcomePrefix },
+            min_app_version_code: min_app_version_code || 0,
+            is_active: true,
+          },
+          select: {
+            grade: true,
+            learning_outcome: true,
+            competency_id: true,
+            flow_state: true,
+            subject_id: true,
+            pass_percent: true,
+            metadata: true,
+            is_active: true,
+          },
+          orderBy: { competency_id: 'asc' },
+        });
+      })
+    );
+  
+    // Flatten the array of arrays
+    //@ts-ignore
+    return competencyMappings.flat().sort((a,b)=>a.competency_id - b.competency_id);
   }
 
   private async getWorkflowRefIdsMappingForCompetency(competency_id: number, min_app_version_code: number) {

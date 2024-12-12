@@ -32,6 +32,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as Sentry from '@sentry/minimal';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
+import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
 
 @Injectable()
 export class AdminService {
@@ -675,17 +676,24 @@ export class AdminService {
     });
 
     const query = `
-    SELECT udise, grade, json_agg(unique_id) AS random_unique_ids
-    FROM (
-        SELECT udise, grade, unique_id,
-              ROW_NUMBER() OVER (PARTITION BY udise, grade ORDER BY random()) AS rn
-        FROM students
-        WHERE udise = ANY($1) and
-        grade in (1, 2, 3)
-        and deleted_at IS null
-    ) AS ranked
-    WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
-    GROUP BY udise, grade;`
+      SELECT udise, grade, json_agg(unique_id) AS random_unique_ids
+      FROM (
+          SELECT s.udise, s.grade, s.unique_id,
+                ROW_NUMBER() OVER (PARTITION BY s.udise, s.grade ORDER BY random()) AS rn
+          FROM students s
+          WHERE s.udise = ANY($1)
+            AND s.grade IN (1, 2, 3)
+            AND s.deleted_at IS NULL
+            AND NOT EXISTS (
+                SELECT 1
+                FROM cwsn_students cs
+                WHERE cs.student_id = s.unique_id
+                  AND cs.is_active = true
+            )
+      ) AS ranked
+      WHERE rn <= (${Math.max(grade1Count, grade2Count, grade3Count)}) 
+      GROUP BY udise, grade;
+    `
 
     const records: Array<Record<string, any>> = await this.prismaService.$queryRawUnsafe(query, udises);
     records.forEach(record => {
@@ -1001,6 +1009,12 @@ export class AdminService {
       select: {
         udise: true,
       },
+    });
+  }
+
+  async createUpdateCwsnStudents(body: CreateUpdateCwsnStudents[]) {
+    return await this.prismaService.cwsn_students.createMany({
+      data: body,
     });
   }
 

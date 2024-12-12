@@ -42,6 +42,7 @@ import { MentorClearCacheDto } from './dto/MentorInfoDto';
 import { MinioService } from 'src/minio/minio.service';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
+import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -336,5 +337,19 @@ export class AdminController {
     body: CreateCompetencyDto[],
   ) {
     return this.service.createCompetencies(body);
+  }
+
+  @Post('/cwsn-students')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async cwsnStudents(
+    @Body(
+      new MaxItemsPipe(500),
+      new ParseArrayPipe({ items: CreateUpdateCwsnStudents }),
+    )
+    body: CreateUpdateCwsnStudents[],
+  ) {
+    return this.service.createUpdateCwsnStudents(body);
   }
 }

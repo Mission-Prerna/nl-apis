@@ -1770,6 +1770,7 @@ model students {
   assessment_visit_results_students_2025_jul_sep assessment_visit_results_students_2025_jul_sep[]
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
   assessments                                    assessments[]
+  cwsn_students                                  cwsn_students?
   student_update_logs                            student_update_logs[]
 
   @@index([udise, grade])
@@ -1966,6 +1967,19 @@ model actor_school_blacklist {
   school_list school_list @relation(fields: [udise], references: [udise], onDelete: Cascade)
 
   @@unique([actor_id, udise])
+}
+
+model cwsn_students {
+  id         Int      @id @default(autoincrement())
+  student_id String   @unique @db.VarChar
+  udise      BigInt
+  is_active  Boolean
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  students   students @relation(fields: [student_id], references: [unique_id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([student_id, udise], map: "cwsn_students_udise_student_id")
+  @@index([udise], map: "cwsn_students_udise")
 }
 
 enum genders_enum {

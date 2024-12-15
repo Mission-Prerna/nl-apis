@@ -50,8 +50,8 @@ export class CreateMentorDto {
   area_type!: string;
 
   @IsBoolean()
-  @IsNotEmpty()
-  is_active: boolean;
+  @IsOptional()
+  is_active?: boolean = true;
 
   @IsString()
   @IsOptional()

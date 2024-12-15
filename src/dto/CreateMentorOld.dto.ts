@@ -1,6 +1,8 @@
 import {
+  IsBoolean,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional, IsPhoneNumber, IsString, MaxLength, Validate,
 } from 'class-validator';
 import { IsExist } from '../auth/auth.validator';
@@ -45,4 +47,8 @@ export class CreateMentorOldDto {
     message: '',
   })
   udise!: number;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  is_active: boolean;
 }

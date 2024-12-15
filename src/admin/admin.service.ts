@@ -79,6 +79,7 @@ export class AdminService {
       area_type: data.area_type,
       subject_of_matter: data.subject_of_matter,
       udise: data.udise,
+      is_active: data.is_active,
     };
     return this.createMentor(newDto);
   }
@@ -141,6 +142,7 @@ export class AdminService {
           block_id: data.block_id,
           designation_id: data.designation_id,
           actor_id: data.actor_id,
+          is_active: data.is_active,
         },
         update: {
           area_type: data.area_type ?? null,
@@ -150,6 +152,7 @@ export class AdminService {
           block_id: data.block_id,
           designation_id: data.designation_id,
           actor_id: data.actor_id,
+          is_active: data.is_active,
         },
       });
 

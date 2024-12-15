@@ -1,6 +1,8 @@
 import {
+  IsBoolean,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional, IsPhoneNumber, IsString, MaxLength, Validate,
 } from 'class-validator';
 import { ActorEnum } from '../enums';
@@ -46,6 +48,10 @@ export class CreateMentorDto {
   @IsString()
   @IsOptional()
   area_type!: string;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  is_active: boolean;
 
   @IsString()
   @IsOptional()

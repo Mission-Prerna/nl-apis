@@ -49,6 +49,6 @@ export class CreateMentorOldDto {
   udise!: number;
 
   @IsBoolean()
-  @IsNotEmpty()
-  is_active: boolean;
+  @IsOptional()
+  is_active?: boolean = true;
 }

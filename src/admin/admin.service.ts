@@ -86,133 +86,166 @@ export class AdminService {
 
   async createMentor(data: CreateMentorDto) {
     try {
-    if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
-      throw new BadRequestException(['udise is needed when actor is "Teacher".']);
-    }
-
-    const latest_assessment_cycle =
-      await this.prismaService.assessment_cycles.findFirst({
-        select: {
-          id: true,
-        },
-        orderBy: { end_date: 'desc' },
-      });
-
-    if (data.actor_id == ActorEnum.EXAMINER && !latest_assessment_cycle) {
-      throw new BadRequestException([
-        'Assessment cycle is needed when actor is "Examiner".',
-      ]);
-    }
-    /*
-      It's a 2-step process:
-      1. Create a user on Fusion auth if not already exists.
-      2. Create mentor at backend.
-     */
-    const applicationId = this.configService.getOrThrow<string>('FA_APPLICATION_ID');
-    const response = await this.faService.createAndRegisterUser({
-      user: {
-        username: data.phone_no,
-        mobilePhone: data.phone_no,
-        password: this.configService.getOrThrow<string>('FA_DEFAULT_PASSWORD'),
-        fullName: data.officer_name ?? '',
-      },
-      registration: {
-        applicationId: applicationId,
-        username: data.phone_no,
-        roles: [],
-      },
-    });
-    if (
-      (
-        // @ts-ignore
-        response.statusCode == 400 && response.exception['fieldErrors']['user.username'][0]['code'] == '[duplicate]user.username'
-      ) || response.statusCode == 200
-    ) {
-      // if success or duplicate username error, we consider it as success
-      const mentor = await this.prismaService.mentor.upsert({
-        where: {
-          phone_no: data.phone_no,
-        },
-        create: {
-          phone_no: data.phone_no,
-          area_type: data.area_type ?? null,
-          officer_name: data.officer_name ?? null,
-          subject_of_matter: data.subject_of_matter ?? null,
-          district_id: data.district_id,
-          block_id: data.block_id,
-          designation_id: data.designation_id,
-          actor_id: data.actor_id,
-          is_active: data.is_active,
-        },
-        update: {
-          area_type: data.area_type ?? null,
-          officer_name: data.officer_name ?? null,
-          subject_of_matter: data.subject_of_matter ?? null,
-          district_id: data.district_id,
-          block_id: data.block_id,
-          designation_id: data.designation_id,
-          actor_id: data.actor_id,
-          is_active: data.is_active,
-        },
-      });
-
-      if (data.actor_id == ActorEnum.TEACHER && data.udise) {
-        const school = await this.prismaService.school_list.findFirstOrThrow({
-          where: {
-            udise: data.udise,
-          },
+      // Step 1: Validate input data
+      if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
+        throw new BadRequestException(['udise is needed when actor is "Teacher".']);
+      }
+  
+      const latest_assessment_cycle =
+        await this.prismaService.assessment_cycles.findFirst({
+          select: { id: true },
+          orderBy: { end_date: 'desc' },
         });
-
-        // delete all previous entries for mentor
-        await this.prismaService.teacher_school_list_mapping.deleteMany({
-          where: {
-            mentor_id: mentor.id,
-          },
-        });
-
-        // create new teacher school mapping
-        await this.prismaService.teacher_school_list_mapping.create({
-          data: {
-            mentor_id: mentor.id,
-            school_list_id: school.id,
-          },
-        });
+  
+      if (data.actor_id == ActorEnum.EXAMINER && !latest_assessment_cycle) {
+        throw new BadRequestException([
+          'Assessment cycle is needed when actor is "Examiner".',
+        ]);
       }
 
-      if (data.actor_id == ActorEnum.EXAMINER && latest_assessment_cycle) {
-        await this.createAssessmentCycleDistrictExaminerMapping(
-          latest_assessment_cycle.id,
-          [
-            {
-              district_id: Number(mentor.district_id),
-              mentor_id: Number(mentor.id),
-            },
-          ],
-        );
-      }
-      return mentor;
-    }
+      
+      // Step 2: Interact with FusionAuth service
+      const applicationId = this.configService.getOrThrow<string>('FA_APPLICATION_ID');
+      const response:any = await this.faService.createAndRegisterUser({
+        user: {
+          username: data.phone_no,
+          mobilePhone: data.phone_no,
+          password: this.configService.getOrThrow<string>('FA_DEFAULT_PASSWORD'),
+          fullName: data.officer_name ?? '',
+        },
+        registration: {
+          applicationId: applicationId,
+          username: data.phone_no,
+          roles: [],
+        },
+      });
+      
+      // Log FusionAuth response to debug
+      this.logger.log(`FusionAuth response for phone_no ${data.phone_no}: ${JSON.stringify(response)}`);
 
-    let description = '';
-    if (Number(this.configService.get('DEBUG', 1)) === 1) {
-      description = JSON.stringify(response);
+      let allowMentorCreation = false
+  
+      if (response.statusCode === 400 && response.exception['fieldErrors']['user.username'][0]['code'] === '[inactive]user.username') {
+        // Handle inactive user case
+  
+        // Check if the data.is_active is true or null, and reactivate the user
+        if (data.is_active === true || data.is_active === null) {
+          this.logger.log(`Reactivating inactive user with phone_no ${data.phone_no} on FusionAuth`);
+  
+          // Call FusionAuth service to reactivate the user
+          const reactivationResponse = await this.faService.reactivateUser(data.phone_no);
+  
+          // Handle the reactivation response
+          if (reactivationResponse.statusCode === 200) {
+            this.logger.log(`User with phone_no ${data.phone_no} successfully reactivated on FusionAuth`);
+            allowMentorCreation = true
+          } else {
+            this.logger.error(`Failed to reactivate user with phone_no ${data.phone_no}`, reactivationResponse);
+            throw new MentorCreationFailedException('Failed to reactivate user on FusionAuth');
+          }
+        } else {
+          // If user should not be inactivated on FusionAuth, but mentor data need to me updated
+          allowMentorCreation = true
+        }
+      }
+  
+      if (
+        (response.statusCode === 400 && response.exception['fieldErrors']['user.username'][0]['code'] === '[duplicate]user.username') ||
+        response.statusCode === 200 || allowMentorCreation
+      ) {
+        // Step 3: Mentor creation or update
+        const mentor = await this.prismaService.mentor.upsert({
+          where: { phone_no: data.phone_no },
+          create: {
+            phone_no: data.phone_no,
+            area_type: data.area_type ?? null,
+            officer_name: data.officer_name ?? null,
+            subject_of_matter: data.subject_of_matter ?? null,
+            district_id: data.district_id,
+            block_id: data.block_id,
+            designation_id: data.designation_id,
+            actor_id: data.actor_id,
+            is_active: data.is_active,
+          },
+          update: {
+            area_type: data.area_type ?? null,
+            officer_name: data.officer_name ?? null,
+            subject_of_matter: data.subject_of_matter ?? null,
+            district_id: data.district_id,
+            block_id: data.block_id,
+            designation_id: data.designation_id,
+            actor_id: data.actor_id,
+            is_active: data.is_active,
+          },
+        });
+  
+        this.logger.log(`Successfully upserted mentor with phone_no ${data.phone_no}`);
+  
+        // Step 4: Handle special logic for "Teacher" or "Examiner" roles
+        if (data.actor_id == ActorEnum.TEACHER && data.udise) {
+          try {
+            const school = await this.prismaService.school_list.findFirstOrThrow({
+              where: { udise: data.udise },
+            });
+            this.logger.log(`Found school for UDISE ${data.udise}: ${school.id}`);
+  
+            // Delete previous mappings and create new one
+            await this.prismaService.teacher_school_list_mapping.deleteMany({
+              where: { mentor_id: mentor.id },
+            });
+  
+            await this.prismaService.teacher_school_list_mapping.create({
+              data: {
+                mentor_id: mentor.id,
+                school_list_id: school.id,
+              },
+            });
+  
+            this.logger.log(`Teacher-school mapping created for mentor: ${mentor.id}, school: ${school.id}`);
+          } catch (error) {
+            this.logger.error(`Failed to map teacher to school for mentor ${mentor.id}`, error);
+            throw error;
+          }
+        }
+  
+        if (data.actor_id == ActorEnum.EXAMINER && latest_assessment_cycle) {
+          this.logger.log(`Assigning district examiner for assessment cycle: ${latest_assessment_cycle.id}`);
+          await this.createAssessmentCycleDistrictExaminerMapping(
+            latest_assessment_cycle.id,
+            [{ district_id: Number(mentor.district_id), mentor_id: Number(mentor.id) }]
+          );
+        }
+  
+        return mentor;
+      }
+  
+      // Log response failure and throw exception with FusionAuth response details
+      let description = '';
+      if (Number(this.configService.get('DEBUG', 1)) === 1) {
+        description = JSON.stringify(response);
+      }
+      this.logger.error(`Mentor creation failed for phone_no ${data.phone_no}`, { response });
+      throw new MentorCreationFailedException('Mentor creation failed!!', description);
+  
+    } catch (error) {
+      // Log detailed error with context
+      this.logger.error(`Failed to create mentor with phone no. ${data.phone_no}`, error);
+  
+      // Error handling specific to database operations or other exceptions
+      const { errorMessage, statusCode } = getPrismaErrorStatusAndMessage(error);
+  
+      // Log error message and status code
+      this.logger.error(`Error message: ${errorMessage}, Status Code: ${statusCode}`);
+  
+      // Throw HTTP exception with specific error details
+      throw new HttpException(
+        {
+          error_message: errorMessage,
+          error_code: statusCode,
+        },
+        statusCode,
+      );
     }
-    throw new MentorCreationFailedException('Mentor creation failed!!', description);
-  } catch (error) {
-    this.logger.error(
-      `Failed to create mentor with phone no. ${data.phone_no}`,
-      error,
-    );
-    const { errorMessage, statusCode } =
-      getPrismaErrorStatusAndMessage(error);
-    throw new HttpException(
-      {
-        error_message: errorMessage,
-        error_code: statusCode,
-      },
-      statusCode,
-    );
-  }
   }
 
   async createMentorSegment(data: CreateMentorSegmentRequest) {

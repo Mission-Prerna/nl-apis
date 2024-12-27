@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
@@ -86,6 +87,9 @@ export class AdminService {
 
   async createMentor(data: CreateMentorDto) {
     try {
+      const districtName = (await this.prismaService.districts.findUnique({ where: { id: data.district_id }}))?.name ?? null
+      const blockName = (await this.prismaService.blocks.findUnique({ where: { id: data.block_id || 0 }}))?.name ?? null
+      const designationName = (await this.prismaService.designations.findUnique({ where: { id:data.designation_id }}))?.name ?? null
       // Step 1: Validate input data
       if (data.actor_id == ActorEnum.TEACHER && !data.udise) {
         throw new BadRequestException(['udise is needed when actor is "Teacher".']);
@@ -121,7 +125,7 @@ export class AdminService {
       });
       
       // Log FusionAuth response to debug
-      this.logger.log(`FusionAuth response for phone_no ${data.phone_no}: ${JSON.stringify(response)}`);
+      this.logger.debug(`FusionAuth status code response for phone_no ${data.phone_no} statusCode: ${response.statusCode}`);
 
       let allowMentorCreation = false
   
@@ -164,6 +168,9 @@ export class AdminService {
             district_id: data.district_id,
             block_id: data.block_id,
             designation_id: data.designation_id,
+            district_name: districtName,
+            block_town_name: blockName,
+            designation: designationName,
             actor_id: data.actor_id,
             is_active: data.is_active,
           },
@@ -174,6 +181,9 @@ export class AdminService {
             district_id: data.district_id,
             block_id: data.block_id,
             designation_id: data.designation_id,
+            district_name: districtName,
+            block_town_name: blockName,
+            designation: designationName,
             actor_id: data.actor_id,
             is_active: data.is_active,
           },
@@ -246,6 +256,20 @@ export class AdminService {
         statusCode,
       );
     }
+  }
+
+  async getMentorByPhone(phone_no: string) {
+    const mentor = await this.prismaService.mentor.findUnique({
+      where: {
+        phone_no: phone_no,
+      },
+    });
+    if (!mentor) {
+      throw new NotFoundException(
+        `Mentor with phone number ${phone_no} not found`,
+      );
+    }
+    return mentor;
   }
 
   async createMentorSegment(data: CreateMentorSegmentRequest) {

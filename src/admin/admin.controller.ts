@@ -83,6 +83,14 @@ export class AdminController {
     return this.service.createMentorOld(body);
   }
 
+  @Get('/mentor/phone/:phone')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 500, ttl: 60000 } })
+  async getMentor(@Param('phone') phone_no: string) {
+    return this.service.getMentorByPhone(phone_no);
+  }
+
   @Post('/school/geo-fencing')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)

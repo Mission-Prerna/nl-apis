@@ -46,7 +46,7 @@ export class FusionauthService {
     try {
       // Fetch the user by username to get the userId
       const userResponse:any = await this.fusionauthClient.retrieveUserByUsername(username);
-      this.logger.log(`FusionAuth user with details ${userResponse} fetched successfully for reactivating`);
+      this.logger.debug(`FusionAuth user with username: ${username} fetched successfully for reactivating`);
 
       if (userResponse.statusCode === 200 && userResponse.response) {
         const userId = userResponse.response.user.id;
@@ -55,11 +55,11 @@ export class FusionauthService {
 
         // If reactivation is successful, return the response
         if (updateResponse.statusCode === 200 && updateResponse.response) {
-          this.logger.log(`User with username ${username} reactivated successfully.`);
+          this.logger.debug(`User with username ${username} reactivated successfully on FusionAuth.`);
           return updateResponse;
         } else {
           // Handle failure response
-          this.logger.error(`Failed to reactivate user on FusionAuth with username ${username}`, updateResponse);
+          this.logger.error(`Failed to reactivate user on FusionAuth with username ${username}`, JSON.stringify(updateResponse));
           throw new Error(`Failed to reactivate user on FusionAuth: ${username}`);
         }
       } else {

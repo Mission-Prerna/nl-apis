@@ -45,6 +45,8 @@ import { CreateMentorSegmentRequest } from './dto/CreateMentorSegmentRequest.dto
 import { GetAppActionsDto } from './dto/AppActions.dto';
 import { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
+import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
+import { FileSystemStoredFile, FormDataRequest } from 'nestjs-form-data';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -126,6 +128,14 @@ export class AppController {
         data: response,
       };
     }
+  }
+
+  @Post('/api/assessment-proof')
+  @FormDataRequest({storage: FileSystemStoredFile})
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async uploadAssessmentProofs(@Body() createAssessmentProofDto: CreateAssessmentProofDto) {
+      return await this.appService.submitAssessmentProof(createAssessmentProofDto);
   }
 
   @Get('/api/mentor/schools')

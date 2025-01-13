@@ -50,6 +50,8 @@ import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { StudentService } from './school/student.service';
+import { MinioService } from './minio/minio.service';
+import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
 
 const moment = require('moment');
 
@@ -69,6 +71,7 @@ export class AppService {
     protected readonly schoolService: SchoolServiceV2,
     protected readonly studentService: StudentService,
     private readonly jwtService: JwtService,
+    private readonly minioService :  MinioService,
   ) {
     this.prismaService.$queryRaw`
       SELECT table_name
@@ -573,6 +576,22 @@ export class AppService {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
     }
+  }
+
+  async submitAssessmentProof(createAssessmentProofDto: CreateAssessmentProofDto){
+    const fileUrl = await this.minioService.uploadAssessmentProof(createAssessmentProofDto.file);
+    if (!fileUrl) {
+      throw new BadRequestException('Error in uploading file');
+    }
+    return await this.prismaService.assessment_proof.create({
+      data: {
+        cycle_id: createAssessmentProofDto.cycle_id,
+        mentor_id: createAssessmentProofDto.mentor_id,
+        student_id: createAssessmentProofDto.student_id,
+        udise: createAssessmentProofDto.udise,
+        proof_url: fileUrl,
+      },
+    })
   }
   
   async getMentorSchoolListIfHeHasVisited(

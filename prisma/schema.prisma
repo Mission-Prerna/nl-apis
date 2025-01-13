@@ -553,6 +553,7 @@ model mentor {
   is_active                                      Boolean                                          @default(true)
   assessment_cycle_district_mentor_mapping       assessment_cycle_district_mentor_mapping[]
   assessment_cycle_school_nipun_results          assessment_cycle_school_nipun_results[]
+  assessment_proof                               assessment_proof[]
   assessment_survey_result_v2                    assessment_survey_result_v2[]
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
@@ -655,6 +656,7 @@ model school_list {
   actor_school_blacklist                       actor_school_blacklist[]
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  assessment_proof                             assessment_proof[]
   assessment_survey_result_v2                  assessment_survey_result_v2[]
   assessment_visit_results_v2                  assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun     assessment_visit_results_v2_2023_apr_jun[]
@@ -1759,6 +1761,7 @@ model students {
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   deleted_at                                     DateTime?                                        @db.Timestamptz(6)
+  assessment_proof                               assessment_proof[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
   assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
@@ -1913,6 +1916,7 @@ model assessment_cycles {
   assessment_cycle_district_mentor_mapping     assessment_cycle_district_mentor_mapping[]
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  assessment_proof                             assessment_proof[]
   school_results_fraud_reports                 school_results_fraud_reports[]
 
   @@index([end_date], map: "assessment_cycles_end_date")
@@ -1980,6 +1984,26 @@ model cwsn_students {
 
   @@unique([student_id, udise], map: "cwsn_students_udise_student_id")
   @@index([udise], map: "cwsn_students_udise")
+}
+
+model assessment_proof {
+  id                Int               @id @default(autoincrement())
+  cycle_id          Int
+  mentor_id         BigInt
+  student_id        String            @db.VarChar
+  udise             BigInt
+  proof_url         String            @db.VarChar
+  is_active         Boolean           @default(true)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
+  mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+  students          students          @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)
+
+  @@index([cycle_id], map: "assessment_proof_cycle_id_key")
+  @@index([cycle_id, mentor_id], map: "assessment_proof_cycle_id_mentor_id_key")
+  @@index([cycle_id, mentor_id, udise], map: "assessment_proof_cycle_id_mentor_id_udise_key")
 }
 
 enum genders_enum {

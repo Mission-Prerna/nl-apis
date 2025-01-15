@@ -47,6 +47,8 @@ import { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
 import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
 import { FileSystemStoredFile, FormDataRequest } from 'nestjs-form-data';
+import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
+import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -136,6 +138,20 @@ export class AppController {
   @UseGuards(JwtAuthGuard)
   async uploadAssessmentProofs(@Body() createAssessmentProofDto: CreateAssessmentProofDto) {
       return await this.appService.submitAssessmentProof(createAssessmentProofDto);
+  }
+
+  @Post('/api/mentor-grade-assessment-details')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async createMentorGradeAssessmentDetails(@Body() createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
+    return await this.appService.createMentorGradeAssessmentDetails(createMentorGradeAssessmentDetailsDto);
+  }
+
+  @Get('/api/mentor-grade-assessment-details')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  async getMentorGradeAssessmentDetails(@Query() getMentorGradeAssessmentDetailsDto: GetMentorGradeAssessmentDetailsDto) {
+    return await this.appService.getMentorGradeAssessmentDetails(getMentorGradeAssessmentDetailsDto);
   }
 
   @Get('/api/mentor/schools')

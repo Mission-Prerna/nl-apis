@@ -52,6 +52,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { StudentService } from './school/student.service';
 import { MinioService } from './minio/minio.service';
 import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
+import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
+import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
 
 const moment = require('moment');
 
@@ -1931,5 +1933,32 @@ export class AppService {
 
     return mentor?.phone_no;
   }
+
+  async createMentorGradeAssessmentDetails(createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
+    return this.prismaService.mentor_grade_assessment_details.create({
+      data: {
+        udise: createMentorGradeAssessmentDetailsDto.udise, 
+        mentor_id: createMentorGradeAssessmentDetailsDto.mentor_id,
+        mentor_name: createMentorGradeAssessmentDetailsDto.mentor_name,
+        cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
+        grade: createMentorGradeAssessmentDetailsDto.grade,
+        image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,
+      }
+    });
+  }
+
+  async getMentorGradeAssessmentDetails(getMentorGradeAssessmentDetails: GetMentorGradeAssessmentDetailsDto) {
+    return this.prismaService.mentor_grade_assessment_details.findUnique({
+      where: {
+        mentor_id_udise_grade_cycle_id: {
+          mentor_id: getMentorGradeAssessmentDetails.mentor_id,
+          udise: getMentorGradeAssessmentDetails.udise,
+          grade: getMentorGradeAssessmentDetails.grade,
+          cycle_id: getMentorGradeAssessmentDetails.cycle_id,
+        },
+      },
+    });
+  }
+  
 
 }

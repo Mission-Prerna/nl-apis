@@ -587,6 +587,7 @@ model mentor {
   designations                                   designations                                     @relation(fields: [designation_id], references: [id])
   districts                                      districts                                        @relation(fields: [district_id], references: [id])
   mentor_bot_telemetry                           mentor_bot_telemetry[]
+  mentor_grade_assessment_details                mentor_grade_assessment_details[]
   mentor_segmentation                            mentor_segmentation[]
   mentor_tokens                                  mentor_tokens?
   mentor_update_logs                             mentor_update_logs[]
@@ -671,6 +672,7 @@ model school_list {
   assessment_visit_results_v2_2025_jul_sep     assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec     assessment_visit_results_v2_2025_oct_dec[]
   assessments                                  assessments[]
+  mentor_grade_assessment_details              mentor_grade_assessment_details[]
   blocks                                       blocks                                         @relation(fields: [block_id], references: [id])
   districts                                    districts                                      @relation(fields: [district_id], references: [id])
   nyay_panchayats                              nyay_panchayats?                               @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
@@ -1917,6 +1919,7 @@ model assessment_cycles {
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
   assessment_proof                             assessment_proof[]
+  mentor_grade_assessment_details              mentor_grade_assessment_details[]
   school_results_fraud_reports                 school_results_fraud_reports[]
 
   @@index([end_date], map: "assessment_cycles_end_date")
@@ -2004,6 +2007,23 @@ model assessment_proof {
   @@index([cycle_id], map: "assessment_proof_cycle_id_key")
   @@index([cycle_id, mentor_id], map: "assessment_proof_cycle_id_mentor_id_key")
   @@index([cycle_id, mentor_id, udise], map: "assessment_proof_cycle_id_mentor_id_udise_key")
+}
+
+model mentor_grade_assessment_details {
+  id                Int               @id @default(autoincrement())
+  mentor_id         BigInt
+  mentor_name       String            @db.VarChar
+  cycle_id          Int
+  udise             BigInt
+  grade             Int
+  image_url         String?           @db.VarChar
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  mentor            mentor            @relation(fields: [mentor_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([mentor_id, udise, grade, cycle_id], map: "mentor_grade_assessment_details_mentor_id_udise_grade_cycle_id_")
 }
 
 enum genders_enum {

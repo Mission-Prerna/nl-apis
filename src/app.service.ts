@@ -580,7 +580,7 @@ export class AppService {
     }
   }
 
-  async submitAssessmentProof(createAssessmentProofDto: CreateAssessmentProofDto){
+  async submitAssessmentProof(mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){
     const fileUrl = await this.minioService.uploadAssessmentProof(createAssessmentProofDto.file);
     if (!fileUrl) {
       throw new BadRequestException('Error in uploading file');
@@ -588,7 +588,7 @@ export class AppService {
     return await this.prismaService.assessment_proof.create({
       data: {
         cycle_id: createAssessmentProofDto.cycle_id,
-        mentor_id: createAssessmentProofDto.mentor_id,
+        mentor_id: mentor_id,
         student_id: createAssessmentProofDto.student_id,
         udise: createAssessmentProofDto.udise,
         proof_url: fileUrl,
@@ -1934,12 +1934,12 @@ export class AppService {
     return mentor?.phone_no;
   }
 
-  async createMentorGradeAssessmentDetails(createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
+  async createMentorGradeAssessmentDetails(mentor_id: number, createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
     return this.prismaService.mentor_grade_assessment_details.create({
       data: {
         udise: createMentorGradeAssessmentDetailsDto.udise, 
-        mentor_id: createMentorGradeAssessmentDetailsDto.mentor_id,
-        mentor_name: createMentorGradeAssessmentDetailsDto.mentor_name,
+        mentor_id: mentor_id,
+        teacher_name: createMentorGradeAssessmentDetailsDto.teacher_name,
         cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
         grade: createMentorGradeAssessmentDetailsDto.grade,
         image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,
@@ -1947,18 +1947,28 @@ export class AppService {
     });
   }
 
-  async getMentorGradeAssessmentDetails(getMentorGradeAssessmentDetails: GetMentorGradeAssessmentDetailsDto) {
-    return this.prismaService.mentor_grade_assessment_details.findUnique({
-      where: {
-        mentor_id_udise_grade_cycle_id: {
-          mentor_id: getMentorGradeAssessmentDetails.mentor_id,
-          udise: getMentorGradeAssessmentDetails.udise,
-          grade: getMentorGradeAssessmentDetails.grade,
-          cycle_id: getMentorGradeAssessmentDetails.cycle_id,
-        },
-      },
+  async getMentorGradeAssessmentDetails(mentor_id: number, getMentorGradeAssessmentDetails: GetMentorGradeAssessmentDetailsDto) {
+    const { udise, grade, cycle_id } = getMentorGradeAssessmentDetails;
+  
+    // Construct query filters
+    const query: any = {
+      mentor_id,
+      cycle_id,
+    };
+  
+    if (udise && udise.length > 0) {
+      query.udise = { in: udise }; // Filter for specific UDISE codes
+    }
+  
+    if (grade && grade.length > 0) {
+      query.grade = { in: grade }; // Filter for specific grades
+    }
+  
+    return this.prismaService.mentor_grade_assessment_details.findMany({
+      where: query,
     });
   }
+  
   
 
 }

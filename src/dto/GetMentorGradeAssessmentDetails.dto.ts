@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsNotEmpty, IsInt, IsString, Validate, IsUrl } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsNotEmpty, IsInt, IsOptional, IsArray, Validate } from 'class-validator';
 import { IsExist } from 'src/auth/auth.validator';
 
 export class GetMentorGradeAssessmentDetailsDto {
@@ -8,22 +8,20 @@ export class GetMentorGradeAssessmentDetailsDto {
   @IsInt()
   @Validate(IsExist, ['assessment_cycles', 'id'])
   cycle_id: number;
-
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsInt()
-  @Validate(IsExist, ['mentor', 'id'])
-  mentor_id: number;
   
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsInt()
-  grade: number;
+  @IsOptional()
+  @Transform(({ value }) => 
+    value ? value.split(',').map((v: string) => parseInt(v.trim(), 10)) : []
+  )
+  @IsArray()
+  @IsInt({ each: true })
+  grade?: number[];
 
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsInt()
-  @Validate(IsExist, ['school_list', 'udise'])
-  udise: number;
-
+  @IsOptional()
+  @Transform(({ value }) => 
+    value ? value.split(',').map((v: string) => parseInt(v.trim(), 10)) : []
+  )
+  @IsArray()
+  @Validate(IsExist, ['school_list', 'udise'], { each: true })
+  udise?: number[];
 }

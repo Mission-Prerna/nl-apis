@@ -2012,7 +2012,7 @@ model assessment_proof {
 model mentor_grade_assessment_details {
   id                Int               @id @default(autoincrement())
   mentor_id         BigInt
-  mentor_name       String            @db.VarChar
+  teacher_name      String            @db.VarChar
   cycle_id          Int
   udise             BigInt
   grade             Int

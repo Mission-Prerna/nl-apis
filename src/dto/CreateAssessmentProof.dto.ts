@@ -10,12 +10,6 @@ export class CreateAssessmentProofDto {
   @Validate(IsExist, ['assessment_cycles', 'id'])
   cycle_id: number;
 
-  @Type(() => Number)
-  @IsNotEmpty()
-  @IsInt()
-  @Validate(IsExist, ['mentor', 'id'])
-  mentor_id: number;
-
   @IsNotEmpty()
   @IsString()
   @Validate(IsExist, ['students', 'unique_id'])

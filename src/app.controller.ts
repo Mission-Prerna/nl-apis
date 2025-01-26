@@ -135,23 +135,30 @@ export class AppController {
   @Post('/api/assessment-proof')
   @FormDataRequest({storage: FileSystemStoredFile})
   @Roles(Role.OpenRole, Role.Diet)
+  @UseInterceptors(MentorInterceptor)
   @UseGuards(JwtAuthGuard)
-  async uploadAssessmentProofs(@Body() createAssessmentProofDto: CreateAssessmentProofDto) {
-      return await this.appService.submitAssessmentProof(createAssessmentProofDto);
+  async uploadAssessmentProofs(@Request() { mentor }: { mentor: Mentor }, @Body() createAssessmentProofDto: CreateAssessmentProofDto) {
+    const mentor_id = mentor.id as unknown as number;
+    return await this.appService.submitAssessmentProof(mentor_id, createAssessmentProofDto);
   }
-
+  
   @Post('/api/mentor-grade-assessment-details')
   @Roles(Role.OpenRole, Role.Diet)
+  @FormDataRequest({storage: FileSystemStoredFile})
+  @UseInterceptors(MentorInterceptor)
   @UseGuards(JwtAuthGuard)
-  async createMentorGradeAssessmentDetails(@Body() createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
-    return await this.appService.createMentorGradeAssessmentDetails(createMentorGradeAssessmentDetailsDto);
+  async createMentorGradeAssessmentDetails(@Request() { mentor }: { mentor: Mentor }, @Body() createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
+    const mentor_id = mentor.id as unknown as number;
+    return await this.appService.createMentorGradeAssessmentDetails(mentor_id, createMentorGradeAssessmentDetailsDto);
   }
 
   @Get('/api/mentor-grade-assessment-details')
   @Roles(Role.OpenRole, Role.Diet)
+  @UseInterceptors(MentorInterceptor)
   @UseGuards(JwtAuthGuard)
-  async getMentorGradeAssessmentDetails(@Query() getMentorGradeAssessmentDetailsDto: GetMentorGradeAssessmentDetailsDto) {
-    return await this.appService.getMentorGradeAssessmentDetails(getMentorGradeAssessmentDetailsDto);
+  async getMentorGradeAssessmentDetails(@Request() { mentor }: { mentor: Mentor }, @Query() getMentorGradeAssessmentDetailsDto: GetMentorGradeAssessmentDetailsDto) {
+    const mentor_id = mentor.id as unknown as number;
+    return await this.appService.getMentorGradeAssessmentDetails(mentor_id, getMentorGradeAssessmentDetailsDto);
   }
 
   @Get('/api/mentor/schools')

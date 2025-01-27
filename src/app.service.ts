@@ -1950,7 +1950,7 @@ export class AppService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         // Duplicate entry error
-        return { success: true, message: 'Duplicate entry, but operation is considered successful.' };
+        return { success: true, message: 'Duplicate entry, but operation is considered successful.' }
       }
       throw error;
     }

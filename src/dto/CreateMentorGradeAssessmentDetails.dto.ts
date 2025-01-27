@@ -13,6 +13,10 @@ export class CreateMentorGradeAssessmentDetailsDto {
   @IsString()
   teacher_name: string;
   
+  @IsNotEmpty()
+  @IsString()
+  teacher_phone: string;
+  
   @Type(() => Number)
   @IsNotEmpty()
   @IsInt()

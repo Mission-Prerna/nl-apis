@@ -2013,17 +2013,18 @@ model mentor_grade_assessment_details {
   id                Int               @id @default(autoincrement())
   mentor_id         BigInt
   teacher_name      String            @db.VarChar
+  teacher_phone     String            @db.VarChar
   cycle_id          Int
   udise             BigInt
   grade             Int
   image_url         String?           @db.VarChar
   created_at        DateTime          @default(now()) @db.Timestamptz(6)
   updated_at        DateTime          @default(now()) @db.Timestamptz(6)
-  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
   mentor            mentor            @relation(fields: [mentor_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  school_list       school_list       @relation(fields: [udise], references: [udise], onDelete: Cascade, onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)
 
-  @@unique([mentor_id, udise, grade, cycle_id], map: "mentor_grade_assessment_details_mentor_id_udise_grade_cycle_id_")
+  @@unique([mentor_id, cycle_id, udise, grade], map: "mentor_grade_assessment_detai_mentor_id_cycle_id_udise_grad_key")
 }
 
 enum genders_enum {

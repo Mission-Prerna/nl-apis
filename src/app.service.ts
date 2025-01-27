@@ -1940,6 +1940,7 @@ export class AppService {
         udise: createMentorGradeAssessmentDetailsDto.udise, 
         mentor_id: mentor_id,
         teacher_name: createMentorGradeAssessmentDetailsDto.teacher_name,
+        teacher_phone: createMentorGradeAssessmentDetailsDto.teacher_phone,
         cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
         grade: createMentorGradeAssessmentDetailsDto.grade,
         image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,

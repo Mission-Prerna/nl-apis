@@ -1935,17 +1935,25 @@ export class AppService {
   }
 
   async createMentorGradeAssessmentDetails(mentor_id: number, createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
-    return this.prismaService.mentor_grade_assessment_details.create({
-      data: {
-        udise: createMentorGradeAssessmentDetailsDto.udise, 
-        mentor_id: mentor_id,
-        teacher_name: createMentorGradeAssessmentDetailsDto.teacher_name,
-        teacher_phone: createMentorGradeAssessmentDetailsDto.teacher_phone,
-        cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
-        grade: createMentorGradeAssessmentDetailsDto.grade,
-        image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,
+    try {
+      return await this.prismaService.mentor_grade_assessment_details.create({
+        data: {
+          udise: createMentorGradeAssessmentDetailsDto.udise, 
+          mentor_id: mentor_id,
+          teacher_name: createMentorGradeAssessmentDetailsDto.teacher_name,
+          teacher_phone: createMentorGradeAssessmentDetailsDto.teacher_phone,
+          cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
+          grade: createMentorGradeAssessmentDetailsDto.grade,
+          image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,
+        }
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // Duplicate entry error
+        return { success: true, message: 'Duplicate entry, but operation is considered successful.' }
       }
-    });
+      throw error;
+    }
   }
 
   async getMentorGradeAssessmentDetails(mentor_id: number, getMentorGradeAssessmentDetails: GetMentorGradeAssessmentDetailsDto) {

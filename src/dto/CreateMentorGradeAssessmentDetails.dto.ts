@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsInt, IsString, Validate, IsUrl, IsOptional } from 'class-validator';
+import { FileSystemStoredFile, IsFile } from 'nestjs-form-data';
 import { IsExist } from 'src/auth/auth.validator';
 
 export class CreateMentorGradeAssessmentDetailsDto {
@@ -28,7 +29,8 @@ export class CreateMentorGradeAssessmentDetailsDto {
   @Validate(IsExist, ['school_list', 'udise'])
   udise: number;
 
-  @IsUrl()
+
   @IsOptional()
-  image_url?: string;
+  @IsFile()
+  file?: FileSystemStoredFile;
 }

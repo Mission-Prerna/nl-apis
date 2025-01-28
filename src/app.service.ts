@@ -581,7 +581,9 @@ export class AppService {
   }
 
   async submitAssessmentProof(mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){
-    const fileUrl = await this.minioService.uploadAssessmentProof(createAssessmentProofDto.file);
+    const bucketName = this.configService.getOrThrow<string>('MINIO_ASSESSMENT_PROOF_BUCKET');
+    const fileName = `ap_${mentor_id}_${createAssessmentProofDto.cycle_id}_${createAssessmentProofDto.student_id}`;
+    const fileUrl = await this.minioService.uploadFileToMinio(createAssessmentProofDto.file, bucketName, fileName);
     if (!fileUrl) {
       throw new BadRequestException('Error in uploading file');
     }
@@ -1936,6 +1938,12 @@ export class AppService {
 
   async createMentorGradeAssessmentDetails(mentor_id: number, createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
     try {
+      let fileUrl = null;
+      if(createMentorGradeAssessmentDetailsDto.file) {
+        const fileName = `mga_${mentor_id}_${createMentorGradeAssessmentDetailsDto.cycle_id}_${createMentorGradeAssessmentDetailsDto.grade}_${createMentorGradeAssessmentDetailsDto.udise}`;
+        const bucketName = this.configService.getOrThrow<string>('MINIO_MENTOR_GRADE_ASSSESSMENT_BUCKET');
+        fileUrl = await this.minioService.uploadFileToMinio(createMentorGradeAssessmentDetailsDto.file, bucketName, fileName);
+      }
       return await this.prismaService.mentor_grade_assessment_details.create({
         data: {
           udise: createMentorGradeAssessmentDetailsDto.udise, 
@@ -1944,7 +1952,7 @@ export class AppService {
           teacher_phone: createMentorGradeAssessmentDetailsDto.teacher_phone,
           cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
           grade: createMentorGradeAssessmentDetailsDto.grade,
-          image_url: createMentorGradeAssessmentDetailsDto?.image_url || null,
+          image_url: fileUrl,
         }
       });
     } catch (error) {

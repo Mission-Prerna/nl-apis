@@ -40,13 +40,14 @@ export class MinioService {
     }
   }
 
-  async uploadAssessmentProof(file: FileSystemStoredFile): Promise<string> {
-    const bucketName = this.configService.getOrThrow<string>('MINIO_ASSESSMENT_PROOF_BUCKET');
-    const filename = file.originalName;
-    const fileExtension = filename.split('.').pop();
+  async uploadFileToMinio(file: FileSystemStoredFile, bucketName: string, fileName?: string): Promise<string> {
+    const fileOriginalName = file.originalName;
+    const fileExtension = fileOriginalName.split('.').pop();
     const formattedDate = new Date().toISOString().slice(0, 19).replace(/[-T:/]/g, '');
-    const objectName = `${filename.substring(0, filename.lastIndexOf('.'))}_${formattedDate}.${fileExtension}`;
-    
+    const objectName = fileName 
+    ? `${(fileName).trim()}_${formattedDate}.${fileExtension}` 
+    : `${fileOriginalName.substring(0, fileOriginalName.lastIndexOf('.'))}_${formattedDate}.${fileExtension}`;
+
     try {
       // Read the file into a buffer
       const fileBuffer = await fs.readFile(file.path);

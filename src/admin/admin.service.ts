@@ -722,9 +722,9 @@ export class AdminService {
 
   private async getRandomStudentsForUdise(cycle: Record<string, number>, udises: Array<number>) {
     let response: Record<number, { grade1: Array<string>, grade2: Array<string>, grade3: Array<string> }> = {};
-    const grade1Count = cycle.class_1_students_count > 0 ? cycle.class_1_students_count : 100;
-    const grade2Count = cycle.class_2_students_count > 0 ? cycle.class_2_students_count : 100;
-    const grade3Count = cycle.class_3_students_count > 0 ? cycle.class_3_students_count : 100;
+    const grade1Count = cycle.class_1_students_count || 0;
+    const grade2Count = cycle.class_2_students_count || 0;
+    const grade3Count = cycle.class_3_students_count || 0;
 
     udises.forEach(udise => {
       // populate response with all udises with grade keys

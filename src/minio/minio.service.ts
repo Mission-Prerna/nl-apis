@@ -1,6 +1,8 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import * as Minio from 'minio';
 import { ConfigService } from '@nestjs/config';
+import { FileSystemStoredFile } from 'nestjs-form-data';
+import * as fs from 'fs/promises';
 
 @Injectable()
 export class MinioService {
@@ -35,6 +37,31 @@ export class MinioService {
     } catch (error : any) {
       this.logger.error(`Error uploading zip file: ${error.message}`, error.stack);
       throw new InternalServerErrorException(`Failed to upload zip file. ${error.message}`);
+    }
+  }
+
+  async uploadFileToMinio(file: FileSystemStoredFile, bucketName: string, fileName?: string): Promise<string> {
+    const fileOriginalName = file.originalName;
+    const fileExtension = fileOriginalName.split('.').pop();
+    const formattedDate = new Date().toISOString().slice(0, 19).replace(/[-T:/]/g, '');
+    const objectName = fileName 
+    ? `${(fileName).trim()}_${formattedDate}.${fileExtension}` 
+    : `${fileOriginalName.substring(0, fileOriginalName.lastIndexOf('.'))}_${formattedDate}.${fileExtension}`;
+
+    try {
+      // Read the file into a buffer
+      const fileBuffer = await fs.readFile(file.path);
+  
+      // Upload the file to MinIO
+      await this.minioClient.putObject(bucketName, objectName, fileBuffer);
+  
+      // Get the presigned URL for the uploaded object
+      const presignedUrl = await this.minioClient.presignedGetObject(bucketName, objectName);
+      const url = presignedUrl.split('?')[0];
+      return url;
+    } catch (error: any) {
+      this.logger.error(`Error uploading assessment proof file: ${error.message}`, error.stack);
+      throw new InternalServerErrorException(`Failed to upload assessment proof file. ${error.message}`);
     }
   }
 }

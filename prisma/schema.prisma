@@ -553,6 +553,7 @@ model mentor {
   is_active                                      Boolean                                          @default(true)
   assessment_cycle_district_mentor_mapping       assessment_cycle_district_mentor_mapping[]
   assessment_cycle_school_nipun_results          assessment_cycle_school_nipun_results[]
+  assessment_proof                               assessment_proof[]
   assessment_survey_result_v2                    assessment_survey_result_v2[]
   assessment_visit_results_students_2023_apr_jun assessment_visit_results_students_2023_apr_jun[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
@@ -586,6 +587,7 @@ model mentor {
   designations                                   designations                                     @relation(fields: [designation_id], references: [id])
   districts                                      districts                                        @relation(fields: [district_id], references: [id])
   mentor_bot_telemetry                           mentor_bot_telemetry[]
+  mentor_grade_assessment_details                mentor_grade_assessment_details[]
   mentor_segmentation                            mentor_segmentation[]
   mentor_tokens                                  mentor_tokens?
   mentor_update_logs                             mentor_update_logs[]
@@ -655,6 +657,7 @@ model school_list {
   actor_school_blacklist                       actor_school_blacklist[]
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  assessment_proof                             assessment_proof[]
   assessment_survey_result_v2                  assessment_survey_result_v2[]
   assessment_visit_results_v2                  assessment_visit_results_v2[]
   assessment_visit_results_v2_2023_apr_jun     assessment_visit_results_v2_2023_apr_jun[]
@@ -669,6 +672,7 @@ model school_list {
   assessment_visit_results_v2_2025_jul_sep     assessment_visit_results_v2_2025_jul_sep[]
   assessment_visit_results_v2_2025_oct_dec     assessment_visit_results_v2_2025_oct_dec[]
   assessments                                  assessments[]
+  mentor_grade_assessment_details              mentor_grade_assessment_details[]
   blocks                                       blocks                                         @relation(fields: [block_id], references: [id])
   districts                                    districts                                      @relation(fields: [district_id], references: [id])
   nyay_panchayats                              nyay_panchayats?                               @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
@@ -1759,6 +1763,7 @@ model students {
   created_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   updated_at                                     DateTime                                         @default(now()) @db.Timestamptz(6)
   deleted_at                                     DateTime?                                        @db.Timestamptz(6)
+  assessment_proof                               assessment_proof[]
   assessment_visit_results_students_2023_jul_sep assessment_visit_results_students_2023_jul_sep[]
   assessment_visit_results_students_2023_oct_dec assessment_visit_results_students_2023_oct_dec[]
   assessment_visit_results_students_2024_apr_jun assessment_visit_results_students_2024_apr_jun[]
@@ -1913,6 +1918,8 @@ model assessment_cycles {
   assessment_cycle_district_mentor_mapping     assessment_cycle_district_mentor_mapping[]
   assessment_cycle_district_school_mapping     assessment_cycle_district_school_mapping[]
   assessment_cycle_school_nipun_results        assessment_cycle_school_nipun_results[]
+  assessment_proof                             assessment_proof[]
+  mentor_grade_assessment_details              mentor_grade_assessment_details[]
   school_results_fraud_reports                 school_results_fraud_reports[]
 
   @@index([end_date], map: "assessment_cycles_end_date")
@@ -1980,6 +1987,44 @@ model cwsn_students {
 
   @@unique([student_id, udise], map: "cwsn_students_udise_student_id")
   @@index([udise], map: "cwsn_students_udise")
+}
+
+model assessment_proof {
+  id                Int               @id @default(autoincrement())
+  cycle_id          Int
+  mentor_id         BigInt
+  student_id        String            @db.VarChar
+  udise             BigInt
+  proof_url         String            @db.VarChar
+  is_active         Boolean           @default(true)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
+  mentor            mentor            @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+  students          students          @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)
+
+  @@index([cycle_id], map: "assessment_proof_cycle_id_key")
+  @@index([cycle_id, mentor_id], map: "assessment_proof_cycle_id_mentor_id_key")
+  @@index([cycle_id, mentor_id, udise], map: "assessment_proof_cycle_id_mentor_id_udise_key")
+}
+
+model mentor_grade_assessment_details {
+  id                Int               @id @default(autoincrement())
+  mentor_id         BigInt
+  teacher_name      String            @db.VarChar
+  teacher_phone     String            @db.VarChar
+  cycle_id          Int
+  udise             BigInt
+  grade             Int
+  image_url         String?           @db.VarChar
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_cycles assessment_cycles @relation(fields: [cycle_id], references: [id], onUpdate: Restrict)
+  mentor            mentor            @relation(fields: [mentor_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  school_list       school_list       @relation(fields: [udise], references: [udise], onUpdate: Restrict)
+
+  @@unique([mentor_id, cycle_id, udise, grade], map: "mentor_grade_assessment_detai_mentor_id_cycle_id_udise_grad_key")
 }
 
 enum genders_enum {

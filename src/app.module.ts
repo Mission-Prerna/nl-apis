@@ -31,6 +31,7 @@ import { CalculateExaminerCycleUdiseResultProcessor } from './processors/calcula
 import { MinioModule } from './minio/minio.module';
 import { MinioService } from './minio/minio.service';
 import { CacheModule, CacheStore } from '@nestjs/cache-manager';
+import { NestjsFormDataModule } from 'nestjs-form-data';
 
 @Module({
   imports: [ 
@@ -88,6 +89,7 @@ import { CacheModule, CacheStore } from '@nestjs/cache-manager';
     }),
     TerminusModule,
     EtagModule,
+    NestjsFormDataModule,
     I18nModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         fallbackLanguage: configService.get<string>('FALLBACK_LANGUAGE', 'en'),

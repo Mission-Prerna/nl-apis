@@ -50,6 +50,10 @@ import axios, { AxiosResponse } from 'axios';
 import { FastifyRequest } from 'fastify';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { StudentService } from './school/student.service';
+import { MinioService } from './minio/minio.service';
+import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
+import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
+import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
 
 const moment = require('moment');
 
@@ -69,6 +73,7 @@ export class AppService {
     protected readonly schoolService: SchoolServiceV2,
     protected readonly studentService: StudentService,
     private readonly jwtService: JwtService,
+    private readonly minioService :  MinioService,
   ) {
     this.prismaService.$queryRaw`
       SELECT table_name
@@ -573,6 +578,24 @@ export class AppService {
       this.logger.error(`Error occurred: ${e}`);
       this.handleRequestError(e);
     }
+  }
+
+  async submitAssessmentProof(mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){
+    const bucketName = this.configService.getOrThrow<string>('MINIO_ASSESSMENT_PROOF_BUCKET');
+    const fileName = `ap_${mentor_id}_${createAssessmentProofDto.cycle_id}_${createAssessmentProofDto.student_id}`;
+    const fileUrl = await this.minioService.uploadFileToMinio(createAssessmentProofDto.file, bucketName, fileName);
+    if (!fileUrl) {
+      throw new BadRequestException('Error in uploading file');
+    }
+    return await this.prismaService.assessment_proof.create({
+      data: {
+        cycle_id: createAssessmentProofDto.cycle_id,
+        mentor_id: mentor_id,
+        student_id: createAssessmentProofDto.student_id,
+        udise: createAssessmentProofDto.udise,
+        proof_url: fileUrl,
+      },
+    })
   }
   
   async getMentorSchoolListIfHeHasVisited(
@@ -1912,5 +1935,57 @@ export class AppService {
 
     return mentor?.phone_no;
   }
+
+  async createMentorGradeAssessmentDetails(mentor_id: number, createMentorGradeAssessmentDetailsDto: CreateMentorGradeAssessmentDetailsDto) {
+    try {
+      let fileUrl = null;
+      if(createMentorGradeAssessmentDetailsDto.file) {
+        const fileName = `mga_${mentor_id}_${createMentorGradeAssessmentDetailsDto.cycle_id}_${createMentorGradeAssessmentDetailsDto.grade}_${createMentorGradeAssessmentDetailsDto.udise}`;
+        const bucketName = this.configService.getOrThrow<string>('MINIO_MENTOR_GRADE_ASSSESSMENT_BUCKET');
+        fileUrl = await this.minioService.uploadFileToMinio(createMentorGradeAssessmentDetailsDto.file, bucketName, fileName);
+      }
+      return await this.prismaService.mentor_grade_assessment_details.create({
+        data: {
+          udise: createMentorGradeAssessmentDetailsDto.udise, 
+          mentor_id: mentor_id,
+          teacher_name: createMentorGradeAssessmentDetailsDto.teacher_name,
+          teacher_phone: createMentorGradeAssessmentDetailsDto.teacher_phone,
+          cycle_id: createMentorGradeAssessmentDetailsDto.cycle_id,
+          grade: createMentorGradeAssessmentDetailsDto.grade,
+          image_url: fileUrl,
+        }
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // Duplicate entry error
+        return { success: true, message: 'Duplicate entry, but operation is considered successful.' }
+      }
+      throw error;
+    }
+  }
+
+  async getMentorGradeAssessmentDetails(mentor_id: number, getMentorGradeAssessmentDetails: GetMentorGradeAssessmentDetailsDto) {
+    const { udise, grade, cycle_id } = getMentorGradeAssessmentDetails;
+  
+    // Construct query filters
+    const query: any = {
+      mentor_id,
+      cycle_id,
+    };
+  
+    if (udise && udise.length > 0) {
+      query.udise = { in: udise }; // Filter for specific UDISE codes
+    }
+  
+    if (grade && grade.length > 0) {
+      query.grade = { in: grade }; // Filter for specific grades
+    }
+  
+    return this.prismaService.mentor_grade_assessment_details.findMany({
+      where: query,
+    });
+  }
+  
+  
 
 }

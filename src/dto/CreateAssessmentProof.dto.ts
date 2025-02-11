@@ -1,14 +1,14 @@
-import { Type } from 'class-transformer';
-import { IsNotEmpty, IsInt, IsString, Validate } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsNotEmpty, IsInt, IsString, Validate, IsOptional } from 'class-validator';
 import { FileSystemStoredFile, HasMimeType, IsFile } from 'nestjs-form-data';
 import { IsExist } from 'src/auth/auth.validator';
 
 export class CreateAssessmentProofDto {
-  @Type(() => Number)
-  @IsNotEmpty()
+  @IsOptional()
+  @Transform(({ value }) => ((value === '' || value == 'null' || value == 'undefined') ? null : Number(value)))
   @IsInt()
   @Validate(IsExist, ['assessment_cycles', 'id'])
-  cycle_id: number;
+  cycle_id?: number;
 
   @IsNotEmpty()
   @IsString()

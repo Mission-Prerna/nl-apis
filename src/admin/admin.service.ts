@@ -34,6 +34,7 @@ import * as Sentry from '@sentry/minimal';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
+import { InvalidateStudentAssessmentDto } from './dto/InvalidateStudentAssessment.dto';
 
 @Injectable()
 export class AdminService {
@@ -1077,5 +1078,55 @@ export class AdminService {
       data: body,
     });
   }
+
+  async invalidateStudentAssessment(payload: InvalidateStudentAssessmentDto) {
+    const { cycle_id, mentor_phone, student_id } = payload;
+    
+    // Fetch the assessment cycle
+    const cycle = await this.prismaService.assessment_cycles.findUnique({
+      where: { id: cycle_id }
+    });
+    if (!cycle) {
+      throw new BadRequestException(`Assessment cycle with ID ${cycle_id} not found.`);
+    }
+
+    // Convert DateTime to BigInt timestamps for comparison
+    const cycleStartTimestamp = BigInt(cycle.start_date.getTime());
+    const cycleEndTimestamp = BigInt(cycle.end_date.getTime());
+
+    // Fetch the mentor
+    const mentor = await this.prismaService.mentor.findUnique({
+      where: { phone_no: mentor_phone }
+    });
+    if (!mentor) {
+      throw new BadRequestException(`Mentor with phone number ${mentor_phone} not found.`);
+    }
+
+    if (mentor.actor_id !== ActorEnum.EXAMINER) {
+      throw new BadRequestException(`Mentor with phone number ${mentor_phone} is not an examiner.`);
+    }
+
+    // Update assessments within the cycle period
+    const response = await this.prismaService.assessments.updateMany({
+      where: {
+        mentor_id: mentor.id,
+        student_id: student_id,
+        submission_timestamp: {
+          gte: cycleStartTimestamp,
+          lte: cycleEndTimestamp
+        }
+      },
+      data: {
+        is_valid: false
+      }
+    });
+
+    if (response.count === 0) {
+      throw new NotFoundException(`No assessments found for student ID ${student_id} by mentor ID ${mentor.id} within the cycle period.`);
+    }
+
+    return response;
+  }
+
 
 }

@@ -43,6 +43,7 @@ import { MinioService } from 'src/minio/minio.service';
 import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto';
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
+import { InvalidateStudentAssessmentDto } from './dto/InvalidateStudentAssessment.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -167,11 +168,7 @@ export class AdminController {
   async createStudents(
     @Body(new MaxItemsPipe(500), new ParseArrayPipe({ items: CreateStudent })) body: CreateStudent[],
   ) {
-    await this.service.createStudents(body);
-    return {
-      msg: 'Success!',
-      data: null,
-    };
+    return await this.service.createStudents(body);
   }
 
   @Patch('/students')
@@ -359,5 +356,13 @@ export class AdminController {
     body: CreateUpdateCwsnStudents[],
   ) {
     return this.service.createUpdateCwsnStudents(body);
+  }
+  
+  @Post('student/invalidate-examiner-assessment')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async invalidateStudentAssessment(@Body() body:InvalidateStudentAssessmentDto){
+    return this.service.invalidateStudentAssessment(body);
   }
 }

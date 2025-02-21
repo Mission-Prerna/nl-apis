@@ -555,7 +555,26 @@ export class SchoolServiceV2 extends SchoolService {
 
     if (cycleDetails.length == 0) {
       // this udise is not mapped to any cycle for this examiner
-      this.logger.warn(`This udise (${udise}) is not mapped to any cycle for this examiner (${mentorID})`);
+      this.logger.warn(`This udise (${udise}) is not mapped to cycle id ${cycleId}`);
+      return true;  // returning true so that the queue job just terminate gracefully
+    }
+
+    const examinerCycleUdiseMapping = await this.prismaService.assessment_cycle_district_mentor_mapping.findFirst({
+      where: {
+        mentor_id: mentorID,
+        cycle_id: cycleId,
+        districts: {
+          school_list: {
+            some: {
+              udise: udise
+            }
+          }
+        }
+      }
+    });
+
+    if(!examinerCycleUdiseMapping) {
+      this.logger.warn(`This udise (${udise}) is not mapped to cycle id ${cycleId} for examiner ${mentorID}`);
       return true;  // returning true so that the queue job just terminate gracefully
     }
 
@@ -598,7 +617,7 @@ export class SchoolServiceV2 extends SchoolService {
             where a.student_id = ANY($3::text[])
             and a.udise = $1
             and a.grade in (1,2,3)
-            and a.mentor_id = $2
+            and a.actor_id = ActorEnum.EXAMINER
             and a.submitted_at between '${moment(
               cycleDetails[0].start_date,
             ).format('YYYY-MM-DD')}' and '${moment(

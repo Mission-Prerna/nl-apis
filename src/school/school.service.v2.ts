@@ -617,7 +617,7 @@ export class SchoolServiceV2 extends SchoolService {
             where a.student_id = ANY($3::text[])
             and a.udise = $1
             and a.grade in (1,2,3)
-            and a.actor_id = ActorEnum.EXAMINER
+            and a.actor_id = ${ActorEnum.EXAMINER}
             and a.submitted_at between '${moment(
               cycleDetails[0].start_date,
             ).format('YYYY-MM-DD')}' and '${moment(

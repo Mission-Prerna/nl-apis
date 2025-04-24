@@ -21,6 +21,9 @@ import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
 import * as XLSX from 'xlsx';
 import { CreateSchoolListResponseDto, SchoolListResponse } from './dto/CreateSchoolListResponse.dto';
 const moment = require('moment');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as csvParser from 'csv-parser';
 
 @Injectable()
 export class SchoolServiceV2 extends SchoolService {
@@ -532,7 +535,7 @@ export class SchoolServiceV2 extends SchoolService {
     }
     return null;
   }
-
+////-------------------------------------
   async calculateExaminerCycleUdiseResult(mentorID: number, cycleId: number, udise: number) {
     // find out cycle details, students list & nipun percentage for the udise
     const cycleDetails: any = await this.prismaService.$queryRawUnsafe(`
@@ -604,7 +607,7 @@ export class SchoolServiceV2 extends SchoolService {
                       case when ${grade3Count} > 0 then (count(t.student_id) * 100) / ${grade3Count} else 0 end
                   else 0
               end, 0
-          )::int as percentage
+          )::int as percentage -- can be removed for rounding off
       from (
             select unnest(array[1, 2, 3]) as grade
          ) g
@@ -904,5 +907,71 @@ export class SchoolServiceV2 extends SchoolService {
         error?.message || 'Failed to mark school result as fraud',
       );
     }
+  }
+
+  async processExaminerCycleUdiseResults(batch: Array<{ mentorID: number; cycleId: number; udise: number }>) {
+    const logFilePath = path.join(__dirname, '../logs/assessment_results.log');
+    
+    // Ensure log directory exists
+    if (!fs.existsSync(path.dirname(logFilePath))) {
+      fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+    }
+
+    this.logger.log(`Processing batch of ${batch.length} entries`);
+    
+    const results = [];
+
+    for (const entry of batch) {
+      const { mentorID, cycleId, udise } = entry;
+      
+      try {
+        this.logger.log(`Processing mentorID: ${mentorID}, cycleId: ${cycleId}, udise: ${udise}`);
+        const result = await this.calculateExaminerCycleUdiseResult(mentorID, cycleId, udise);
+        results.push({ mentorID, cycleId, udise, result });
+
+        // Write log entry
+        fs.appendFileSync(logFilePath, `Success: ${JSON.stringify({ mentorID, cycleId, udise, result })}\n`);
+      } catch (error:any) {
+        this.logger.error(`Error processing mentorID: ${mentorID}, cycleId: ${cycleId}, udise: ${udise}`, error.stack);
+        fs.appendFileSync(logFilePath, `Error: ${JSON.stringify({ mentorID, cycleId, udise, error: error.message })}\n`);
+      }
+    }
+    
+    return results;
+  }
+
+  async extractNipun(filePath: string) {
+    console.log('filePath:', filePath)
+    this.logger.log(`Extracting Nipun data from file: ${filePath}`);
+const result = await this.extract(filePath)
+   
+    this.processExaminerCycleUdiseResults(result)
+    return result
+  }
+
+  async extract(filePath:string): Promise< { cycleId: number; udise: number; mentorID:number }[]>{
+    return new Promise((resolve, reject) => {
+      const result: { cycleId: number; udise: number; mentorID:number }[] = [];
+    console.log('result:', result)
+    
+      this.logger.log(`Extracting Nipun data from file: ${filePath}`);
+      fs.createReadStream(filePath)
+        .pipe(csvParser())
+        .on('data', (row:any) => {
+          // this.logger.log(`Row: ${JSON.stringify(row)}`);
+          // Extract phone_no and district_id
+          result.push({
+            mentorID: +row['mentor_id'],
+            udise: +row['udise'],
+            cycleId: +row['cycle_id'],
+          });
+        })
+        .on('end', () => {
+          resolve(result); // Resolve the Promise with the result
+        })
+        .on('error', (error:any) => {
+          reject(error); // Reject the Promise if there's an error
+        });
+    });
   }
 }

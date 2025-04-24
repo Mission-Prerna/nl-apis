@@ -450,4 +450,14 @@ export class AppController {
     return this.appService.callBhashiniService(request);
   }
 
+  @Get('extract/mentor-mapping')
+  async extract(@Query('filePath') filePath: string) {
+    try {
+      const data = await this.appService.getMentorMappingDetails(filePath);
+      return { success: true, data };
+    } catch (error:any) {
+      return { success: false, error: error.message };
+    }
+  }
+
 }

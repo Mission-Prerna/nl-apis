@@ -55,6 +55,10 @@ import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
 import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
 import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
 
+
+import * as fs from 'fs';
+import * as csvParser from 'csv-parser';
+
 const moment = require('moment');
 
 @Injectable()
@@ -1986,6 +1990,84 @@ export class AppService {
     });
   }
   
+
+  async extractPhoneAndDistrict(filePath: string): Promise<{ phone_no: string; district_id: string }[]> {
+    const result: { phone_no: string; district_id: string }[] = [];
+
+    return new Promise((resolve, reject) => {
+      fs.createReadStream(filePath)
+        .pipe(csvParser())
+        .on('data', (row:any) => {
+          // Extract phone_no and district_id
+          result.push({
+            phone_no: row['phone_no'],
+            district_id: row['district_id'],
+          });
+        })
+        .on('end', () => {
+          resolve(result); // Resolve the Promise with the result
+        })
+        .on('error', (error:any) => {
+          reject(error); // Reject the Promise if there's an error
+        });
+    });
+  }
+
   
+  async getMentorMappingDetails(filePath: string){
+    const data = await this.extractPhoneAndDistrict(filePath);
+    // return data
+    const failedData:any = []
+    let response = await Promise.all(
+    data.map(async (mentor) => {
+      try {
+        const mentorData = await this.prismaService.mentor.findFirstOrThrow({
+          where: {
+            phone_no: mentor.phone_no,
+            is_active: true,
+          },
+          select: {
+            id: true,
+          },
+        });
+        // console.log('mentorData:', mentorData);
+        return { mentor_id: mentorData.id, district_id: Number(mentor.district_id) };
+      } catch (error:any) {
+        failedData.push({phone_no: mentor.phone_no, message: error.message})
+        // console.error(`Error processing mentor with phone_no: ${mentor.phone_no}`, error);
+        // Optionally, return a fallback value or rethrow the error
+        // throw new Error(`Failed to process mentor with phone_no: ${mentor.phone_no}`);
+        
+      }
+    })
+  );
+
+
+  const chunckresult = [];
+  console.log('failedData:', failedData)
+
+  fs.writeFile('failed-examiner-mapping-data.json', JSON.stringify(failedData, null, 2), (err) => {
+    if (err) {
+      console.error('Error writing file:', err);
+    } else {
+      console.log('File written successfully');
+    }
+  }
+  )
+  
+  for (let i = 0; i < response.length; i += 500) {
+    chunckresult.push(response.slice(i, i + 500));
+  }
+  // Write the chunks to a file
+fs.writeFile('examiner-mapping-data.json', JSON.stringify(chunckresult, null, 2), (err) => {
+  if (err) {
+    console.error('Error writing file:', err);
+  } else {
+    console.log('File written successfully');
+  }
+});
+    // console.log('chunckresult:', chunckresult);
+    return chunckresult;
+  }
 
 }

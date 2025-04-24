@@ -47,6 +47,18 @@ export class SchoolController {
     private readonly calculateExaminerCycleUdiseResultQueue: Queue,
   ) {}
 
+  
+  @Get()
+  async extract(@Query('filePath') filePath: string) {
+    try {
+      const data = await this.service.extractNipun(filePath);
+      // const data = await this.appService.getMentorMappingDetails(filePath);
+      return { success: true, data };
+    } catch (error:any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   @Post('upload')
   @Roles(Role.Admin)
   @UseGuards(JwtAdminGuard)
@@ -134,32 +146,41 @@ export class SchoolController {
   }
 
   @Post(':udise/result/calculate')
-  @Roles(Role.OpenRole, Role.Diet)
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(MentorInterceptor)
+  // @Roles(Role.OpenRole, Role.Diet)
+  // @UseGuards(JwtAuthGuard)
+  // @UseInterceptors(MentorInterceptor)
   async calculateExaminerCycleUdiseResult(
-    @Param('udise', ParseIntPipe) udise: number,
-    @Query() params: AssessmentCycleValidatorDto,
-    @Request() { mentor }: { mentor: Mentor },
+    // @Param('udise', ParseIntPipe) udise: number,
+    // @Query() params: AssessmentCycleValidatorDto,
+    @Query('filePath') filePath: string
+    // @Request() { mentor }: { mentor: Mentor },
   ) {
-    await this.calculateExaminerCycleUdiseResultQueue.add(
-      JobEnum.ProcessExaminerCycleUdiseResult,
-      {
-        mentor: mentor,
-        udise: udise,
-        cycle_id: params.cycle_id,
-      },
-      {
-        attempts: 3,
-        removeOnComplete: true,
-        backoff: 60000,
-        delay: 60000, // we must process the event 1 minute later
-      },
-    );
-    return {
-      msg: 'Queued!',
-      data: null,
-    };
+    try {
+      console.log('filePath:', filePath)
+      const data = await this.service.extractNipun(filePath);
+      // const data = await this.appService.getMentorMappingDetails(filePath);
+      return { success: true, data };
+    } catch (error:any) {
+      return { success: false, error: error.message };
+    }
+    // await this.calculateExaminerCycleUdiseResultQueue.add(
+    //   JobEnum.ProcessExaminerCycleUdiseResult,
+    //   {
+    //     mentor: mentor,
+    //     udise: udise,
+    //     cycle_id: params.cycle_id,
+    //   },
+    //   {
+    //     attempts: 3,
+    //     removeOnComplete: true,
+    //     backoff: 60000,
+    //     delay: 60000, // we must process the event 1 minute later
+    //   },
+    // );
+    // return {
+    //   msg: 'Queued!',
+    //   data: null,
+    // };
   }
 
   @Post(':udise/result/report/fraud')

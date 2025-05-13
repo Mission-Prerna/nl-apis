@@ -1199,6 +1199,7 @@ export class AppService {
           grade: true,
           learning_outcome: true,
           competency_id: true,
+          assessment_type: true,
           flow_state: true,
           subject_id: true,
           pass_percent: true,
@@ -1325,16 +1326,18 @@ export class AppService {
 
   // Method to get competency mappings based on actor ID
   private async getCompetencyMappings(actorId: ActorEnum, minAppVersionCode:number) {
-    let learningOutcomePrefix = '';
+    let assessment_type: Array<string> = [];
     switch (actorId) {
       case ActorEnum.EXAMINER:
-        learningOutcomePrefix = 'Examiner:';
+        assessment_type.push('examiner');
         break;
       case ActorEnum.DIET_MENTOR:
-      case ActorEnum.TEACHER:
       case ActorEnum.MENTOR:
       case ActorEnum.PARENT:
-        learningOutcomePrefix = 'Nipun Lakshya:';
+        assessment_type.push('nipun_lakshya');
+        break;
+      case ActorEnum.TEACHER:
+        assessment_type.push('soochi', 'nipun_lakshya');
         break;
       default:
         break;
@@ -1344,7 +1347,7 @@ export class AppService {
     const gradesWithVersions = await this.prismaService.competency_mapping.groupBy({
       by: ['grade'],
       where: {
-        learning_outcome: { startsWith: learningOutcomePrefix },
+        assessment_type: { in: assessment_type },
         min_app_version_code: { lte: minAppVersionCode },
         is_active: true,
       },
@@ -1364,7 +1367,7 @@ export class AppService {
         return this.prismaService.competency_mapping.findMany({
           where: {
             grade: grade,
-            learning_outcome: { startsWith: learningOutcomePrefix },
+            assessment_type: { in: assessment_type },
             min_app_version_code: min_app_version_code || 0,
             is_active: true,
           },
@@ -1372,6 +1375,7 @@ export class AppService {
             grade: true,
             learning_outcome: true,
             competency_id: true,
+            assessment_type: true,
             flow_state: true,
             subject_id: true,
             pass_percent: true,

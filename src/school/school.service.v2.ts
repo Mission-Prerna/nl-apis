@@ -905,4 +905,164 @@ export class SchoolServiceV2 extends SchoolService {
       );
     }
   }
+
+  async getSchoolStudentsSoochiResults(
+    mentorId: number,
+    udise: number,
+    grades: Array<number>,
+  ) {
+    // Get the current language from the I18nContext
+    const lang: string = I18nContext?.current()?.lang ?? 'en';
+
+    // STEP 1: Get students in selected grades
+    const students = await this.studentService.getSchoolStudents(udise);
+    const filteredStudents = students.filter((s) =>
+      grades.includes(Number(s.grade)),
+    );
+
+    const studentIds = filteredStudents.map((s) => s.id as string);
+
+    // STEP 2: Fetch grade-specific active competencies
+    const competencyMappings =
+      await this.prismaService.competency_mapping.findMany({
+        where: {
+          is_active: true,
+          assessment_type: 'soochi',
+        },
+        select: {
+          id: true,
+          grade: true,
+        },
+      });
+
+    // Group competencies by grade
+    const gradeCompetencyMap: Record<string, number[]> = {};
+    for (const comp of competencyMappings) {
+      if (!gradeCompetencyMap[comp.grade]) {
+        gradeCompetencyMap[comp.grade] = [];
+      }
+      gradeCompetencyMap[comp.grade].push(comp.id);
+    }
+
+    // STEP 3: Fetch relevant assessments (only needed data)
+    const assessments = await this.prismaService.soochi_assessments.findMany({
+      where: {
+        student_id: { in: studentIds },
+        competency_id: { in: competencyMappings.map((c) => c.id) },
+        is_valid: true,
+        mentor_id: mentorId,
+      },
+      select: {
+        student_id: true,
+        competency_id: true,
+        is_passed: true,
+        submitted_at: true,
+      },
+      orderBy: {
+        submitted_at: 'desc',
+      },
+    });
+
+    // STEP 4: Build latest + passed-first map
+    const studentAssessmentMap: Record<
+      string,
+      Record<number, { status: 'pass' | 'fail'; last_assessment_date: Date }>
+    > = {};
+
+    for (const a of assessments) {
+      const sid = a.student_id;
+      const cid = a.competency_id;
+      const passed = a.is_passed;
+      const date = a.submitted_at;
+
+      studentAssessmentMap[sid] ||= {};
+      const existing = studentAssessmentMap[sid][cid];
+
+      if (!existing) {
+        studentAssessmentMap[sid][cid] = {
+          status: passed ? 'pass' : 'fail',
+          last_assessment_date: date,
+        };
+      } else {
+        // Once pass, always pass
+        if (passed) {
+          existing.status = 'pass';
+        }
+        // Always keep latest date
+        if (date > existing.last_assessment_date) {
+          existing.last_assessment_date = date;
+        }
+      }
+    }
+
+    // STEP 5: Process results grade-wise
+    const gradeResults: Record<
+      string,
+      {
+        students: Array<{
+          id: string;
+          name: string;
+          assessments: Array<{
+            competency_id: number;
+            status: 'pass' | 'fail' | 'pending';
+            last_assessment_date: Date | null;
+          }>;
+        }>;
+        summary: Record<'pass' | 'fail' | 'pending', number>;
+      }
+    > = {};
+
+    for (const student of filteredStudents) {
+      const grade = student.grade?.toString() ?? '0';
+      const competencies = gradeCompetencyMap[grade] ?? [];
+
+      if (!gradeResults[grade]) {
+        gradeResults[grade] = {
+          students: [],
+          summary: { pass: 0, fail: 0, pending: 0 },
+        };
+      }
+
+      const assessmentsData = competencies.map((cid) => {
+        const result = studentAssessmentMap[student.id as string]?.[cid];
+        const status = result?.status ?? 'pending';
+        const lastDate = result?.last_assessment_date ?? null;
+
+        gradeResults[grade].summary[status]++;
+        return { competency_id: cid, status, last_assessment_date: lastDate };
+      });
+
+      gradeResults[grade].students.push({
+        id: student.id as string,
+        name: student.name as string,
+        assessments: assessmentsData,
+      });
+    }
+
+    // STEP 6: Format and return response
+    return Object.entries(gradeResults).map(([grade, data]) => ({
+      grade: this.i18n.t(`grades.${grade}`, { lang }),
+      summary: [
+        {
+          label: this.i18n.t(`common.Nipun`, { lang: lang }),
+          colour: '#06753C',
+          count: data.summary.pass,
+          identifier: 'pass',
+        },
+        {
+          label: this.i18n.t(`common.NotNipun`, { lang: lang }),
+          colour: '#892B2B',
+          count: data.summary.fail,
+          identifier: 'fail',
+        },
+        {
+          label: this.i18n.t('common.NotAssessed', { lang }),
+          colour: '#B1AFAF',
+          count: data.summary.pending,
+          identifier: 'pending',
+        },
+      ],
+      students: data.students,
+    }));
+  }
 }

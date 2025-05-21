@@ -178,4 +178,31 @@ export class SchoolController {
     }
     return await this.service.markSchoolResultFraud(mentor.id, udise, cycle_id);
   }
+
+
+  @Get(':udise/students/soochi-result')
+  @Roles(Role.OpenRole, Role.Diet)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(MentorInterceptor)
+  async getSchoolStudentsSoochiResults(
+    @Param('udise', ParseIntPipe) udise: number,
+    @Query() params: GetSchoolStudentsResultDto,
+    @Request() { mentor }: { mentor: Mentor },
+  ) {
+    if (!(mentor.actor_id === ActorEnum.TEACHER)) {
+      throw new ForbiddenException(
+        'Only Teachers are allowed to access this endpoint.',
+      );
+    }
+
+    const grades = params.grade
+      .split(',')
+      .map((grade) => parseInt(grade.trim()));
+
+    return this.service.getSchoolStudentsSoochiResults(
+      mentor.id as unknown as number,
+      udise,
+      grades,
+    );
+  }
 }

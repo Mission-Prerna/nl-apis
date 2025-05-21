@@ -26,6 +26,7 @@ model actors {
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
   assessments                              assessments[]
   mentor                                   mentor[]
+  soochi_assessments                       soochi_assessments[]
 }
 
 model assessment_results {
@@ -325,6 +326,7 @@ model blocks {
   mentor                                   mentor[]
   nyay_panchayats                          nyay_panchayats[]
   school_list                              school_list[]
+  soochi_assessments                       soochi_assessments[]
 
   @@unique([district_id, name])
   @@index([name], map: "blocks_name_key")
@@ -342,6 +344,7 @@ model competency_mapping {
   metadata             Json     @default(dbgenerated("jsonb_build_object()"))
   is_active            Boolean  @default(true)
   min_app_version_code Int      @default(0)
+  assessment_type      String?
   subjects             subjects @relation(fields: [subject_id], references: [id])
 
   @@index([learning_outcome], map: "competency_mapping_lo_index")
@@ -592,6 +595,7 @@ model mentor {
   mentor_tokens                                  mentor_tokens?
   mentor_update_logs                             mentor_update_logs[]
   school_results_fraud_reports                   school_results_fraud_reports[]
+  soochi_assessments                             soochi_assessments[]
   teacher_school_list_mapping                    teacher_school_list_mapping[]
 
   @@index([actor_id], map: "mentor_actor_id_key")
@@ -677,6 +681,7 @@ model school_list {
   districts                                    districts                                      @relation(fields: [district_id], references: [id])
   nyay_panchayats                              nyay_panchayats?                               @relation(fields: [nyay_panchayat_id], references: [id], onDelete: Restrict)
   school_results_fraud_reports                 school_results_fraud_reports[]
+  soochi_assessments                           soochi_assessments[]
   teacher_school_list_mapping                  teacher_school_list_mapping[]
 
   @@index([block, district], map: "sch_list_block_dist_index")
@@ -730,6 +735,7 @@ model subjects {
   assessment_visit_results_v2_2025_oct_dec assessment_visit_results_v2_2025_oct_dec[]
   assessments                              assessments[]
   competency_mapping                       competency_mapping[]
+  soochi_assessments                       soochi_assessments[]
   workflow_refids_mapping                  workflow_refids_mapping[]
 }
 
@@ -1776,6 +1782,7 @@ model students {
   assessment_visit_results_students_2025_oct_dec assessment_visit_results_students_2025_oct_dec[]
   assessments                                    assessments[]
   cwsn_students                                  cwsn_students?
+  soochi_assessments                             soochi_assessments[]
   student_update_logs                            student_update_logs[]
 
   @@index([udise, grade])
@@ -2026,6 +2033,56 @@ model mentor_grade_assessment_details {
 
   @@unique([mentor_id, cycle_id, udise, grade], map: "mentor_grade_assessment_detai_mentor_id_cycle_id_udise_grad_key")
 }
+
+model soochi_assessments {
+  id                   Int         @id @default(autoincrement())
+  mentor_id            BigInt
+  actor_id             Int
+  subject_id           Int
+  udise                BigInt
+  block_id             Int?
+  student_id           String      @db.VarChar
+  student_name         String      @db.VarChar
+  grade                Int         @db.SmallInt
+  competency_id        Int
+  submitted_at         DateTime    @db.Timestamp(6)
+  submission_timestamp BigInt      @default(0)
+  start_time           BigInt
+  end_time             BigInt
+  is_passed            Boolean
+  statement            String?
+  achievement          Int
+  total_questions      Int
+  success_criteria     Int
+  module               String      @db.VarChar
+  assessment_type_id   Int?
+  workflow_ref_id      String      @db.VarChar
+  session_completed    Boolean
+  student_session      String?     @db.Uuid
+  total_time_taken     Int?
+  is_network_active    Boolean
+  old_assessment_id    BigInt?
+  old_student_id       BigInt?
+  results_json         Json?
+  player_results       Json        @default(dbgenerated("jsonb_build_object()"))
+  is_valid             Boolean     @default(true)
+  app_version_code     Int         @default(0)
+  created_at           DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime    @default(now()) @db.Timestamptz(6)
+  actors               actors      @relation(fields: [actor_id], references: [id], onUpdate: Restrict)
+  blocks               blocks?     @relation(fields: [block_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  mentor               mentor      @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+  students             students    @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict)
+  subjects             subjects    @relation(fields: [subject_id], references: [id], onUpdate: Restrict)
+  school_list          school_list @relation(fields: [udise], references: [udise], onUpdate: Restrict)
+
+  @@unique([competency_id, submitted_at, subject_id, submission_timestamp, mentor_id, udise, grade, student_id], map: "soochi_assessments_competency_id_submitted_at_subject_id_submis")
+  @@unique([submitted_at, id])
+  @@unique([mentor_id, submitted_at])
+  @@unique([submission_timestamp, student_id, competency_id, submitted_at, subject_id, grade, mentor_id, udise])
+  @@unique([udise, submitted_at])
+}
+
 
 enum genders_enum {
   male

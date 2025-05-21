@@ -430,14 +430,28 @@ export class AppService {
   }
 
   async createAssessmentVisitResult(
-    createAssessmentVisitResultData: CreateAssessmentVisitResult,
+    assessmentPayload: CreateAssessmentVisitResult,
   ) {
     // check if school is blacklisted for this actor or check if for examiner the student submitted is in cycle
-    if (
-      !(await this.checkIfAssessmentIsValid(createAssessmentVisitResultData))
-    ) {
+    if (!(await this.checkIfAssessmentIsValid(assessmentPayload))) {
       return {
         msg: 'Submission is ignored, Bad Assessment submission request - school is blacklisted or student not found in cycle',
+      };
+    }
+
+    const {
+      modifiedAssessment: createAssessmentVisitResultData,
+      soochiInsertedCount,
+      soochiInsertResult,
+    } = await this.dumpSoochiCompetencyRecords(assessmentPayload);
+
+    if (createAssessmentVisitResultData.results.length === 0) {
+      this.logger.log(
+        `Only Soochi records processed for mentor_id=${createAssessmentVisitResultData.mentor_id}, submission_timestamp=${createAssessmentVisitResultData.submission_timestamp}`,
+      );
+      return {
+        msg: 'Only Soochi records processed',
+        soochiInsertedCount,
       };
     }
 
@@ -580,7 +594,115 @@ export class AppService {
     }
   }
 
-  async submitAssessmentProof(mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){
+  async dumpSoochiCompetencyRecords(assessment: CreateAssessmentVisitResult) {
+    try {
+      const soochiCompetencies =
+        await this.prismaService.competency_mapping.findMany({
+          where: {
+            assessment_type: 'soochi',
+            is_active: true,
+          },
+          select: { competency_id: true },
+        });
+
+      const soochiCompetencyIds = new Set(
+        soochiCompetencies.map((c) => c.competency_id),
+      );
+
+      const soochiRecords = [];
+      const nonSoochiResults = [];
+
+      for (const result of assessment.results) {
+        if (!assessment.actor_id || !result.student_id) {
+          this.logger.warn(
+            `Missing required fields in assessment or result: actor_id=${assessment.actor_id}, student_id=${result.student_id}`,
+          );
+          continue;
+        }
+
+        if (
+          result.competency_id &&
+          soochiCompetencyIds.has(result.competency_id)
+        ) {
+          soochiRecords.push({
+            subject_id: result.subject_id ?? assessment.subject_id,
+            mentor_id: assessment.mentor_id,
+            actor_id: assessment.actor_id,
+            block_id: assessment.block_id ?? null,
+            assessment_type_id: assessment.assessment_type_id ?? null,
+            udise: assessment.udise,
+            submission_timestamp: assessment.submission_timestamp,
+            submitted_at: new Date(assessment.submission_timestamp),
+            app_version_code: assessment.app_version_code ?? 0,
+            student_name: result.student_name,
+            competency_id: result.competency_id,
+            module: result.module,
+            end_time: result.end_time,
+            is_passed: result.is_passed,
+            start_time: result.start_time,
+            statement: result.statement ?? '',
+            achievement: result.achievement,
+            total_questions: result.total_questions,
+            success_criteria: result.success_criteria,
+            session_completed: result.session_completed,
+            is_network_active: result.is_network_active,
+            workflow_ref_id: result.workflow_ref_id,
+            student_session: result.student_session ?? null,
+            total_time_taken: result.total_time_taken ?? null,
+            grade: assessment.grade,
+            old_assessment_id: 0,
+            old_student_id: 0,
+            results_json: JSON.parse(JSON.stringify(result.odk_results)),
+            student_id: result.student_id,
+            player_results: result?.result_details ?? {},
+            is_valid: true,
+          });
+        } else {
+          nonSoochiResults.push(result);
+        }
+      }
+
+      let insertResult = null;
+      if (soochiRecords.length > 0) {
+        insertResult = await this.prismaService.soochi_assessments.createMany({
+          data: soochiRecords,
+          skipDuplicates: true,
+        });
+        this.logger.log(
+          `Inserted ${soochiRecords.length} Soochi competency records`,
+        );
+      }
+
+      assessment.results = nonSoochiResults;
+
+      return {
+        modifiedAssessment: assessment,
+        soochiInsertedCount: soochiRecords.length,
+        soochiInsertResult: insertResult,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Error dumping Soochi competency records: ${error.message || error}`,
+      );
+      Sentry.captureMessage('Error dumping Soochi competency records', {
+        user: {
+            id: assessment.mentor_id + '',
+          },
+        extra: {
+            submission_timestamp:
+              assessment.submission_timestamp,
+            mentor_id: assessment.mentor_id,
+            grade: assessment.grade,
+            subject_id: assessment.subject_id,
+            udise: assessment.udise,
+          },
+      });
+      throw error; // rethrow for caller to handle
+    }
+  }
+
+  async submitAssessmentProof(
+    mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){
     const bucketName = this.configService.getOrThrow<string>('MINIO_ASSESSMENT_PROOF_BUCKET');
     const fileName = `ap_${mentor_id}_${createAssessmentProofDto.cycle_id}_${createAssessmentProofDto.student_id}`;
     const fileUrl = await this.minioService.uploadFileToMinio(createAssessmentProofDto.file, bucketName, fileName);

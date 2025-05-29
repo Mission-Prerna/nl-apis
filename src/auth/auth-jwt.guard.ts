@@ -34,6 +34,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
       }
 
       // We'll check if the token is from the very same application as needed in the app
+      this.logger.warn('Application ID from token:', request['user']['applicationId']);
+      this.logger.warn('Application ID from config:', this.applicationId);
       if (request['user']['applicationId'] !== this.applicationId) {
         // as this token doesn't belongs to the regular user Application
         isAllowed = false;

@@ -14,6 +14,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    console.log('Decoded JWT:', payload);
+// console.log('Headers:', request.headers);
+console.log('ENV Application ID:', process.env.FA_APPLICATION_ID);
+
     return {
       roles: payload.roles,
       apiRoles: payload.apiRoles,

@@ -13,6 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: configService.getOrThrow('FA_PUBLIC_KEY'),
       algorithms: ['RS256'],
     });
+    this.logger.log('------JwtStrategy instantiated-------'); // ← Add this
   }
 
   async validate(payload: any) {

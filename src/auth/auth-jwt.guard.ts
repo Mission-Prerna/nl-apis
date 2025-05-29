@@ -49,6 +49,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
 
       this.logger.warn('FA_APPLICATION_ID ENV VALUE:', this.configService.get('FA_APPLICATION_ID'));
       this.logger.warn('FA_APPLICATION_ID ENV VALUE--:', this.applicationId);
+      this.logger.warn('Request User:', JSON.stringify(request['user'], null, 2));
+      this.logger.warn('Request User Application ID:', request['user']['applicationId']);
 
       
 

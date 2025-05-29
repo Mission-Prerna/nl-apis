@@ -33,20 +33,25 @@ export class JwtAuthGuard extends AuthGuard('jwt') implements IAuthGuard {
         }
       }
 
-
-  // Log Bearer Token
-  const authHeader = request.headers['authorization'] || request.headers['Authorization'];
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-  this.logger.warn(`Bearer Token: ${bearerToken}`);
-
-  // Log the full request
-  this.logger.warn(`Request Headers: ${JSON.stringify(request.headers, null, 2)}`);
-  this.logger.warn(`Request Body: ${JSON.stringify(request.body, null, 2)}`);
-  this.logger.warn(`Request URL: ${request.url}`);
-  this.logger.warn(`Request Method: ${request.method}`);
-
   // Then proceed with regular guard
   await super.canActivate(context);
+
+        // Log Bearer Token
+      const authHeader = request.headers['authorization'] || request.headers['Authorization'];
+      const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+      this.logger.warn(`Bearer Token: ${bearerToken}`);
+
+      // Log the full request
+      this.logger.warn(`Request Headers: ${JSON.stringify(request.headers, null, 2)}`);
+      this.logger.warn(`Request Body: ${JSON.stringify(request.body, null, 2)}`);
+      this.logger.warn(`Request URL: ${request.url}`);
+      this.logger.warn(`Request Method: ${request.method}`);
+
+      this.logger.warn('FA_APPLICATION_ID ENV VALUE:', this.configService.get('FA_APPLICATION_ID'));
+      this.logger.warn('FA_APPLICATION_ID ENV VALUE--:', this.applicationId);
+
+      
+
 
       // We'll check if the token is from the very same application as needed in the app
       if (request['user']['applicationId'] !== this.applicationId) {

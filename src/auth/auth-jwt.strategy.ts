@@ -19,7 +19,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: any) {
   this.logger.log('✅ JwtStrategy.validate() called');
-  this.logger.log('Decoded JWT Payload:', JSON.stringify(payload, null, 2));
 
   if (!payload || !payload['https://hasura.io/jwt/claims']) {
     this.logger.error('❌ Missing required JWT claims');

@@ -14,11 +14,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       secretOrKey: publicKey,
       algorithms: ['RS256'],
     });
-    this.logger.log('------ JwtStrategy instantiated -------');
   }
 
   async validate(payload: any) {
-  this.logger.log('✅ JwtStrategy.validate() called');
 
   if (!payload || !payload['https://hasura.io/jwt/claims']) {
     this.logger.error('❌ Missing required JWT claims');

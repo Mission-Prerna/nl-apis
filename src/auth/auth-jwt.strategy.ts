@@ -18,19 +18,20 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
-    try {
-      this.logger.log(`Decoded JWT payload: ${JSON.stringify(payload, null, 2)}`);
-      this.logger.log(`ENV FA_APPLICATION_ID: ${process.env.FA_APPLICATION_ID}`);
+  this.logger.log('✅ JwtStrategy.validate() called');
+  this.logger.log('Decoded JWT Payload:', JSON.stringify(payload, null, 2));
 
-      return {
-        roles: payload.roles,
-        apiRoles: payload.apiRoles,
-        applicationId: payload.applicationId,
-        id: payload['https://hasura.io/jwt/claims']['X-Hasura-User-Id'] ?? null,
-      };
-    } catch (err) {
-      this.logger.error('JWT validation failed:', err);
-      throw err;
-    }
+  if (!payload || !payload['https://hasura.io/jwt/claims']) {
+    this.logger.error('❌ Missing required JWT claims');
+    return null;
   }
+
+  return {
+    roles: payload.roles ?? [],
+    apiRoles: payload.apiRoles ?? [],
+    applicationId: payload.applicationId ?? payload['https://hasura.io/jwt/claims']['X-Hasura-Application-Id'],
+    id: payload['https://hasura.io/jwt/claims']['X-Hasura-User-Id'],
+  };
+}
+
 }

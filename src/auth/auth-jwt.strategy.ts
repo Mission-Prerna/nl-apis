@@ -3,29 +3,34 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
-export class JwtStrategy extends PassportStrategy(Strategy) {
-    protected logger = new Logger(JwtStrategy.name);
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  protected logger = new Logger(JwtStrategy.name);
 
   constructor(@Inject(ConfigService) configService: ConfigService) {
+    const publicKey = configService.getOrThrow<string>('FA_PUBLIC_KEY').replace(/\\n/g, '\n');
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow('FA_PUBLIC_KEY'),
+      secretOrKey: publicKey,
       algorithms: ['RS256'],
     });
-    this.logger.log('------JwtStrategy instantiated-------'); // ← Add this
+    this.logger.log('------ JwtStrategy instantiated -------');
   }
 
   async validate(payload: any) {
-    this.logger.log('Decoded JWT:', payload);
-// this.logger.log('Headers:', request.headers);
-this.logger.log('ENV Application ID:', process.env.FA_APPLICATION_ID);
+    try {
+      this.logger.log(`Decoded JWT payload: ${JSON.stringify(payload, null, 2)}`);
+      this.logger.log(`ENV FA_APPLICATION_ID: ${process.env.FA_APPLICATION_ID}`);
 
-    return {
-      roles: payload.roles,
-      apiRoles: payload.apiRoles,
-      applicationId: payload.applicationId,
-      id: payload['https://hasura.io/jwt/claims']['X-Hasura-User-Id'] ?? null,
-    };
+      return {
+        roles: payload.roles,
+        apiRoles: payload.apiRoles,
+        applicationId: payload.applicationId,
+        id: payload['https://hasura.io/jwt/claims']['X-Hasura-User-Id'] ?? null,
+      };
+    } catch (err) {
+      this.logger.error('JWT validation failed:', err);
+      throw err;
+    }
   }
 }

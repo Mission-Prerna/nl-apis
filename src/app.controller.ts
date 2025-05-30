@@ -246,8 +246,8 @@ export class AppController {
   }
 
   @Get('/api/v2/mentor/details')
-  @Roles(Role.OpenRole, Role.Diet)
   @UseGuards(JwtAuthGuard)
+  @Roles(Role.OpenRole, Role.Diet)
   @UseInterceptors(MentorInterceptor)
   async getMentorDetailsV2(
     @Query() queryParams: GetMentorDetailsDto,

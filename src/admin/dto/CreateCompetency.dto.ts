@@ -40,4 +40,12 @@ export class CreateCompetencyDto {
   @ValidateNested()
   @Type(() => Object)
   metadata?: Record<string, any>;
+
+  @IsString()
+  @IsOptional()
+  assessment_type?: string;
+
+  @IsString()
+  @IsOptional()
+  bucket?: string;
 }

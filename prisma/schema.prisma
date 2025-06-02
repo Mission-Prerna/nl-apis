@@ -345,6 +345,7 @@ model competency_mapping {
   is_active            Boolean  @default(true)
   min_app_version_code Int      @default(0)
   assessment_type      String?
+  bucket               String?  @db.VarChar
   subjects             subjects @relation(fields: [subject_id], references: [id])
 
   @@index([learning_outcome], map: "competency_mapping_lo_index")

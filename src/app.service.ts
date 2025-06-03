@@ -1326,6 +1326,7 @@ export class AppService {
           subject_id: true,
           pass_percent: true,
           metadata: true,
+          bucket: true,
           is_active: true,
         },
         where:{
@@ -1502,6 +1503,7 @@ export class AppService {
             subject_id: true,
             pass_percent: true,
             metadata: true,
+            bucket: true,
             is_active: true,
           },
           orderBy: { competency_id: 'asc' },

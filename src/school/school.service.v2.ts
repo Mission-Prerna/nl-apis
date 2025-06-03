@@ -923,17 +923,17 @@ export class SchoolServiceV2 extends SchoolService {
     const studentIds = filteredStudents.map((s) => s.id as string);
 
     // STEP 2: Fetch grade-specific active competencies
-    const competencyMappings =
-      await this.prismaService.competency_mapping.findMany({
-        where: {
-          is_active: true,
-          assessment_type: 'soochi',
-        },
-        select: {
-          id: true,
-          grade: true,
-        },
-      });
+    const competencyMappings = await this.prismaService.competency_mapping.findMany({
+      where: {
+        is_active: true,
+        assessment_type: 'soochi',
+      },
+      select: {
+        id: true,
+        competency_id: true,
+        grade: true,
+      },
+    });
 
     // Group competencies by grade
     const gradeCompetencyMap: Record<string, number[]> = {};
@@ -941,14 +941,14 @@ export class SchoolServiceV2 extends SchoolService {
       if (!gradeCompetencyMap[comp.grade]) {
         gradeCompetencyMap[comp.grade] = [];
       }
-      gradeCompetencyMap[comp.grade].push(comp.id);
+      gradeCompetencyMap[comp.grade].push(comp.competency_id as number);
     }
 
     // STEP 3: Fetch relevant assessments (only needed data)
     const assessments = await this.prismaService.soochi_assessments.findMany({
       where: {
         student_id: { in: studentIds },
-        competency_id: { in: competencyMappings.map((c) => c.id) },
+        competency_id: { in: competencyMappings.map((c) => c.competency_id as number) },
         is_valid: true,
         mentor_id: mentorId,
       },
@@ -1023,14 +1023,33 @@ export class SchoolServiceV2 extends SchoolService {
         };
       }
 
+      let passCount = 0;
+      let failCount = 0;
+      let pendingCount = 0;
+
       const assessmentsData = competencies.map((cid) => {
         const result = studentAssessmentMap[student.id as string]?.[cid];
-        const status = result?.status ?? 'pending';
+        const status: 'pass' | 'fail' | 'pending' = result?.status ?? 'pending';
         const lastDate = result?.last_assessment_date ?? null;
 
-        gradeResults[grade].summary[status]++;
+        if (status === 'pass') passCount++;
+        else if (status === 'fail') failCount++;
+        else pendingCount++;
+
         return { competency_id: cid, status, last_assessment_date: lastDate };
       });
+
+      let studentStatus: 'pass' | 'fail' | 'pending';
+
+      if (passCount === competencies.length) {
+        studentStatus = 'pass';
+      } else if (failCount > 0 || (pendingCount > 0 && (passCount > 0 || failCount > 0))) {
+        studentStatus = 'fail';
+      } else {
+        studentStatus = 'pending';
+      }
+
+      gradeResults[grade].summary[studentStatus]++;
 
       gradeResults[grade].students.push({
         id: student.id as string,
@@ -1065,4 +1084,5 @@ export class SchoolServiceV2 extends SchoolService {
       students: data.students,
     }));
   }
+
 }

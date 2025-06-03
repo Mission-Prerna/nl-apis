@@ -44,6 +44,7 @@ import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto'
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
 import { InvalidateStudentAssessmentDto } from './dto/InvalidateStudentAssessment.dto';
+import { CreateCompetencyBadgeDto } from './dto/CreateCompetencyBadge.dto';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -364,5 +365,19 @@ export class AdminController {
   @Throttle({ default: { limit: 100, ttl: 60000 } })
   async invalidateStudentAssessment(@Body() body:InvalidateStudentAssessmentDto){
     return this.service.invalidateStudentAssessment(body);
+  }
+
+  @Post('/create/competency-badge')
+  @Roles(Role.Admin)
+  @UseGuards(JwtAdminGuard)
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async createCompetencyBadge(
+    @Body(
+      new MaxItemsPipe(500),
+      new ParseArrayPipe({ items: CreateCompetencyBadgeDto }),
+    )
+    body: CreateCompetencyBadgeDto[],
+  ) {
+    return this.service.createCompetencyBadges(body);
   }
 }

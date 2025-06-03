@@ -54,6 +54,7 @@ import { MinioService } from './minio/minio.service';
 import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
 import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
 import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
+import { getCurrentAcademicYear } from './utils/current-academic-year';
 
 const moment = require('moment');
 
@@ -442,7 +443,6 @@ export class AppService {
     const {
       modifiedAssessment: createAssessmentVisitResultData,
       soochiInsertedCount,
-      soochiInsertResult,
     } = await this.dumpSoochiCompetencyRecords(assessmentPayload);
 
     if (createAssessmentVisitResultData.results.length === 0) {
@@ -596,35 +596,30 @@ export class AppService {
 
   async dumpSoochiCompetencyRecords(assessment: CreateAssessmentVisitResult) {
     try {
-      const soochiCompetencies =
-        await this.prismaService.competency_mapping.findMany({
-          where: {
-            assessment_type: 'soochi',
-            is_active: true,
-          },
-          select: { competency_id: true },
-        });
-
+      this.logger.debug(`Fetching active Soochi competency mappings`);
       const soochiCompetencyIds = new Set(
-        soochiCompetencies.map((c) => c.competency_id),
+        (
+          await this.prismaService.competency_mapping.findMany({
+            where: { assessment_type: 'soochi', is_active: true },
+            select: { competency_id: true },
+          })
+        ).map((c) => c.competency_id),
       );
 
-      const soochiRecords = [];
-      const nonSoochiResults = [];
+      const soochiRecords: any[] = [];
+      const soochiResultsMap: Map<string, any> = new Map();
+      const nonSoochiResults: any[] = [];
 
       for (const result of assessment.results) {
         if (!assessment.actor_id || !result.student_id) {
-          this.logger.warn(
-            `Missing required fields in assessment or result: actor_id=${assessment.actor_id}, student_id=${result.student_id}`,
-          );
+          this.logger.warn(`Missing fields in result. actor_id=${assessment.actor_id}, student_id=${result.student_id}`);
           continue;
         }
 
-        if (
-          result.competency_id &&
-          soochiCompetencyIds.has(result.competency_id)
-        ) {
-          soochiRecords.push({
+        if (result.competency_id && soochiCompetencyIds.has(result.competency_id)) {
+          this.logger.debug(`Processing Soochi result for student ${result.student_id}, competency ${result.competency_id}`);
+
+          const soochiData = {
             subject_id: result.subject_id ?? assessment.subject_id,
             mentor_id: assessment.mentor_id,
             actor_id: assessment.actor_id,
@@ -656,50 +651,159 @@ export class AppService {
             student_id: result.student_id,
             player_results: result?.result_details ?? {},
             is_valid: true,
-          });
+          };
+
+          soochiRecords.push(soochiData);
+          soochiResultsMap.set(`${result.student_id}_${result.competency_id}`, result);
         } else {
           nonSoochiResults.push(result);
         }
       }
 
-      let insertResult = null;
+      let insertedAssessments: any[] = [];
       if (soochiRecords.length > 0) {
-        insertResult = await this.prismaService.soochi_assessments.createMany({
-          data: soochiRecords,
-          skipDuplicates: true,
+        this.logger.debug(`Starting DB transaction to insert ${soochiRecords.length} Soochi records`);
+        insertedAssessments = await this.prismaService.$transaction(async (tx) => {
+          await tx.soochi_assessments.createMany({
+            data: soochiRecords,
+            skipDuplicates: true,
+          });
+
+          return await tx.soochi_assessments.findMany({
+            where: {
+              submission_timestamp: assessment.submission_timestamp,
+              mentor_id: assessment.mentor_id,
+              udise: assessment.udise,
+            },
+            select: { id: true, student_id: true, competency_id: true },
+          });
         });
-        this.logger.log(
-          `Inserted ${soochiRecords.length} Soochi competency records`,
-        );
+
+        this.logger.log(`Inserted ${insertedAssessments.length} Soochi records`);
+      } else {
+        this.logger.log(`No Soochi records to insert`);
       }
+
+      await this.insertStudentBadges(insertedAssessments, soochiResultsMap);
 
       assessment.results = nonSoochiResults;
 
       return {
         modifiedAssessment: assessment,
-        soochiInsertedCount: soochiRecords.length,
-        soochiInsertResult: insertResult,
+        soochiInsertedCount: insertedAssessments.length,
       };
     } catch (error: any) {
-      this.logger.error(
-        `Error dumping Soochi competency records: ${error.message || error}`,
-      );
+      this.logger.error(`Error dumping Soochi competency records: ${error.message || error}`);
       Sentry.captureMessage('Error dumping Soochi competency records', {
-        user: {
-            id: assessment.mentor_id + '',
-          },
+        user: { id: assessment.mentor_id + '' },
         extra: {
-            submission_timestamp:
-              assessment.submission_timestamp,
-            mentor_id: assessment.mentor_id,
-            grade: assessment.grade,
-            subject_id: assessment.subject_id,
-            udise: assessment.udise,
-          },
+          submission_timestamp: assessment.submission_timestamp,
+          mentor_id: assessment.mentor_id,
+          grade: assessment.grade,
+          subject_id: assessment.subject_id,
+          udise: assessment.udise,
+        },
       });
-      throw error; // rethrow for caller to handle
+      throw error;
     }
   }
+
+  async insertStudentBadges(
+    insertedAssessments: { id: number; student_id: string; competency_id: number }[],
+    soochiResultsMap: Map<string, any>,
+  ) {
+    if (!insertedAssessments.length) {
+      this.logger.debug('No assessments to process for badges');
+      return;
+    }
+
+    const academicYear = getCurrentAcademicYear();
+    this.logger.debug(`Calculated academic year: ${academicYear}`);
+
+    const uniqueKeys = insertedAssessments.map((a) => ({
+      student_id: a.student_id,
+      competency_id: a.competency_id,
+      academic_year: academicYear,
+    }));
+
+    const existingBadges = await this.prismaService.student_badges.findMany({
+      where: {
+        OR: uniqueKeys,
+        is_active: true,
+      },
+      select: {
+        student_id: true,
+        competency_id: true,
+      },
+    });
+
+    const existingSet = new Set(
+      existingBadges.map((b) => `${b.student_id}_${b.competency_id}`),
+    );
+    this.logger.debug(`Found ${existingSet.size} existing badges`);
+
+    const allBadges = await this.prismaService.competency_badges.findMany({
+      where: { is_active: true },
+      select: { id: true, competency_id: true },
+    });
+    
+    if (allBadges.length === 0) {
+      this.logger.warn('No active badges found to award');
+      return;
+    }
+
+    const badgeMap = new Map<number, number>();
+    for (const b of allBadges) {
+      badgeMap.set(b.competency_id, b.id);
+    }
+    
+    const studentBadges: any[] = [];
+
+    for (const assessment of insertedAssessments) {
+      const key = `${assessment.student_id}_${assessment.competency_id}`;
+      if (existingSet.has(key)) {
+        this.logger.debug(`Skipping badge for student ${assessment.student_id}, competency ${assessment.competency_id} — already exists`);
+        continue;
+      }
+
+      const result = soochiResultsMap.get(key);
+      if (!result || result.student_id !== assessment.student_id || result.competency_id !== assessment.competency_id) {
+        this.logger.warn(`Mismatch in assessment ID lookup for student ${assessment.student_id}`);
+        continue;
+      }
+
+      if (!result.is_passed) {
+        this.logger.debug(`Student ${assessment.student_id} did not pass competency ${assessment.competency_id}`);
+        continue;
+      }
+
+      const badgeId = badgeMap.get(assessment.competency_id);
+      if (!badgeId) {
+        this.logger.warn(`No badge found for competency_id ${assessment.competency_id}`);
+        continue;
+      }
+
+      studentBadges.push({
+        student_id: assessment.student_id,
+        competency_id: assessment.competency_id,
+        academic_year: academicYear,
+        earned_at: new Date(result?.end_time || Date.now()),
+        competency_badge_id: badgeId,
+        soochi_assessment_id: assessment.id,
+      });
+    }
+
+    if (studentBadges.length > 0) {
+      await this.prismaService.student_badges.createMany({
+        data: studentBadges,
+        skipDuplicates: true,
+      });
+      this.logger.log(`Awarded ${studentBadges.length} new badges`);
+    } else {
+      this.logger.log(`No new badges awarded`);
+    }
+  }
+
 
   async submitAssessmentProof(
     mentor_id: number, createAssessmentProofDto: CreateAssessmentProofDto){

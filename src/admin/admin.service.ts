@@ -35,6 +35,7 @@ import { CreateUpdateSchoolBlacklistDto } from './dto/CreateSchoolBlacklist.dto'
 import { CreateCompetencyDto } from './dto/CreateCompetency.dto';
 import { CreateUpdateCwsnStudents } from './dto/CwsnStudents.dto';
 import { InvalidateStudentAssessmentDto } from './dto/InvalidateStudentAssessment.dto';
+import { CreateCompetencyBadgeDto } from './dto/CreateCompetencyBadge.dto';
 
 @Injectable()
 export class AdminService {
@@ -1126,6 +1127,13 @@ export class AdminService {
     }
 
     return response;
+  }
+
+  async createCompetencyBadges(body: CreateCompetencyBadgeDto[]) {
+    return await this.prismaService.competency_badges.createMany({
+      data: body,
+      skipDuplicates: true,
+    });
   }
 
 

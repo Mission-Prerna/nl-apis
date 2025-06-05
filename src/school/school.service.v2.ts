@@ -922,7 +922,7 @@ export class SchoolServiceV2 extends SchoolService {
 
     const studentIds = filteredStudents.map((s) => s.id as string);
 
-    // STEP 2: Fetch grade-specific active competencies
+    // STEP 2: Fetch competency mappings
     const competencyMappings = await this.prismaService.competency_mapping.findMany({
       where: {
         is_active: true,
@@ -937,14 +937,18 @@ export class SchoolServiceV2 extends SchoolService {
 
     // Group competencies by grade
     const gradeCompetencyMap: Record<string, number[]> = {};
+
     for (const comp of competencyMappings) {
-      if (!gradeCompetencyMap[comp.grade]) {
-        gradeCompetencyMap[comp.grade] = [];
+      const grade = comp.grade;
+      const competencyId = comp.competency_id as number;
+
+      if (!gradeCompetencyMap[grade]) {
+        gradeCompetencyMap[grade] = [];
       }
-      gradeCompetencyMap[comp.grade].push(comp.competency_id as number);
+      gradeCompetencyMap[grade].push(competencyId);
     }
 
-    // STEP 3: Fetch relevant assessments (only needed data)
+    // STEP 3: Fetch assessments
     const assessments = await this.prismaService.soochi_assessments.findMany({
       where: {
         student_id: { in: studentIds },
@@ -963,7 +967,7 @@ export class SchoolServiceV2 extends SchoolService {
       },
     });
 
-    // STEP 4: Build latest + passed-first map
+    // STEP 4: Map assessments
     const studentAssessmentMap: Record<
       string,
       Record<number, { status: 'pass' | 'fail'; last_assessment_date: Date }>
@@ -995,7 +999,7 @@ export class SchoolServiceV2 extends SchoolService {
       }
     }
 
-    // STEP 5: Process results grade-wise
+    // STEP 5: Process student data
     const gradeResults: Record<
       string,
       {
@@ -1036,7 +1040,11 @@ export class SchoolServiceV2 extends SchoolService {
         else if (status === 'fail') failCount++;
         else pendingCount++;
 
-        return { competency_id: cid, status, last_assessment_date: lastDate };
+        return {
+          competency_id: cid,
+          status,
+          last_assessment_date: lastDate,
+        };
       });
 
       let studentStatus: 'pass' | 'fail' | 'pending';
@@ -1063,13 +1071,13 @@ export class SchoolServiceV2 extends SchoolService {
       grade: this.i18n.t(`grades.${grade}`, { lang }),
       summary: [
         {
-          label: this.i18n.t(`common.Nipun`, { lang: lang }),
+          label: this.i18n.t(`common.Nipun`, { lang }),
           colour: '#06753C',
           count: data.summary.pass,
           identifier: 'pass',
         },
         {
-          label: this.i18n.t(`common.NotNipun`, { lang: lang }),
+          label: this.i18n.t(`common.NotNipun`, { lang }),
           colour: '#892B2B',
           count: data.summary.fail,
           identifier: 'fail',

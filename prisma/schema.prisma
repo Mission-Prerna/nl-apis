@@ -2036,19 +2036,20 @@ model mentor_grade_assessment_details {
   @@unique([mentor_id, cycle_id, udise, grade], map: "mentor_grade_assessment_detai_mentor_id_cycle_id_udise_grad_key")
 }
 
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
 model soochi_assessments {
-  id                   Int              @id @default(autoincrement())
+  id                   Int         @default(autoincrement())
   mentor_id            BigInt
   actor_id             Int
   subject_id           Int
   udise                BigInt
   block_id             Int?
-  student_id           String           @db.VarChar
-  student_name         String           @db.VarChar
-  grade                Int              @db.SmallInt
+  student_id           String      @db.VarChar
+  student_name         String      @db.VarChar
+  grade                Int         @db.SmallInt
   competency_id        Int
-  submitted_at         DateTime         @db.Timestamp(6)
-  submission_timestamp BigInt           @default(0)
+  submitted_at         DateTime    @db.Timestamp(6)
+  submission_timestamp BigInt      @default(0)
   start_time           BigInt
   end_time             BigInt
   is_passed            Boolean
@@ -2056,32 +2057,33 @@ model soochi_assessments {
   achievement          Int
   total_questions      Int
   success_criteria     Int
-  module               String           @db.VarChar
+  module               String      @db.VarChar
   assessment_type_id   Int?
-  workflow_ref_id      String           @db.VarChar
+  workflow_ref_id      String      @db.VarChar
   session_completed    Boolean
-  student_session      String?          @db.Uuid
+  student_session      String?     @db.Uuid
   total_time_taken     Int?
   is_network_active    Boolean
   old_assessment_id    BigInt?
   old_student_id       BigInt?
   results_json         Json?
-  player_results       Json             @default(dbgenerated("jsonb_build_object()"))
-  is_valid             Boolean          @default(true)
-  app_version_code     Int              @default(0)
-  created_at           DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime         @default(now()) @db.Timestamptz(6)
-  actors               actors           @relation(fields: [actor_id], references: [id], onUpdate: Restrict)
-  blocks               blocks?          @relation(fields: [block_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  mentor               mentor           @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
-  students             students         @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict)
-  subjects             subjects         @relation(fields: [subject_id], references: [id], onUpdate: Restrict)
-  school_list          school_list      @relation(fields: [udise], references: [udise], onUpdate: Restrict)
-  student_badges       student_badges[]
+  player_results       Json        @default(dbgenerated("jsonb_build_object()"))
+  is_valid             Boolean     @default(true)
+  app_version_code     Int         @default(0)
+  created_at           DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime    @default(now()) @db.Timestamptz(6)
+  actors               actors      @relation(fields: [actor_id], references: [id], onUpdate: Restrict)
+  blocks               blocks?     @relation(fields: [block_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  mentor               mentor      @relation(fields: [mentor_id], references: [id], onUpdate: Restrict)
+  students             students    @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict)
+  subjects             subjects    @relation(fields: [subject_id], references: [id], onUpdate: Restrict)
+  school_list          school_list @relation(fields: [udise], references: [udise], onUpdate: Restrict)
 
+  @@id([id, submitted_at], map: "soochi_assessments_pk")
   @@unique([competency_id, submitted_at, subject_id, submission_timestamp, mentor_id, udise, grade, student_id], map: "soochi_assessments_competency_id_submitted_at_subject_id_submis")
   @@unique([submitted_at, id])
   @@index([mentor_id, student_id, competency_id, is_valid, submitted_at(sort: Desc)], map: "idx_soochi_fast_lookup")
+  @@index([submitted_at(sort: Desc)])
 }
 
 model competency_badges {
@@ -2099,19 +2101,18 @@ model competency_badges {
 }
 
 model student_badges {
-  id                   BigInt             @id @default(autoincrement())
+  id                   BigInt            @id @default(autoincrement())
   competency_badge_id  Int
   competency_id        Int
-  student_id           String             @db.VarChar
+  student_id           String            @db.VarChar
   soochi_assessment_id Int
-  earned_at            DateTime           @db.Timestamptz(6)
-  academic_year        String             @db.VarChar
-  is_active            Boolean            @default(true)
-  created_at           DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime           @default(now()) @db.Timestamptz(6)
-  competency_badges    competency_badges  @relation(fields: [competency_badge_id], references: [id], onUpdate: Restrict)
-  soochi_assessments   soochi_assessments @relation(fields: [soochi_assessment_id], references: [id], onUpdate: Restrict)
-  students             students           @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict, map: "student_badges_student_unique_id_fkey")
+  earned_at            DateTime          @db.Timestamptz(6)
+  academic_year        String            @db.VarChar
+  is_active            Boolean           @default(true)
+  created_at           DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime          @default(now()) @db.Timestamptz(6)
+  competency_badges    competency_badges @relation(fields: [competency_badge_id], references: [id], onUpdate: Restrict)
+  students             students          @relation(fields: [student_id], references: [unique_id], onUpdate: Restrict, map: "student_badges_student_unique_id_fkey")
 }
 
 

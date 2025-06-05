@@ -1447,12 +1447,39 @@ export class AppService {
       return this.getWorkflowRefIdsMappingForCompetency(item.competency_id, appVersionCode)
     }));
 
+    // Extract unique, non-null, and non-undefined competency IDs
+    const uniqueCompetencyIds: number[] = Array.from(
+      new Set(
+        competencyMapping
+          .map((item) => item.competency_id as number)
+          .filter((id) => id !== null),
+      ),
+    );
+
+    // Fetch competency badges based on unique competency IDs
+    const badges = await this.prismaService.competency_badges.findMany({
+      where: {
+        competency_id: { in: uniqueCompetencyIds },
+        is_active: true,
+      },
+      select: {
+        id: true,
+        competency_id: true,
+        name: true,
+        description: true,
+        image_url: true,
+        audio_url: true,
+        haptic_pattern: true, 
+      },
+    });
+
     const resp = {
       actors,
       designations,
       subjects,
       assessment_types: assessmentTypes,
       competency_mapping: competencyMapping,
+      badges,
       workflow_ref_ids: workflow_ref_ids,
     };
   
@@ -1483,6 +1510,23 @@ export class AppService {
       ),
     );
 
+    // Fetch competency badges based on unique competency IDs
+    const badges = await this.prismaService.competency_badges.findMany({
+      where: {
+        competency_id: { in: uniqueCompetencyIds },
+        is_active: true,
+      },
+      select: {
+        id: true,
+        competency_id: true,
+        name: true,
+        description: true,
+        image_url: true,
+        audio_url: true,
+        haptic_pattern: true, 
+      },
+    });
+
     // Fetch workflow ref IDs mapping based on actor ID and unique competency IDs
     const workflowRefIdsMapping = await this.getWorkflowRefIdsMapping(
       actorId,
@@ -1510,6 +1554,7 @@ export class AppService {
       assessment_types: assessmentTypes,
       subjects,
       competency_mapping: competencyMappings,
+      badges,
       workflow_ref_ids: workflowRefIdsMapping,
     };
 

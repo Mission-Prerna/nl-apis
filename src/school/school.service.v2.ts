@@ -999,22 +999,28 @@ export class SchoolServiceV2 extends SchoolService {
       }
     }
 
-    // STEP 5: Process student data
-    const gradeResults: Record<
-      string,
-      {
-        students: Array<{
-          id: string;
-          name: string;
-          assessments: Array<{
-            competency_id: number;
-            status: 'pass' | 'fail' | 'pending';
-            last_assessment_date: Date | null;
-          }>;
-        }>;
-        summary: Record<'pass' | 'fail' | 'pending', number>;
+    // STEP 5: Fetch active badges and student badges
+    const allBadges = await this.prismaService.competency_badges.findMany({
+      where: { is_active: true },
+    });
+
+    const studentBadges = await this.prismaService.student_badges.findMany({
+      where: {
+        is_active: true,
+        student_id: { in: studentIds },
+      },
+    });
+
+    const studentBadgeMap: Record<string, Set<number>> = {};
+    for (const sb of studentBadges) {
+      if (!studentBadgeMap[sb.student_id]) {
+        studentBadgeMap[sb.student_id] = new Set();
       }
-    > = {};
+      studentBadgeMap[sb.student_id].add(sb.competency_badge_id);
+    }
+
+    // STEP 6: Process student data
+    const gradeResults: Record<string, { students: Array<any>; summary: Record<'pass' | 'fail' | 'pending', number> }> = {};
 
     for (const student of filteredStudents) {
       const grade = student.grade?.toString() ?? '0';
@@ -1027,9 +1033,7 @@ export class SchoolServiceV2 extends SchoolService {
         };
       }
 
-      let passCount = 0;
-      let failCount = 0;
-      let pendingCount = 0;
+      let passCount = 0, failCount = 0, pendingCount = 0;
 
       const assessmentsData = competencies.map((cid) => {
         const result = studentAssessmentMap[student.id as string]?.[cid];
@@ -1040,22 +1044,25 @@ export class SchoolServiceV2 extends SchoolService {
         else if (status === 'fail') failCount++;
         else pendingCount++;
 
-        return {
-          competency_id: cid,
-          status,
-          last_assessment_date: lastDate,
-        };
+        return { competency_id: cid, status, last_assessment_date: lastDate };
       });
 
-      let studentStatus: 'pass' | 'fail' | 'pending';
+      const badgeData = allBadges
+        .filter((badge) => competencies.includes(badge.competency_id))
+        .map((badge) => ({
+          competency_id: badge.competency_id,
+          is_achieved: studentBadgeMap[student.id as string]?.has(badge.id) || false,
+          name: badge.name,
+          description: badge.description,
+          image_url: badge.image_url,
+          audio_url: badge.audio_url,
+          haptic_pattern: badge.haptic_pattern,
+        }));
 
-      if (passCount === competencies.length) {
-        studentStatus = 'pass';
-      } else if (failCount > 0 || (pendingCount > 0 && (passCount > 0 || failCount > 0))) {
-        studentStatus = 'fail';
-      } else {
-        studentStatus = 'pending';
-      }
+      let studentStatus: 'pass' | 'fail' | 'pending';
+      if (passCount === competencies.length) studentStatus = 'pass';
+      else if (failCount > 0 || (pendingCount > 0 && (passCount > 0 || failCount > 0))) studentStatus = 'fail';
+      else studentStatus = 'pending';
 
       gradeResults[grade].summary[studentStatus]++;
 
@@ -1063,10 +1070,11 @@ export class SchoolServiceV2 extends SchoolService {
         id: student.id as string,
         name: student.name as string,
         assessments: assessmentsData,
+        badges: badgeData,
       });
     }
 
-    // STEP 6: Format and return response
+    // STEP 7: Format and return response
     return Object.entries(gradeResults).map(([grade, data]) => ({
       grade: this.i18n.t(`grades.${grade}`, { lang }),
       summary: [

@@ -32,6 +32,8 @@ import { MinioModule } from './minio/minio.module';
 import { MinioService } from './minio/minio.service';
 import { CacheModule, CacheStore } from '@nestjs/cache-manager';
 import { NestjsFormDataModule } from 'nestjs-form-data';
+import { OdkService } from './odk.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [ 
@@ -39,6 +41,7 @@ import { NestjsFormDataModule } from 'nestjs-form-data';
       isGlobal: true,
     }),
     AuthModule,
+    HttpModule,
     JwtModule,
     BullModule.forRootAsync({
       useFactory: async (configService: ConfigService) => ({
@@ -114,6 +117,7 @@ import { NestjsFormDataModule } from 'nestjs-form-data';
   controllers: [AppController, SchoolController, AdminController],
   providers: [
     AppService,
+    OdkService,
     PrismaService,
     AssessmentVisitResultsProcessor,
     AssessmentSurveyResultProcessor,

@@ -49,6 +49,7 @@ import { CreateAssessmentProofDto } from './dto/CreateAssessmentProof.dto';
 import { FileSystemStoredFile, FormDataRequest } from 'nestjs-form-data';
 import { CreateMentorGradeAssessmentDetailsDto } from './dto/CreateMentorGradeAssessmentDetails.dto';
 import { GetMentorGradeAssessmentDetailsDto } from './dto/GetMentorGradeAssessmentDetails.dto';
+import { OdkService } from './odk.service';
 
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
 
@@ -68,6 +69,7 @@ export class AppController {
     @InjectQueue(QueueEnum.AssessmentSurveyResult)
     private readonly assessmentSurveyResultQueue: Queue,
     private readonly adminService: AdminService,
+    private readonly odkService: OdkService,
   ) {
     this.useQueues =
       configService.get<string>('API_QUEUES', 'false') === 'true';
@@ -449,5 +451,15 @@ export class AppController {
     ) {
     return this.appService.callBhashiniService(request);
   }
+
+@Get('api/odk/assessments')
+async getLatestOdk(@Query('limit') limit?: string) {
+  const lim = limit ? parseInt(limit) : 10;
+  this.odkService.getLatestOdkAssessments(lim);
+  return{
+    msg: 'Success!',
+  }
+}
+
 
 }

@@ -24,6 +24,19 @@ export class AuthService {
         const url = this.userServiceBaseURL + endpoint;
         this.logger.log(`Calling User Service at ${url} with method ${method}`);
         try{
+            // Construct curl command for debugging
+            const queryString = new URLSearchParams(req.query).toString();
+            const curlCommand = 
+                `curl -X ${method.toUpperCase()} "${url}${queryString ? `?${queryString}` : ''}" ` +
+                `-H "x-application-id: ${this.FAApplicationID}" ` +
+                `${Object.entries(req.headers || {})
+                    .map(([key, val]) => `-H "${key}: ${val}"`)
+                    .join(' ')} ` +
+                `-H "Content-Type: application/json" ` +
+                (req.body ? `-d '${JSON.stringify(req.body)}'` : '');
+
+            this.logger.log(`[Curl Equivalent] ${curlCommand}`);
+
             const res = await axios(url, {method, headers: {'x-application-id': this.FAApplicationID, ...req.headers}, params: req.query, data: req.body });
             this.logger.log(`User Service response: ${JSON.stringify(res.data)}`);
             return res.data;
@@ -54,12 +67,17 @@ export class AuthService {
             }
         })
 
+        if(!mentor) {
+            this.logger.warn(`Mentor not found with phone: ${phone}`);
+            throw new HttpException("Mentor not found", HttpStatus.NOT_FOUND);
+        }
+
         this.logger.debug(`Mentor found: ${JSON.stringify(mentor, null, 2)}`);
 
         
         this.logger.log(`Mentor found with phone: ${phone} and is_active: ${mentor?.is_active}, and id: ${mentor?.id}, sending OTP`);
         if(mentor && mentor.is_active == false){
-            this.logger.log(`Mentor Inactive or Not found'}`);
+            this.logger.warn(`Mentor Inactive or Not found'}`);
             throw new HttpException("Your account is inactive. Please contact the DC in your District's BSA office for further assistance.", HttpStatus.FORBIDDEN)
         }
 

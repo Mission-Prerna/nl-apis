@@ -54,11 +54,13 @@ export class AuthService {
             }
         })
 
-        this.logger.log(`Mentor found: ${mentor ? mentor.id : 'Not found'}`);
-
+        
+        this.logger.log(`Mentor found with phone: ${phone} and is_active: ${mentor?.is_active}, and id: ${mentor?.id}, sending OTP`);
         if(mentor && mentor.is_active == false){
+            this.logger.log(`Mentor Inactive or Not found'}`);
             throw new HttpException("Your account is inactive. Please contact the DC in your District's BSA office for further assistance.", HttpStatus.FORBIDDEN)
         }
+
 
         this.logger.log(`Calling user service to send OTP`);
 

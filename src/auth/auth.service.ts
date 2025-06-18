@@ -54,6 +54,8 @@ export class AuthService {
             }
         })
 
+        this.logger.debug(`Mentor found: ${JSON.stringify(mentor)}`);
+
         
         this.logger.log(`Mentor found with phone: ${phone} and is_active: ${mentor?.is_active}, and id: ${mentor?.id}, sending OTP`);
         if(mentor && mentor.is_active == false){

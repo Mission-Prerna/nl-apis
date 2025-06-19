@@ -6,6 +6,8 @@ import * as xml2js from 'xml2js';
 import * as dotenv from 'dotenv';
 import { PrismaService } from './prisma.service';
 const fs = require('fs');
+import * as XLSX from 'xlsx';
+
 
 dotenv.config();
 
@@ -153,7 +155,7 @@ public async getLatestOdkAssessments(limit = 10): Promise<any[]> {
     const { submission_timestamp } = latest;
 
     // Step 3: Get all assessments with same submission_timestamp
-    const assessments = await this.prisma.assessments.findMany({
+    const all_assessments = await this.prisma.assessments.findMany({
       where: {
         mentor_id,
         student_id,
@@ -164,20 +166,21 @@ public async getLatestOdkAssessments(limit = 10): Promise<any[]> {
       select: {
         workflow_ref_id: true,
         results_json: true,
+        is_passed: true,
       },
+    });
+
+    const assessments = all_assessments.filter((a) => {
+      const answers = Array.isArray(a.results_json) ? a.results_json : [];
+      return a.workflow_ref_id && answers.length === 1;
     });
 
     this.logger.log(`Found ${assessments.length} odk assessments for student_id: ${student_id} with timestamp ${submission_timestamp}`);
 
     const response_object = {
-      cycle_id,
-      mentor_id,
-      student_id,
-      udise,
       proof_url,
-      assessments: [],
     }
-    for (const { workflow_ref_id, results_json } of assessments) {
+    for (const { workflow_ref_id, results_json, is_passed } of assessments) {
       const answers = Array.isArray(results_json) ? results_json : [];
       const question_ids = answers.map((a: any) => a.question);
 
@@ -185,10 +188,12 @@ public async getLatestOdkAssessments(limit = 10): Promise<any[]> {
         // Step 4: Fetch form XML and extract questions
         const xml = await this.fetchFormXml(workflow_ref_id, token);
         const question_group = await this.convertXmlToQuestionsArray(xml, question_ids);
-        response_object.assessments.push({
-          workflow_ref_id,
-          question_group,
-        });
+        response_object["question_text"] = question_group[0].questions[0].text;
+        response_object["is_passed"] = is_passed;
+        response_object["cycle_id"] = cycle_id;
+        response_object["student_id"] = student_id;
+        response_object["mentor_id"] = mentor_id;
+        response_object["udise"] = udise;
       } catch (err) {
         this.logger.warn(`Error processing form ${workflow_ref_id}: ${err.message}`);
       }
@@ -198,6 +203,26 @@ public async getLatestOdkAssessments(limit = 10): Promise<any[]> {
   
   // write the response to a json file in the current directory
   fs.writeFileSync('./latest_odk_assessments.json', JSON.stringify(results, null, 2));
+
+  // Write to XLSX
+  const worksheetData = results.map(item => ({
+    proof_url: item.proof_url,
+    question_text: item.question_text,
+    is_passed: item.is_passed,
+    cycle_id: item.cycle_id,
+    student_id: item.student_id,
+    mentor_id: item.mentor_id,
+    udise: item.udise,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'ODK Assessments');
+  XLSX.writeFile(workbook, './latest_odk_assessments.xlsx');
+
+  const csv = XLSX.utils.sheet_to_csv(worksheet);
+fs.writeFileSync('./latest_odk_assessments.csv', csv);
+
 
   return results;
 }
